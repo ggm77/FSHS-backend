@@ -17,8 +17,17 @@ public class TokenProvider {
 
     private static final Key SECURITY_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS512);
 
-    public String create(Long id){
-        Date exprTime = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));
+    public String createAccessToken(Long id){
+        Date exprTime = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));//Refresh token expired date set 1 hour.
+        String userId = id.toString();
+        return Jwts.builder()
+                .signWith(SignatureAlgorithm.HS512, SECURITY_KEY)
+                .setSubject(userId).setIssuedAt(new Date()).setExpiration(exprTime)
+                .compact();
+    }
+
+    public String createRefreshToken(Long id){
+        Date exprTime = Date.from(Instant.now().plus(14, ChronoUnit.DAYS));//Refresh token expired date set 2 week.
         String userId = id.toString();
         return Jwts.builder()
                 .signWith(SignatureAlgorithm.HS512, SECURITY_KEY)

@@ -8,6 +8,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SignUpResponseDto {
-    private boolean result;
-    private String message;
+    private String location;
 }
