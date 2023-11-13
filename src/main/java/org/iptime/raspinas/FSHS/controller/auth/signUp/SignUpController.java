@@ -2,7 +2,6 @@ package org.iptime.raspinas.FSHS.controller.auth.signUp;
 
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.auth.signUp.request.SignUpRequestDto;
-import org.iptime.raspinas.FSHS.dto.auth.signUp.response.SignUpResponseDto;
 import org.iptime.raspinas.FSHS.entity.user.UserInfo;
 import org.iptime.raspinas.FSHS.service.auth.AuthService;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +21,7 @@ public class SignUpController {
     private final AuthService authService;
 
     @PostMapping("/signUp")
-    public ResponseEntity<SignUpResponseDto> signUp(@RequestBody SignUpRequestDto requestDto){
+    public ResponseEntity signUp(@RequestBody SignUpRequestDto requestDto){
         UserInfo result = authService.signUp(requestDto);
 
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()

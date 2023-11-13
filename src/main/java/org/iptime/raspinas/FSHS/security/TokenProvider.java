@@ -17,6 +17,10 @@ public class TokenProvider {
 
     private static final Key SECURITY_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS512);
 
+    public String getTokenType(){
+        return "bearer";
+    }
+
     public String createAccessToken(Long id){
         Date exprTime = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));//Refresh token expired date set 1 hour.
         String userId = id.toString();
