@@ -1,4 +1,4 @@
-package org.iptime.raspinas.FSHS.entity.user;
+package org.iptime.raspinas.FSHS.entity.userInfo;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.iptime.raspinas.FSHS.dto.auth.signUp.request.SignUpRequestDto;
+import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;

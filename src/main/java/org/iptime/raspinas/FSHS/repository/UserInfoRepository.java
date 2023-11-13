@@ -1,6 +1,6 @@
 package org.iptime.raspinas.FSHS.repository;
 
-import org.iptime.raspinas.FSHS.entity.user.UserInfo;
+import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

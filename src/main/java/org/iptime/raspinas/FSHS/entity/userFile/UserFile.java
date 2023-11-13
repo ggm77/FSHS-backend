@@ -1,10 +1,11 @@
-package org.iptime.raspinas.FSHS.entity.user;
+package org.iptime.raspinas.FSHS.entity.userFile;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 
 import java.sql.Timestamp;
 

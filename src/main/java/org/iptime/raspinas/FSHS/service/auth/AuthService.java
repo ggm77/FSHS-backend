@@ -5,13 +5,15 @@ import org.iptime.raspinas.FSHS.config.WebSecurityConfig;
 import org.iptime.raspinas.FSHS.dto.auth.signIn.reqeust.SignInRequestDto;
 import org.iptime.raspinas.FSHS.dto.auth.signIn.response.SignInResponseDto;
 import org.iptime.raspinas.FSHS.dto.auth.signUp.request.SignUpRequestDto;
-import org.iptime.raspinas.FSHS.entity.user.UserInfo;
+import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.repository.UserInfoRepository;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
-import org.springframework.security.core.parameters.P;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.stereotype.Service;
+
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
@@ -29,8 +31,11 @@ public class AuthService {
         boolean isEmailExist = false;
         try {
             isEmailExist = userInfoRepository.existsByUserEmail(userEmail);
+        } catch (DataAccessResourceFailureException e){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
         } catch (Exception e){
             e.printStackTrace();
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
         if(isEmailExist) {
@@ -39,19 +44,31 @@ public class AuthService {
 
         UserInfo userInfo = new UserInfo(putDto);
 
-        try{
+        try {
             UserInfo result = userInfoRepository.save(userInfo);
             return result;
+        } catch (DataAccessResourceFailureException e){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
         } catch (Exception e){
             e.printStackTrace();
-            return null;
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
     }
 
     public SignInResponseDto signIn(SignInRequestDto requestDto){
         String userEmail = requestDto.getUserEmail();
-        UserInfo userInfo = userInfoRepository.findByUserEmail(userEmail)
-                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+        UserInfo userInfo;
+        try{
+            userInfo = userInfoRepository.findByUserEmail(userEmail).get();
+        } catch (NoSuchElementException e){
+            throw new CustomException(ExceptionCode.USER_EMAIL_NOT_EXIST);
+        } catch (DataAccessResourceFailureException e){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
+        } catch (Exception e){
+            e.printStackTrace();
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
+
         boolean isPasswordMatch = webSecurityConfig.getPasswordEncoder().matches(requestDto.getUserPassword(), userInfo.getUserPassword());
 
         if(!isPasswordMatch){
