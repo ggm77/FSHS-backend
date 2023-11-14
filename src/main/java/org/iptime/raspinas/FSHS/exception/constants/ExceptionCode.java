@@ -18,7 +18,7 @@ public enum ExceptionCode {
 
 
 
-    FILE_NOT_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "File is missing."),
+    FILE_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "File is missing."),
     FAILED_TO_SAVE_FILE_IN_DIR(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save the file in server."),
     FAILED_TO_MAKE_DIR(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to make directory."),
     DATABASE_DOWN(HttpStatus.INTERNAL_SERVER_ERROR, "DATABASE DOWN"),

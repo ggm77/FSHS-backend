@@ -6,6 +6,7 @@ import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileReadRequestDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileCreateService;
+import org.iptime.raspinas.FSHS.service.userFile.UserFileDeleteService;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileReadService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ public class UserFileController {
 
     private final UserFileCreateService userFileCreateService;
     private final UserFileReadService userFileReadService;
+    private final UserFileDeleteService userFileDeleteService;
     private final TokenProvider tokenProvider;
 
     @PostMapping(value = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)//upload file
@@ -58,4 +60,13 @@ public class UserFileController {
 //
 //        return userFileReadService.readManyUserFile(requestDto.getIdList(), longUserId);
 //    }
+
+
+    @DeleteMapping("/file/{id}")
+    public ResponseEntity deleteUserFile(@RequestHeader(value = "Authorization") String token, @PathVariable Long id){
+        String userId = tokenProvider.validate(token.substring(7));
+        Long longUserId = Long.parseLong(userId);
+        userFileDeleteService.deleteUserFile(id, longUserId);
+        return ResponseEntity.noContent().build();
+    }
 }
