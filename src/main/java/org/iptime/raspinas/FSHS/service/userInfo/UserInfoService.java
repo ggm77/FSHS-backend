@@ -8,11 +8,10 @@ import org.iptime.raspinas.FSHS.dto.userInfo.response.UserInfoResponseDto;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
-import org.iptime.raspinas.FSHS.repository.UserInfoRepository;
+import org.iptime.raspinas.FSHS.repository.userInfo.UserInfoRepository;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.stereotype.Service;
 
-import java.sql.SQLNonTransientConnectionException;
 import java.util.NoSuchElementException;
 
 @Service

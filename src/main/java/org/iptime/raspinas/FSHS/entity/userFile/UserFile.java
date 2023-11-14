@@ -2,6 +2,7 @@ package org.iptime.raspinas.FSHS.entity.userFile;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,13 +25,13 @@ public class UserFile {
     private UserInfo userInfo;
 
     @Column(length = 260, nullable = false)
+    private String originalFileName;
+
+    @Column(length = 47, nullable = false) //extension max len = 10
     private String fileName;
 
     @Column(nullable = false)
-    private int fileSize;
-
-    @Column(length = 2048, nullable = false)
-    private String thumbnailUrl;
+    private Long fileSize;
 
     @CreationTimestamp
     private Timestamp uploadDate;
@@ -41,18 +42,47 @@ public class UserFile {
     @Column(length = 2048, nullable = false)
     private String url;
 
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isFavorite;
 
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isStreamingMusic;
 
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isStreamingVideo;
 
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isShared;
 
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isSecrete;
 
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isDeleted;
 
     @Column(nullable = true)
     private Timestamp deletedDate;
+
+
+    @Builder
+    public UserFile(UserInfo userInfo,
+                    String originalFileName,
+                    String fileName,
+                    Long fileSize,
+                    String url,
+                    boolean isSecrete){
+
+        this.userInfo = userInfo;
+        this.originalFileName = originalFileName;
+        this.fileName = fileName;
+        this.fileSize = fileSize;
+        this.url = url;
+        this.isStreamingMusic = false;
+        this.isStreamingVideo = false;
+        this.isFavorite = false;
+        this.isShared = false;
+        this.isSecrete = isSecrete;
+        this.isDeleted = false;
+
+    }
 }

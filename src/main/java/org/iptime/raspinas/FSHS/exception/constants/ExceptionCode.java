@@ -12,7 +12,11 @@ public enum ExceptionCode {
     USER_ID_NOT_EXIST(HttpStatus.NOT_ACCEPTABLE, "User not exist."),
     PASSWORD_NOT_MATCHED(HttpStatus.FORBIDDEN, "Password not correct."),
     TOKEN_AND_ID_NOT_MATCHED(HttpStatus.UNAUTHORIZED, "Token and id not matched."),
+    FILE_NOT_UPLOADED(HttpStatus.BAD_REQUEST, "No files were uploaded."),
 
+
+    FAILED_TO_SAVE_FILE_IN_DIR(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save the file in server."),
+    FAILED_TO_MAKE_DIR(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to make directory."),
     DATABASE_DOWN(HttpStatus.INTERNAL_SERVER_ERROR, "DATABASE DOWN"),
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Server Error");
 

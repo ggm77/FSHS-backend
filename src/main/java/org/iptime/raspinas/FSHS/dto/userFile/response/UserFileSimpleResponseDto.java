@@ -10,9 +10,13 @@ import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 @AllArgsConstructor
 public class UserFileSimpleResponseDto {
     private Long id;
+    private String originalFileName;
+    private Long fileSize;
 
 
     public UserFileSimpleResponseDto(UserFile userFile){
         this.id = userFile.getId();
+        this.originalFileName = userFile.getOriginalFileName();
+        this.fileSize = userFile.getFileSize();
     }
 }

@@ -8,7 +8,7 @@ import org.iptime.raspinas.FSHS.dto.auth.signUp.request.SignUpRequestDto;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
-import org.iptime.raspinas.FSHS.repository.UserInfoRepository;
+import org.iptime.raspinas.FSHS.repository.userInfo.UserInfoRepository;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.stereotype.Service;
