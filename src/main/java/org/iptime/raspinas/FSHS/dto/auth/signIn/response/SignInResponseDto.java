@@ -4,11 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.iptime.raspinas.FSHS.dto.userFile.response.UserFileSimpleResponseDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -23,7 +25,7 @@ public class SignInResponseDto {
     private String userEmail;
     private String userProfilePictureUrl;
     private Timestamp signUpDate;
-    private List<UserFile> userFileList;
+    private List<UserFileSimpleResponseDto> userFileList;
     private boolean isAdmin;
     private boolean isDisabled;
 
@@ -38,7 +40,11 @@ public class SignInResponseDto {
         this.userEmail = userInfo.getUserEmail();
         this.userProfilePictureUrl = userInfo.getUserProfilePictureUrl();
         this.signUpDate = userInfo.getSignUpDate();
-        this.userFileList = userInfo.getUserFile();
+        if(userInfo.getUserFile() != null){
+            this.userFileList = userInfo.getUserFile().stream()
+                    .map(UserFileSimpleResponseDto:: new)
+                    .collect(Collectors.toList());
+        }
         this.isAdmin = userInfo.isAdmin();
         this.isDisabled = userInfo.isDisabled();
     }

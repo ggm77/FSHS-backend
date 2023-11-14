@@ -33,6 +33,9 @@ public class UserFile {
     @Column(nullable = false)
     private Long fileSize;
 
+    @Column(length = 10, nullable = false)
+    private String fileExtension;
+
     @CreationTimestamp
     private Timestamp uploadDate;
 
@@ -68,6 +71,7 @@ public class UserFile {
     public UserFile(UserInfo userInfo,
                     String originalFileName,
                     String fileName,
+                    String fileExtension,
                     Long fileSize,
                     String url,
                     boolean isSecrete){
@@ -75,6 +79,7 @@ public class UserFile {
         this.userInfo = userInfo;
         this.originalFileName = originalFileName;
         this.fileName = fileName;
+        this.fileExtension = fileExtension;
         this.fileSize = fileSize;
         this.url = url;
         this.isStreamingMusic = false;

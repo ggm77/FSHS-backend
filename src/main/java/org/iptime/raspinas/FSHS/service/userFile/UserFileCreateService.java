@@ -1,7 +1,7 @@
 package org.iptime.raspinas.FSHS.service.userFile;
 
 import lombok.RequiredArgsConstructor;
-import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileRequestDto;
+import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 import org.iptime.raspinas.FSHS.exception.CustomException;
@@ -22,7 +22,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UserFileService {
+public class UserFileCreateService {
 
     private final UserFileRepository userFileRepository;
     private final UserInfoRepository userInfoRepository;
@@ -30,7 +30,7 @@ public class UserFileService {
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
 
-    public List<UserFile> createUserFile(List<MultipartFile> files, UserFileRequestDto requestDto, Long id){
+    public List<UserFile> createUserFile(List<MultipartFile> files, UserFileCreateRequestDto requestDto, Long id){
         if(files.isEmpty()){
             throw new CustomException(ExceptionCode.FILE_NOT_UPLOADED);
         }
@@ -53,7 +53,8 @@ public class UserFileService {
 
 
     private UserFile saveFile(MultipartFile file, String path, UserInfo userInfo, boolean isSecrete){
-        String fileName = generateSaveFileName(file.getOriginalFilename());
+        String fileExtension = StringUtils.getFilenameExtension(file.getOriginalFilename());
+        String fileName = generateSaveFileName(file.getOriginalFilename(), fileExtension);
         String filePath = path+"/"+fileName;
         try {
             file.transferTo(new File(filePath));
@@ -68,6 +69,7 @@ public class UserFileService {
                 .userInfo(userInfo)
                 .originalFileName(file.getOriginalFilename())
                 .fileName(fileName)
+                .fileExtension(fileExtension)
                 .fileSize(file.getSize())
                 .url(filePath)
                 .isSecrete(isSecrete)
@@ -100,9 +102,8 @@ public class UserFileService {
         return folderPath.getPath();
     }
 
-    private String generateSaveFileName(String originalFileName){
+    private String generateSaveFileName(String originalFileName, String extension){
         String uuid = UUID.randomUUID().toString().replaceAll("-","");
-        String extension = StringUtils.getFilenameExtension(originalFileName);
         return uuid+"."+extension;
     }
 

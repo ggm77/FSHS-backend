@@ -9,7 +9,6 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserFileRequestDto {
-    private String path; // '/user/~~~'
-    private boolean isSecrete;
+public class UserFileReadRequestDto {
+    private List<Long> idList;
 }
