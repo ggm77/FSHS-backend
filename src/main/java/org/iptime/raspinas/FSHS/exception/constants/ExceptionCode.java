@@ -15,9 +15,10 @@ public enum ExceptionCode {
     TOKEN_AND_ID_NOT_MATCHED(HttpStatus.UNAUTHORIZED, "Token and id not matched."),
     FILE_NOT_UPLOADED(HttpStatus.BAD_REQUEST, "No files were uploaded."),
     FILE_ACCESS_DENY(HttpStatus.FORBIDDEN, "Cannot access other people's files."),
+    PATH_NOT_VALID(HttpStatus.NOT_ACCEPTABLE, "Path is not valid; it must start with a '/' and end with a '/'."),
 
 
-
+    FAILED_TO_CREATE_THUMBNAIL(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create thumbnail."),
     FILE_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "File is missing."),
     FAILED_TO_SAVE_FILE_IN_DIR(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save the file in server."),
     FAILED_TO_MAKE_DIR(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to make directory."),

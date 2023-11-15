@@ -31,7 +31,6 @@ public class UserFileController {
     public ResponseEntity createUserFile(@RequestPart(value = "files") List<MultipartFile> multipartFiles,
                                          @RequestPart(value = "info") UserFileCreateRequestDto requestDto,
                                          @RequestHeader(value = "Authorization") String token){
-
         String userId = tokenProvider.validate(token.substring(7));
         Long id = Long.parseLong(userId);
 
