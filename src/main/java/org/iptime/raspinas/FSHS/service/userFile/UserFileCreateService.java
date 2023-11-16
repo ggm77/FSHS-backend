@@ -9,12 +9,19 @@ import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.repository.userFile.UserFileRepository;
 import org.iptime.raspinas.FSHS.repository.userInfo.UserInfoRepository;
+import org.jcodec.api.FrameGrab;
+import org.jcodec.api.JCodecException;
+import org.jcodec.common.io.NIOUtils;
+import org.jcodec.common.model.Picture;
+import org.jcodec.scale.AWTUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLConnection;
@@ -43,8 +50,8 @@ public class UserFileCreateService {
         List<UserFile> result = new ArrayList<>();
 
         UserInfo userInfo = userInfoRepository.findById(id).get();
-        String filePath = generatePath(UserFileDirPath+"/"+id.toString()+requestDto.getPath()); // input : ' /{folderName}/{folderName}/ '   -->>  ' /userId/{folderName}/{folderName}/ '
-        String thumbnailPath = generatePath(UserFileDirPath+"/thumbnail/"+id.toString()+requestDto.getPath());
+        String filePath = generatePath(UserFileDirPath+"/"+id+requestDto.getPath()); // input : ' /{folderName}/{folderName}/ '   -->>  ' /userId/{folderName}/{folderName}/ '
+        String thumbnailPath = generatePath(UserFileDirPath+"/thumbnail/"+id+requestDto.getPath());
         boolean isSecrete = requestDto.isSecrete();
 
         for(MultipartFile multipartFile : files){
@@ -81,6 +88,29 @@ public class UserFileCreateService {
                 Thumbnailator.createThumbnail(saveFile, thumbnailFile, 100, 100);
             } catch (IOException e){
                 throw new CustomException(ExceptionCode.FAILED_TO_CREATE_THUMBNAIL);
+            } catch (Exception e){
+                e.printStackTrace();
+                throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+            }
+        }
+        else if(mimeType.startsWith("video")){//only support mp4
+            String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
+            File thumbnailSaveFile = new File(thumbnailSaveName);
+
+            try {
+//                FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(saveFile));
+//                double durationInSeconds = frameGrab.getVideoTrack().getMeta().getTotalDuration();
+//                Picture thumbnail = FrameGrab.getFrameAtSec(saveFile, durationInSeconds/2);
+                Picture thumbnail = FrameGrab.getFrameFromFile(saveFile, 0);
+                BufferedImage bufferedImage = AWTUtil.toBufferedImage(thumbnail);
+                ImageIO.write(bufferedImage, "jpeg", thumbnailSaveFile);
+                Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
+            } catch (IllegalArgumentException e){
+                throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
+            } catch (JCodecException e) {
+                throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
+            } catch (IOException e) {
+                throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
             } catch (Exception e){
                 e.printStackTrace();
                 throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
@@ -127,7 +157,6 @@ public class UserFileCreateService {
         String uuid = UUID.randomUUID().toString().replaceAll("-","");
         return uuid;
     }
-
 
 
 }
