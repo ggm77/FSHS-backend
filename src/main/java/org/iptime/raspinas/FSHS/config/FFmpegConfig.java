@@ -1,18 +1,22 @@
 package org.iptime.raspinas.FSHS.config;
 
+import lombok.extern.slf4j.Slf4j;
 import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.FFprobe;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.probe.FFmpegProbeResult;
+import net.bramp.ffmpeg.progress.Progress;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.Async;
 
 import java.io.*;
 import java.time.LocalTime;
 
+@Slf4j
 @Configuration
 public class FFmpegConfig {
 
@@ -78,5 +82,34 @@ public class FFmpegConfig {
             throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
         }
     }
+
+    @Async
+    public void convertToHls(String filePath, String hlsPath){
+        FFmpegBuilder builder = new FFmpegBuilder()
+                .setInput(filePath) // 입력 소스
+                .overrideOutputFiles(true)
+                .addOutput(hlsPath + "master.m3u8") // 출력 위치
+                .setFormat("hls")
+                .addExtraArgs("-hls_time", "10") // 10초
+                .addExtraArgs("-hls_list_size", "0")
+                .addExtraArgs("-hls_segment_filename", hlsPath + "master_%08d.ts") // 청크 파일 이름
+                .done();
+
+        FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
+        executor.createJob(builder, progress -> {
+            log.info("progress ==> {}", progress);
+            if (progress.status.equals(Progress.Status.END)) {
+                log.info("================================= JOB FINISHED =================================");
+            }
+        }).run();
+        File complete = new File(hlsPath+"complete.txt");
+        try {
+            complete.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 
 }

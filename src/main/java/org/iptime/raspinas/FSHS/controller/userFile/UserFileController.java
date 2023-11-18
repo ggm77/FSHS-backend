@@ -2,7 +2,6 @@ package org.iptime.raspinas.FSHS.controller.userFile;
 
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
-import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileReadRequestDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileCreateService;

@@ -89,6 +89,7 @@ public class UserFileCreateService {
             }
         }
         else if(mimeType.startsWith("video")){
+            //generate thumbnail
             String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
             File thumbnailSaveFile = new File(thumbnailSaveName);
 
@@ -104,6 +105,11 @@ public class UserFileCreateService {
                 e.printStackTrace();
                 throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
             }
+
+
+            //hls convert
+            String hlsPath = generatePath(path+"."+fileName);
+            fFmpegConfig.convertToHls(filePath, hlsPath); // <- async
         }
         else if(mimeType.startsWith("audio")){
 
