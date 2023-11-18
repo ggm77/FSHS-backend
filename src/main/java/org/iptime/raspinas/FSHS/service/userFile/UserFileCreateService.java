@@ -2,6 +2,7 @@ package org.iptime.raspinas.FSHS.service.userFile;
 
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnailator;
+import org.iptime.raspinas.FSHS.config.FFmpegConfig;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
@@ -9,19 +10,12 @@ import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.repository.userFile.UserFileRepository;
 import org.iptime.raspinas.FSHS.repository.userInfo.UserInfoRepository;
-import org.jcodec.api.FrameGrab;
-import org.jcodec.api.JCodecException;
-import org.jcodec.common.io.NIOUtils;
-import org.jcodec.common.model.Picture;
-import org.jcodec.scale.AWTUtil;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLConnection;
@@ -35,6 +29,7 @@ public class UserFileCreateService {
 
     private final UserFileRepository userFileRepository;
     private final UserInfoRepository userInfoRepository;
+    private final FFmpegConfig fFmpegConfig;
 
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
@@ -81,7 +76,7 @@ public class UserFileCreateService {
 
         //create thumbnail
         String mimeType = URLConnection.guessContentTypeFromName(filePath);
-        if(mimeType.startsWith("image")){ //Add video and audio!!!
+        if(mimeType.startsWith("image")){
             String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
             File thumbnailFile = new File(thumbnailSaveName);
             try {
@@ -93,28 +88,36 @@ public class UserFileCreateService {
                 throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
             }
         }
-        else if(mimeType.startsWith("video")){//only support mp4
+        else if(mimeType.startsWith("video")){
             String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
             File thumbnailSaveFile = new File(thumbnailSaveName);
 
             try {
-//                FrameGrab frameGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(saveFile));
-//                double durationInSeconds = frameGrab.getVideoTrack().getMeta().getTotalDuration();
-//                Picture thumbnail = FrameGrab.getFrameAtSec(saveFile, durationInSeconds/2);
-                Picture thumbnail = FrameGrab.getFrameFromFile(saveFile, 0);
-                BufferedImage bufferedImage = AWTUtil.toBufferedImage(thumbnail);
-                ImageIO.write(bufferedImage, "jpeg", thumbnailSaveFile);
+                fFmpegConfig.generateThumbnail(filePath, thumbnailSaveName);
                 Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
             } catch (IllegalArgumentException e){
                 throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
-            } catch (JCodecException e) {
-                throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
             } catch (IOException e) {
+                e.printStackTrace();
                 throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
             } catch (Exception e){
                 e.printStackTrace();
                 throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
             }
+        }
+        else if(mimeType.startsWith("audio")){
+
+            String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
+            File thumbnailSaveFile = new File(thumbnailSaveName);
+
+            try{
+                fFmpegConfig.getAlbumCoverImage(filePath, thumbnailSaveName);
+                Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
+            } catch (Exception e){
+                e.printStackTrace();
+                throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+            }
+
         }
 
         UserFile fileEntity = UserFile.builder()

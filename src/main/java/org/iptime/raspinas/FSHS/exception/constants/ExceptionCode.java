@@ -18,6 +18,7 @@ public enum ExceptionCode {
     PATH_NOT_VALID(HttpStatus.NOT_ACCEPTABLE, "Path is not valid; it must start with a '/' and end with a '/'."),
 
 
+    FAILED_TO_GET_MEDIA_INFO(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get info from media."),
     FAILED_TO_GENERATE_THUMBNAIL(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate thumbnail from uploaded file."),
     FAILED_TO_CREATE_THUMBNAIL(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create thumbnail."),
     FILE_MISSING(HttpStatus.INTERNAL_SERVER_ERROR, "File is missing."),
