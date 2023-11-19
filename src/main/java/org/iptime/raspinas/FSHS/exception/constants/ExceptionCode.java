@@ -16,6 +16,7 @@ public enum ExceptionCode {
     FILE_NOT_UPLOADED(HttpStatus.BAD_REQUEST, "No files were uploaded."),
     FILE_ACCESS_DENY(HttpStatus.FORBIDDEN, "Cannot access other people's files."),
     PATH_NOT_VALID(HttpStatus.NOT_ACCEPTABLE, "Path is not valid; it must start with a '/' and end with a '/'."),
+    FILE_NOT_EXIST(HttpStatus.NOT_ACCEPTABLE, "File not exist."),
 
 
     FAILED_TO_GET_MEDIA_INFO(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get info from media."),
