@@ -5,6 +5,8 @@ import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.iptime.raspinas.FSHS.exception.CustomException;
+import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
@@ -40,7 +42,12 @@ public class TokenProvider {
     }
 
     public String validate(String token){
-        Claims claims = Jwts.parserBuilder().setSigningKey(SECURITY_KEY).build().parseClaimsJws(token).getBody();
-        return claims.getSubject();
+        try{
+            Claims claims = Jwts.parserBuilder().setSigningKey(SECURITY_KEY).build().parseClaimsJws(token).getBody();
+            return claims.getSubject();
+        } catch (Exception e){
+            throw new CustomException(ExceptionCode.TOKEN_NOT_VALID);
+        }
+
     }
 }
