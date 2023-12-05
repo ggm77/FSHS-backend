@@ -79,8 +79,14 @@ public class UserFileCreateService {
         if(mimeType.startsWith("image")){
             String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
             File thumbnailFile = new File(thumbnailSaveName);
+            File originalImage = saveFile;
+
+            if(fileExtension.endsWith("svg") || fileExtension.endsWith("SVG")){
+
+            }
+
             try {
-                Thumbnailator.createThumbnail(saveFile, thumbnailFile, 100, 100);
+                Thumbnailator.createThumbnail(originalImage, thumbnailFile, 100, 100);
             } catch (IOException e){
                 throw new CustomException(ExceptionCode.FAILED_TO_CREATE_THUMBNAIL);
             } catch (Exception e){

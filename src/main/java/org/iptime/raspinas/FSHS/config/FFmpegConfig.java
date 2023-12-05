@@ -110,6 +110,4 @@ public class FFmpegConfig {
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
     }
-
-
 }

@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.*;
+import java.nio.file.Path;
 
 @RequiredArgsConstructor
 @RestController
@@ -23,16 +24,17 @@ public class UserFileStreamingController {
     private final TokenProvider tokenProvider;
 
     //@GetMapping("/streaming-video/{token}/{path}/{fileName}")
-    @GetMapping("/streaming-video/{userId}/{path}/{fileName}")
+    @GetMapping("/streaming-video/{userId}/{path}/{fileName}/{hlsFile}")
     public ResponseEntity<InputStreamResource> getHlsFile(
             //@PathVariable String token
             @PathVariable String userId,
             @PathVariable String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable String fileName
+            @PathVariable String fileName,
+            @PathVariable String hlsFile
     ){
 //        String userId = tokenProvider.validate(token);
         path = path.replaceAll("@","/");
-        File file = hlsService.getHlsFile("/"+userId+path,fileName);
+        File file = hlsService.getHlsFile("/"+userId+path,fileName, hlsFile);
         try {
             InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
             return ResponseEntity.ok()
