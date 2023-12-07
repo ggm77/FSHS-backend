@@ -45,18 +45,18 @@ public class UserFileStreamingController {
         }
     }
 
-    @GetMapping(value = "/streaming-image/{userId}/{path}/{fileName}", produces = MediaType.IMAGE_JPEG_VALUE)
-    public ResponseEntity<byte[]> getImageFile(
+    @GetMapping("/streaming-image/{userId}/{path}/{fileNameAndExtension}")
+    public ResponseEntity getImageFile(
             @RequestHeader(value = "Authorization") String token,
             @PathVariable String userId,
             @PathVariable String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable String fileName
+            @PathVariable String fileNameAndExtension
     ){
         String id = tokenProvider.validate(token.substring(7));
         if(!id.equals(userId)){
             throw new CustomException(ExceptionCode.TOKEN_AND_ID_NOT_MATCHED);
         }
         path = path.replaceAll("@","/");
-        return imageStreamingService.streamingImageFile("/"+userId+path,fileName);
+        return imageStreamingService.streamingImageFile("/"+userId+path,fileNameAndExtension);
     }
 }

@@ -6,6 +6,7 @@ import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.repository.userFile.UserFileRepository;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -61,7 +62,5 @@ public class UserFileDeleteService {
             e.printStackTrace();
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
-
-
     }
 }
