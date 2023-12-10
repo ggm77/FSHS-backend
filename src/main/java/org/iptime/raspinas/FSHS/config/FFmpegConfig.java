@@ -84,7 +84,7 @@ public class FFmpegConfig {
     }
 
     @Async
-    public void convertToHls(String filePath, String hlsPath){
+    public void convertToHlsVideo(String filePath, String hlsPath){
         FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(filePath) // 입력 소스
                 .overrideOutputFiles(true)
@@ -110,4 +110,38 @@ public class FFmpegConfig {
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @Async
+    public void convertToHlsAudio(String filePath, String hlsPath){
+        FFmpegBuilder builder = new FFmpegBuilder()
+                .setInput(filePath) // 입력 소스
+                .overrideOutputFiles(true)
+                .addOutput(hlsPath + "master.m3u8") // 출력 위치
+                .setFormat("hls")
+                .setAudioCodec("aac")
+                .setStrict(FFmpegBuilder.Strict.EXPERIMENTAL) // 실험적인 옵션을 허용
+                .addExtraArgs("-map","0:a")
+                .addExtraArgs("-c:a","aac")
+                .addExtraArgs("-b:a","320k")
+                .addExtraArgs("-hls_time", "10") // 10초
+                .addExtraArgs("-hls_list_size", "0")
+                .addExtraArgs("-hls_segment_filename", hlsPath + "master_%08d.ts") // 청크 파일 이름
+                .done();
+
+        FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
+        executor.createJob(builder, progress -> {
+            log.info("progress ==> {}", progress);
+            if (progress.status.equals(Progress.Status.END)) {
+                log.info("================================= JOB FINISHED =================================");
+            }
+        }).run();
+        File complete = new File(hlsPath+"complete.txt");
+        try {
+            complete.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

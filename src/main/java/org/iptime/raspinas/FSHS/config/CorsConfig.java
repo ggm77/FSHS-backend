@@ -17,6 +17,8 @@ public class CorsConfig {
                         .allowedMethods("GET","OPTIONS");
 //                        .allowedHeaders("Origin", "Content-Type", "Accept")
 //                        .allowCredentials(true).maxAge(3600);
+                corsRegistry.addMapping("/api/v1/streaming-audio/**").allowedOriginPatterns("*")
+                        .allowedMethods("GET","OPTIONS");
             }
         };
     }

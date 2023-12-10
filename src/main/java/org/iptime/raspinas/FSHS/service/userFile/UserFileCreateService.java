@@ -115,7 +115,7 @@ public class UserFileCreateService {
 
             //hls convert
             String hlsPath = generatePath(path+"."+fileName);
-            fFmpegConfig.convertToHls(filePath, hlsPath); // <- async
+            fFmpegConfig.convertToHlsVideo(filePath, hlsPath); // <- async
         }
         else if(mimeType.startsWith("audio")){
 
@@ -130,6 +130,9 @@ public class UserFileCreateService {
                 throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
             }
 
+            //hls convert
+            String hlsPath = generatePath(path+"."+fileName);
+            fFmpegConfig.convertToHlsAudio(filePath, hlsPath); // <- async
         }
 
         UserFile fileEntity = UserFile.builder()
