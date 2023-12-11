@@ -49,6 +49,9 @@ public class UserFile {
     private boolean isFavorite;
 
     @Column(columnDefinition = "BOOLEAN", nullable = false)
+    private boolean isStreaming;
+
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isStreamingMusic;
 
     @Column(columnDefinition = "BOOLEAN", nullable = false)
@@ -74,6 +77,7 @@ public class UserFile {
                     String fileExtension,
                     Long fileSize,
                     String url,
+                    boolean isStreaming,
                     boolean isSecrete){
 
         this.userInfo = userInfo;
@@ -82,6 +86,7 @@ public class UserFile {
         this.fileExtension = fileExtension;
         this.fileSize = fileSize;
         this.url = url;
+        this.isStreaming = isStreaming;
         this.isStreamingMusic = false;
         this.isStreamingVideo = false;
         this.isFavorite = false;

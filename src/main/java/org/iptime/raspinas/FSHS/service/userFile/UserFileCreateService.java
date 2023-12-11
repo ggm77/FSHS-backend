@@ -64,6 +64,7 @@ public class UserFileCreateService {
         String fileExtension = StringUtils.getFilenameExtension(file.getOriginalFilename());
         String fileName = generateSaveFileName();//uuid
         String filePath = path+fileName+"."+fileExtension;
+        boolean isStreaming = false;
         File saveFile = new File(filePath);
         try { // saving file
             file.transferTo(saveFile);
@@ -113,6 +114,7 @@ public class UserFileCreateService {
             }
 
 
+            isStreaming = true;
             //hls convert
             String hlsPath = generatePath(path+"."+fileName);
             fFmpegConfig.convertToHlsVideo(filePath, hlsPath); // <- async
@@ -130,6 +132,7 @@ public class UserFileCreateService {
                 throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
             }
 
+            isStreaming = true;
             //hls convert
             String hlsPath = generatePath(path+"."+fileName);
             fFmpegConfig.convertToHlsAudio(filePath, hlsPath); // <- async
@@ -141,7 +144,8 @@ public class UserFileCreateService {
                 .fileName(fileName)
                 .fileExtension(fileExtension)
                 .fileSize(file.getSize())
-                .url(filePath)
+                .url(path)
+                .isStreaming(isStreaming)
                 .isSecrete(isSecrete)
                 .build();
 

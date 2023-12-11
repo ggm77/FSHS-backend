@@ -1,6 +1,7 @@
 package org.iptime.raspinas.FSHS.service.userFile;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.io.FileUtils;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
@@ -41,7 +42,9 @@ public class UserFileDeleteService {
             throw new CustomException(ExceptionCode.FILE_ACCESS_DENY);
         }
 
-        Path path = Paths.get(file.getUrl());
+        Path path = Paths.get(file.getUrl()+file.getFileName()+"."+file.getFileExtension());
+
+
 
         try{
             userFileRepository.deleteById(fileId);
@@ -55,6 +58,12 @@ public class UserFileDeleteService {
         }
 
         try {
+            if(file.isStreaming()){
+                File hlsPath;
+                hlsPath = Paths.get(file.getUrl()+"."+file.getFileName()+"/").toFile();
+                FileUtils.cleanDirectory(hlsPath);
+                hlsPath.delete();
+            }
             Files.delete(path);
         } catch (IOException e){
             throw new CustomException(ExceptionCode.FILE_MISSING);

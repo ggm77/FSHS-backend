@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.NoSuchElementException;
 
 @Service
@@ -43,14 +45,21 @@ public class UserFileReadService {
             throw new CustomException(ExceptionCode.FILE_ACCESS_DENY);
         }
 
-        String path = file.getUrl();
+        String path = file.getUrl()+file.getFileName()+"."+file.getFileExtension();
         String originalFileName = file.getOriginalFileName();
+        String encodedFileName;
+        try {
+            encodedFileName = URLEncoder.encode(originalFileName, "UTF-8").replaceAll("\\+", "%20");
+        } catch (UnsupportedEncodingException e) {
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
         try{
             InputStreamResource resource = new InputStreamResource(new FileInputStream(path));
+            System.out.println(originalFileName);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .cacheControl(CacheControl.noCache())
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + originalFileName)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''"+encodedFileName)
                     .body(resource);
         } catch (FileNotFoundException e) {
             throw new CustomException(ExceptionCode.FILE_MISSING);
