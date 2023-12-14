@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,23 +67,28 @@ public class UserFileDeleteService {
 
             Tika tika = new Tika();
 
-//            String mimeType;
-//            try {
-//                mimeType = tika.detect(path);
-//            } catch (IOException e) {
-//                throw new CustomException(ExceptionCode.FILE_MISSING);
-//            }
-//
-//
-//            //delete thumbnail file
-//            if(mimeType.startsWith("image") || mimeType.startsWith("video") || mimeType.startsWith("audio")){
-//                String thumbnailPath = UserFileDirPath+"/thumbnail/"+file.getUrl()+file.getFileName();
-//                if(Files.exists(Paths.get(thumbnailPath+".jepg"))){
-//                    Files.delete(Paths.get(thumbnailPath+".jepg"));
-//                } else if(Files.exists(Paths.get(thumbnailPath+".svg"))){
-//                    Files.delete(Paths.get(thumbnailPath+".svg"));
-//                }
-//            }
+            String mimeType;
+            try {
+                mimeType = tika.detect(path);
+            } catch (IOException e) {
+                throw new CustomException(ExceptionCode.FILE_MISSING);
+            }
+
+
+            //delete thumbnail file
+            if(mimeType.startsWith("image") || mimeType.startsWith("video") || mimeType.startsWith("audio")){
+                String thumbnailPath = UserFileDirPath+"/thumbnail"+file.getUrl()+"s_"+file.getFileName();
+                try{
+                    if(file.getFileExtension().equals("svg")){
+                        Files.delete(Paths.get(thumbnailPath+".svg"));
+                    }
+                    else {
+                        Files.delete(Paths.get(thumbnailPath + ".jpeg"));
+                    }
+                } catch (FileNotFoundException e){
+                    throw new CustomException(ExceptionCode.FILE_MISSING);
+                }
+            }
 
             if(file.isStreaming()){
                 File hlsPath;
