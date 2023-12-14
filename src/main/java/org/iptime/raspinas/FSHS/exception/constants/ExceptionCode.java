@@ -20,6 +20,7 @@ public enum ExceptionCode {
     TOKEN_NOT_VALID(HttpStatus.UNAUTHORIZED, "Token is not valid."),
 
 
+    FAILED_TO_CONVERT_SVG_TO_JPEG(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to convert svg file to jpeg."),
     FAILED_TO_GET_MEDIA_INFO(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get info from media."),
     FAILED_TO_GENERATE_THUMBNAIL(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate thumbnail from uploaded file."),
     FAILED_TO_CREATE_THUMBNAIL(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create thumbnail."),

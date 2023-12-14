@@ -38,6 +38,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation group: 'net.coobird', name: 'thumbnailator', version: '0.4.11'
 	implementation 'net.bramp.ffmpeg:ffmpeg:0.8.0'
+	implementation 'org.apache.tika:tika-parsers:1.18'
 }
 
 tasks.named('bootBuildImage') {

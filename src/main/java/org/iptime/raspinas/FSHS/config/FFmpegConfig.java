@@ -122,7 +122,7 @@ public class FFmpegConfig {
                 .setStrict(FFmpegBuilder.Strict.EXPERIMENTAL) // 실험적인 옵션을 허용
                 .addExtraArgs("-map","0:a")
                 .addExtraArgs("-c:a","aac")
-                .addExtraArgs("-b:a","320k")
+//                .addExtraArgs("-b:a","320k")
                 .addExtraArgs("-hls_time", "10") // 10초
                 .addExtraArgs("-hls_list_size", "0")
                 .addExtraArgs("-hls_segment_filename", hlsPath + "master_%08d.ts") // 청크 파일 이름

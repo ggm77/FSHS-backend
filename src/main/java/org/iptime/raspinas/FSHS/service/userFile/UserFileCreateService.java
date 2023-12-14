@@ -2,6 +2,7 @@ package org.iptime.raspinas.FSHS.service.userFile;
 
 import lombok.RequiredArgsConstructor;
 import net.coobird.thumbnailator.Thumbnailator;
+import org.apache.tika.Tika;
 import org.iptime.raspinas.FSHS.config.FFmpegConfig;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
@@ -16,9 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URLConnection;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -76,23 +77,41 @@ public class UserFileCreateService {
         }
 
         //create thumbnail
-        String mimeType = URLConnection.guessContentTypeFromName(filePath);
+        Tika tika = new Tika();
+
+        String mimeType;
+        try {
+            mimeType = tika.detect(saveFile);
+        } catch (IOException e) {
+            throw new CustomException(ExceptionCode.FILE_MISSING);
+        }
+
         if(mimeType.startsWith("image")){
             String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
-            File thumbnailFile = new File(thumbnailSaveName);
+            File thumbnailFile;
             File originalImage = saveFile;
 
             if(fileExtension.endsWith("svg") || fileExtension.endsWith("SVG")){
-
+                thumbnailSaveName = thumbnailPath+"s_"+fileName+".svg";
+                thumbnailFile = new File(thumbnailSaveName);
+                try {
+                    Files.copy(saveFile.toPath(), thumbnailFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    throw new CustomException(ExceptionCode.FAILED_TO_CREATE_THUMBNAIL);
+                }
             }
+            else{
+                thumbnailFile = new File(thumbnailSaveName);
+                try {
 
-            try {
-                Thumbnailator.createThumbnail(originalImage, thumbnailFile, 100, 100);
-            } catch (IOException e){
-                throw new CustomException(ExceptionCode.FAILED_TO_CREATE_THUMBNAIL);
-            } catch (Exception e){
-                e.printStackTrace();
-                throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+                    Thumbnailator.createThumbnail(originalImage, thumbnailFile, 100, 100);
+                } catch (IOException e){
+                    throw new CustomException(ExceptionCode.FAILED_TO_CREATE_THUMBNAIL);
+                } catch (Exception e){
+                    e.printStackTrace();
+                    throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+                }
             }
         }
         else if(mimeType.startsWith("video")){
@@ -179,6 +198,4 @@ public class UserFileCreateService {
         String uuid = UUID.randomUUID().toString().replaceAll("-","");
         return uuid;
     }
-
-
 }

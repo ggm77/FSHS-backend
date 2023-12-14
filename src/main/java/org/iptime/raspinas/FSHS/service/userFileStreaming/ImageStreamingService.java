@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -24,10 +25,16 @@ public class ImageStreamingService {
     public ResponseEntity streamingImageFile(String path, String fileName){
         try {
             InputStream image = new FileInputStream(UserFileDirPath+path+fileName);
+            String fileExtension = StringUtils.getFilenameExtension(fileName);
             byte[] imageByteArray = IOUtils.toByteArray(image);
             image.close();
             HttpHeaders responseHeaders = new HttpHeaders();
-            responseHeaders.set("content-type", "image/jpeg");
+            if(fileExtension.equals("svg") || fileExtension.equals("SVG")){
+                responseHeaders.set("content-type", "image/svg+xml");
+            }
+            else{
+                responseHeaders.set("content-type", "image/"+fileExtension);
+            }
             return new ResponseEntity<byte[]>(imageByteArray, responseHeaders, HttpStatus.OK);
         } catch (FileNotFoundException e) {
             throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
