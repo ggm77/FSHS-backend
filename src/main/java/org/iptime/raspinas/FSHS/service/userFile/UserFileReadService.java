@@ -5,6 +5,7 @@ import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.repository.userFile.UserFileRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.http.CacheControl;
@@ -24,6 +25,9 @@ import java.util.NoSuchElementException;
 public class UserFileReadService {
 
     private final UserFileRepository userFileRepository;
+
+    @Value("${user-file.directory.path}")
+    private String UserFileDirPath;
 
     public ResponseEntity readUserFile(Long id, Long userId){
         UserFile file;
@@ -45,7 +49,7 @@ public class UserFileReadService {
             throw new CustomException(ExceptionCode.FILE_ACCESS_DENY);
         }
 
-        String path = file.getUrl()+file.getFileName()+"."+file.getFileExtension();
+        String path = UserFileDirPath+file.getUrl()+file.getFileName()+"."+file.getFileExtension();
         String originalFileName = file.getOriginalFileName();
         String encodedFileName;
         try {
@@ -55,7 +59,6 @@ public class UserFileReadService {
         }
         try{
             InputStreamResource resource = new InputStreamResource(new FileInputStream(path));
-            System.out.println(originalFileName);
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .cacheControl(CacheControl.noCache())

@@ -88,11 +88,11 @@ public class FFmpegConfig {
         FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(filePath) // 입력 소스
                 .overrideOutputFiles(true)
-                .addOutput(hlsPath + "master.m3u8") // 출력 위치
+                .addOutput(hlsPath + "/master.m3u8") // 출력 위치
                 .setFormat("hls")
                 .addExtraArgs("-hls_time", "10") // 10초
                 .addExtraArgs("-hls_list_size", "0")
-                .addExtraArgs("-hls_segment_filename", hlsPath + "master_%08d.ts") // 청크 파일 이름
+                .addExtraArgs("-hls_segment_filename", hlsPath + "/master_%08d.ts") // 청크 파일 이름
                 .done();
 
         FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
@@ -102,7 +102,7 @@ public class FFmpegConfig {
                 log.info("================================= JOB FINISHED =================================");
             }
         }).run();
-        File complete = new File(hlsPath+"complete.txt");
+        File complete = new File(hlsPath+"/complete.txt");
         try {
             complete.createNewFile();
         } catch (IOException e) {
@@ -116,7 +116,7 @@ public class FFmpegConfig {
         FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(filePath) // 입력 소스
                 .overrideOutputFiles(true)
-                .addOutput(hlsPath + "master.m3u8") // 출력 위치
+                .addOutput(hlsPath + "/master.m3u8") // 출력 위치
                 .setFormat("hls")
                 .setAudioCodec("aac")
                 .setStrict(FFmpegBuilder.Strict.EXPERIMENTAL) // 실험적인 옵션을 허용
@@ -125,7 +125,7 @@ public class FFmpegConfig {
 //                .addExtraArgs("-b:a","320k")
                 .addExtraArgs("-hls_time", "10") // 10초
                 .addExtraArgs("-hls_list_size", "0")
-                .addExtraArgs("-hls_segment_filename", hlsPath + "master_%08d.ts") // 청크 파일 이름
+                .addExtraArgs("-hls_segment_filename", hlsPath + "/master_%08d.ts") // 청크 파일 이름
                 .done();
 
         FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
@@ -135,7 +135,7 @@ public class FFmpegConfig {
                 log.info("================================= JOB FINISHED =================================");
             }
         }).run();
-        File complete = new File(hlsPath+"complete.txt");
+        File complete = new File(hlsPath+"/complete.txt");
         try {
             complete.createNewFile();
         } catch (IOException e) {

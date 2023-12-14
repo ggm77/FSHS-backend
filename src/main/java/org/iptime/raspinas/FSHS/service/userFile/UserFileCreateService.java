@@ -46,8 +46,8 @@ public class UserFileCreateService {
         List<UserFile> result = new ArrayList<>();
 
         UserInfo userInfo = userInfoRepository.findById(id).get();
-        String filePath = generatePath(UserFileDirPath+"/"+id+requestDto.getPath()); // input : ' /{folderName}/{folderName}/ '   -->>  ' /userId/{folderName}/{folderName}/ '
-        String thumbnailPath = generatePath(UserFileDirPath+"/thumbnail/"+id+requestDto.getPath());
+        String filePath = generatePath("/"+id+requestDto.getPath()); // input : ' /{folderName}/{folderName}/ '   -->>  ' /userId/{folderName}/{folderName}/ '
+        String thumbnailPath = generatePath("/thumbnail/"+id+requestDto.getPath());
         boolean isSecrete = requestDto.isSecrete();
 
         for(MultipartFile multipartFile : files){
@@ -64,7 +64,7 @@ public class UserFileCreateService {
     private UserFile saveFile(MultipartFile file, String path, String thumbnailPath, UserInfo userInfo, boolean isSecrete){
         String fileExtension = StringUtils.getFilenameExtension(file.getOriginalFilename());
         String fileName = generateSaveFileName();//uuid
-        String filePath = path+fileName+"."+fileExtension;
+        String filePath = UserFileDirPath+path+fileName+"."+fileExtension;
         boolean isStreaming = false;
         File saveFile = new File(filePath);
         try { // saving file
@@ -87,12 +87,12 @@ public class UserFileCreateService {
         }
 
         if(mimeType.startsWith("image")){
-            String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
+            String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".jpeg";
             File thumbnailFile;
             File originalImage = saveFile;
 
             if(fileExtension.endsWith("svg") || fileExtension.endsWith("SVG")){
-                thumbnailSaveName = thumbnailPath+"s_"+fileName+".svg";
+                thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".svg";
                 thumbnailFile = new File(thumbnailSaveName);
                 try {
                     Files.copy(saveFile.toPath(), thumbnailFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
@@ -116,7 +116,7 @@ public class UserFileCreateService {
         }
         else if(mimeType.startsWith("video")){
             //generate thumbnail
-            String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
+            String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".jpeg";
             File thumbnailSaveFile = new File(thumbnailSaveName);
 
             try {
@@ -135,12 +135,12 @@ public class UserFileCreateService {
 
             isStreaming = true;
             //hls convert
-            String hlsPath = generatePath(path+"."+fileName);
+            String hlsPath = UserFileDirPath+generatePath(path+"."+fileName);
             fFmpegConfig.convertToHlsVideo(filePath, hlsPath); // <- async
         }
         else if(mimeType.startsWith("audio")){
 
-            String thumbnailSaveName = thumbnailPath+"s_"+fileName+".jpeg";
+            String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".jpeg";
             File thumbnailSaveFile = new File(thumbnailSaveName);
 
             try{
@@ -153,7 +153,7 @@ public class UserFileCreateService {
 
             isStreaming = true;
             //hls convert
-            String hlsPath = generatePath(path+"."+fileName);
+            String hlsPath = UserFileDirPath+generatePath(path+"."+fileName);
             fFmpegConfig.convertToHlsAudio(filePath, hlsPath); // <- async
         }
 
@@ -181,8 +181,8 @@ public class UserFileCreateService {
         return result;
     }
 
-    private String generatePath(String path){
-        File folderPath = new File(path);
+    private String generatePath(String path){ //use relative path
+        File folderPath = new File(UserFileDirPath+path);
         if(!folderPath.exists()){
             try{
                 folderPath.mkdirs();
@@ -191,7 +191,7 @@ public class UserFileCreateService {
                 throw new CustomException(ExceptionCode.FAILED_TO_MAKE_DIR);
             }
         }
-        return folderPath.getPath()+"/";
+        return path;
     }
 
     private String generateSaveFileName(){
