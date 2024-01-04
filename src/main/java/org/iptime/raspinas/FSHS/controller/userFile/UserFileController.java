@@ -1,5 +1,7 @@
 package org.iptime.raspinas.FSHS.controller.userFile;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
@@ -27,16 +29,24 @@ public class UserFileController {
     private final TokenProvider tokenProvider;
 
     @PostMapping(value = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)//upload file
-    public ResponseEntity createUserFile(@RequestPart(value = "files") List<MultipartFile> multipartFiles,
-                                         @RequestPart(value = "info") UserFileCreateRequestDto requestDto,
-                                         @RequestHeader(value = "Authorization") String token){
-        String userId = tokenProvider.validate(token.substring(7));
-        Long id = Long.parseLong(userId);
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "유저 파일 업로드 성공"
+            )
+    })
+    public ResponseEntity<?> createUserFile(
+            @RequestPart(value = "files") final List<MultipartFile> multipartFiles,
+            @RequestPart(value = "info") final UserFileCreateRequestDto requestDto,
+            @RequestHeader(value = "Authorization") final String token
+    ){
+        final String userId = tokenProvider.validate(token.substring(7));
+        final Long id = Long.parseLong(userId);
 
-        List<UserFile> result = userFileCreateService.createUserFile(multipartFiles, requestDto, id);
+        final List<UserFile> result = userFileCreateService.createUserFile(multipartFiles, requestDto, id);
 
 
-        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
+        final URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/v1/file/{id}")
                 .buildAndExpand(result.get(0).getId())
                 .toUri();
@@ -44,9 +54,18 @@ public class UserFileController {
     }
 
     @GetMapping("/file/{id}")//download file
-    public ResponseEntity getUserFile(@RequestHeader(value = "Authorization") String token, @PathVariable Long id){
-        String userId = tokenProvider.validate(token.substring(7));
-        Long longUserId = Long.parseLong(userId);
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "유저 파일 다운로드 성공"
+            )
+    })
+    public ResponseEntity<?> getUserFile(
+            @PathVariable final Long id,
+            @RequestHeader(value = "Authorization") final String token
+    ){
+        final String userId = tokenProvider.validate(token.substring(7));
+        final Long longUserId = Long.parseLong(userId);
 
         return userFileReadService.readUserFile(id, longUserId);
     }
@@ -61,10 +80,23 @@ public class UserFileController {
 
 
     @DeleteMapping("/file/{id}")
-    public ResponseEntity deleteUserFile(@RequestHeader(value = "Authorization") String token, @PathVariable Long id){
-        String userId = tokenProvider.validate(token.substring(7));
-        Long longUserId = Long.parseLong(userId);
-        userFileDeleteService.deleteUserFile(id, longUserId);
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "유저 파일 삭제 성공"
+            )
+    })
+    public ResponseEntity<?> deleteUserFile(
+            @PathVariable final Long id,
+            @RequestHeader(value = "Authorization") final String token
+    ){
+
+        final Long userId = Long.parseLong(
+                tokenProvider.validate(token.substring(7))
+        );
+
+        userFileDeleteService.deleteUserFile(id, userId);
+
         return ResponseEntity.noContent().build();
     }
 }

@@ -1,6 +1,7 @@
 package org.iptime.raspinas.FSHS.service.userFile;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
@@ -22,6 +23,7 @@ import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserFileReadService {
 
     private final UserFileRepository userFileRepository;
@@ -29,48 +31,54 @@ public class UserFileReadService {
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
 
-    public ResponseEntity readUserFile(Long id, Long userId){
-        UserFile file;
+    public ResponseEntity readUserFile(
+            final Long id,
+            final Long userId
+    ){
+
+        final UserFile file;
 
         try{
             file = userFileRepository.findById(id).get();
-        } catch (NoSuchElementException e) {
+        } catch (NoSuchElementException ex) {
             throw new CustomException(ExceptionCode.FILE_ID_NOT_EXIST);
-        } catch (DataAccessResourceFailureException e){
+        } catch (DataAccessResourceFailureException ex){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
-        } catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception ex){
+            log.error("UserFileReadService.readUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
-        Long authorId = file.getUserInfo().getId();
+        final Long authorId = file.getUserInfo().getId();
 
+        //Restricting access for other users. | 다른 유저 접근 제한
         if(!authorId.equals(userId)){
             throw new CustomException(ExceptionCode.FILE_ACCESS_DENY);
         }
 
-        String path = UserFileDirPath+file.getUrl()+file.getFileName()+"."+file.getFileExtension();
-        String originalFileName = file.getOriginalFileName();
-        String encodedFileName;
+        final String path = UserFileDirPath+file.getUrl()+file.getFileName()+"."+file.getFileExtension();
+        final String originalFileName = file.getOriginalFileName();
+        final String encodedFileName;
+
         try {
             encodedFileName = URLEncoder.encode(originalFileName, "UTF-8").replaceAll("\\+", "%20");
-        } catch (UnsupportedEncodingException e) {
+        } catch (UnsupportedEncodingException ex) {
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
+
         try{
-            InputStreamResource resource = new InputStreamResource(new FileInputStream(path));
+            final InputStreamResource resource = new InputStreamResource(new FileInputStream(path));
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .cacheControl(CacheControl.noCache())
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''"+encodedFileName)
                     .body(resource);
-        } catch (FileNotFoundException e) {
+
+        } catch (FileNotFoundException ex) {
             throw new CustomException(ExceptionCode.FILE_MISSING);
-        } catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception ex){
+            log.error("UserFileReadService.readUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
     }
-
-
 }

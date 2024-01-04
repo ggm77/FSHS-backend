@@ -71,14 +71,16 @@ public class UserFile {
 
 
     @Builder
-    public UserFile(UserInfo userInfo,
-                    String originalFileName,
-                    String fileName,
-                    String fileExtension,
-                    Long fileSize,
-                    String url,
-                    boolean isStreaming,
-                    boolean isSecrete){
+    public UserFile(
+            final UserInfo userInfo,
+            final String originalFileName,
+            final String fileName,
+            final String fileExtension,
+            final Long fileSize,
+            final String url,
+            final boolean isStreaming,
+            final boolean isSecrete
+    ){
 
         this.userInfo = userInfo;
         this.originalFileName = originalFileName;

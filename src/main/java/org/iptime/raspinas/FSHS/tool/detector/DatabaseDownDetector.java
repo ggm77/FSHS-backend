@@ -1,11 +1,13 @@
 package org.iptime.raspinas.FSHS.tool.detector;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 @Component
+@Slf4j
 public class DatabaseDownDetector {
     public void databaseDown(){
-        System.out.println("DATABASE DOWN");
+        log.error("[!=====DATABASE DOWN=====!]");
         //shut down
     }
 }

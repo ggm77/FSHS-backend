@@ -21,15 +21,19 @@ public class WebSecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
-    protected SecurityFilterChain configure(HttpSecurity httpSecurity) throws Exception {
+    protected SecurityFilterChain configure(final HttpSecurity httpSecurity) throws Exception {
+
         httpSecurity
                 .cors(Customizer.withDefaults())
                 .csrf((csrf) -> csrf.disable())
                 .httpBasic((httpBasic) -> httpBasic.disable())
                 .sessionManagement((sessionManagement) -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests.requestMatchers("/api/v1/streaming-video/**", "/api/v1/streaming-audio/**", "/api/v1/test/**", "/v3/api-docs/**","/swagger-ui/**","/api/v1/auth/**", "/")
-                        .permitAll().anyRequest().authenticated());
+                .authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests.requestMatchers(
+                        "/api/v1/streaming-video/**", "/api/v1/streaming-audio/**", "/api/v1/test/**", "/v3/api-docs/**","/swagger-ui/**","/api/v1/auth/**", "/"
+                        ).permitAll().anyRequest().authenticated());
+
         httpSecurity.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return httpSecurity.build();
     }
 

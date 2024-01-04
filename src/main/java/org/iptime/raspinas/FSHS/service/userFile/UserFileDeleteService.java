@@ -1,6 +1,7 @@
 package org.iptime.raspinas.FSHS.service.userFile;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.apache.tika.Tika;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
@@ -9,7 +10,6 @@ import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.repository.userFile.UserFileRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -22,6 +22,7 @@ import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserFileDeleteService {
 
     private final UserFileRepository userFileRepository;
@@ -29,78 +30,83 @@ public class UserFileDeleteService {
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
 
-    public void deleteUserFile(Long fileId, Long userId){
-        UserFile file;
+    public void deleteUserFile(
+            final Long fileId,
+            final Long userId
+    ){
+        final UserFile file;
         try{
             file = userFileRepository.findById(fileId).get();
-        } catch (NoSuchElementException e) {
+        } catch (NoSuchElementException ex) {
             throw new CustomException(ExceptionCode.FILE_ID_NOT_EXIST);
-        } catch (DataAccessResourceFailureException e){
+        } catch (DataAccessResourceFailureException ex){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
-        } catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception ex){
+            log.error("UserFileDeleteService.deleteUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
-        Long authorId = file.getUserInfo().getId();
+        final Long authorId = file.getUserInfo().getId();
 
+        //Restricting access for other users. | 다른 유저 접근 제한
         if(!authorId.equals(userId)){
             throw new CustomException(ExceptionCode.FILE_ACCESS_DENY);
         }
 
-        Path path = Paths.get(UserFileDirPath+file.getUrl()+file.getFileName()+"."+file.getFileExtension());
-
-
+        final Path path = Paths.get(UserFileDirPath+file.getUrl()+file.getFileName()+"."+file.getFileExtension());
 
         try{
             userFileRepository.deleteById(fileId);
-        } catch (NoSuchElementException e) {
+        } catch (NoSuchElementException ex) {
             throw new CustomException(ExceptionCode.FILE_ID_NOT_EXIST);
-        } catch (DataAccessResourceFailureException e){
+        } catch (DataAccessResourceFailureException ex){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
-        } catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception ex){
+            log.error("UserFileDeleteService.deleteUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
         try {
 
-            Tika tika = new Tika();
+            final Tika tika = new Tika();
 
-            String mimeType;
+            final String mimeType;
             try {
                 mimeType = tika.detect(path);
-            } catch (IOException e) {
+            } catch (IOException ex) {
                 throw new CustomException(ExceptionCode.FILE_MISSING);
             }
 
 
-            //delete thumbnail file
+            //delete thumbnail file | 썸네일 지우기
             if(mimeType.startsWith("image") || mimeType.startsWith("video") || mimeType.startsWith("audio")){
-                String thumbnailPath = UserFileDirPath+"/thumbnail"+file.getUrl()+"s_"+file.getFileName();
+                final String thumbnailPath = UserFileDirPath+"/thumbnail"+file.getUrl()+"s_"+file.getFileName();
                 try{
+                    //Handle SVG file processing. | svg 파일 예외 처리
                     if(file.getFileExtension().equals("svg")){
                         Files.delete(Paths.get(thumbnailPath+".svg"));
                     }
                     else {
                         Files.delete(Paths.get(thumbnailPath + ".jpeg"));
                     }
-                } catch (FileNotFoundException e){
+                } catch (FileNotFoundException ex){
                     throw new CustomException(ExceptionCode.FILE_MISSING);
                 }
             }
 
+            //delete hls file | hls 파일 지우기
             if(file.isStreaming()){
-                File hlsPath;
+                final File hlsPath;
                 hlsPath = Paths.get(UserFileDirPath+file.getUrl()+"."+file.getFileName()+"/").toFile();
                 FileUtils.cleanDirectory(hlsPath);
                 hlsPath.delete();
             }
             Files.delete(path);
-        } catch (IOException e){
+
+        } catch (IOException ex){
             throw new CustomException(ExceptionCode.FILE_MISSING);
-        } catch (Exception e){
-            e.printStackTrace();
+        } catch (Exception ex){
+            log.error("UserFileDeleteService.deleteUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
     }

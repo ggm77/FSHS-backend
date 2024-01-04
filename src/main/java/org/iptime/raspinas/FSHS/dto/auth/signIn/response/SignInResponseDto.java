@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.userFile.response.UserFileSimpleResponseDto;
-import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 
 import java.sql.Timestamp;
@@ -30,7 +29,13 @@ public class SignInResponseDto {
     private boolean isDisabled;
 
     @Builder
-    public SignInResponseDto(UserInfo userInfo, String accessToken, String refreshToken, String tokenType, int exprTime){
+    public SignInResponseDto(
+            final UserInfo userInfo,
+            final String accessToken,
+            final String refreshToken,
+            final String tokenType,
+            final int exprTime
+    ){
         this.accessToken = accessToken;
         this.tokenType = tokenType;
         this.exprTime = exprTime;
@@ -40,6 +45,7 @@ public class SignInResponseDto {
         this.userEmail = userInfo.getUserEmail();
         this.userProfilePictureUrl = userInfo.getUserProfilePictureUrl();
         this.signUpDate = userInfo.getSignUpDate();
+        //Null handling to prevent potential NullPointerExceptions. | null 방지
         if(userInfo.getUserFile() != null){
             this.userFileList = userInfo.getUserFile().stream()
                     .map(UserFileSimpleResponseDto:: new)

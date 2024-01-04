@@ -11,7 +11,11 @@ public class HlsService {
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
 
-    public File getHlsFile(String path, String name, String hlsFile){
+    public File getHlsFile(
+            final String path,
+            final String name,
+            final String hlsFile
+    ){
         return new File(UserFileDirPath+path+"."+name+"/"+hlsFile);
     }
 }

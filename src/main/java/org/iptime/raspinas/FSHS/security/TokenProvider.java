@@ -1,7 +1,6 @@
 package org.iptime.raspinas.FSHS.security;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -23,29 +22,38 @@ public class TokenProvider {
         return "bearer";
     }
 
-    public String createAccessToken(Long id){
-        Date exprTime = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));//Refresh token expired date set 1 hour.
-        String userId = id.toString();
+    public String createAccessToken(final Long id){
+
+        //Access token expired date set 1 hour.
+        final Date exprTime = Date.from(Instant.now().plus(1, ChronoUnit.HOURS));
+
+        final String userId = id.toString();
+
         return Jwts.builder()
                 .signWith(SignatureAlgorithm.HS512, SECURITY_KEY)
                 .setSubject(userId).setIssuedAt(new Date()).setExpiration(exprTime)
                 .compact();
     }
 
-    public String createRefreshToken(Long id){
-        Date exprTime = Date.from(Instant.now().plus(14, ChronoUnit.DAYS));//Refresh token expired date set 2 week.
-        String userId = id.toString();
+    public String createRefreshToken(final Long id){
+
+        //Refresh token expired date set 2 week.
+        final Date exprTime = Date.from(Instant.now().plus(14, ChronoUnit.DAYS));
+
+        final String userId = id.toString();
+
         return Jwts.builder()
                 .signWith(SignatureAlgorithm.HS512, SECURITY_KEY)
                 .setSubject(userId).setIssuedAt(new Date()).setExpiration(exprTime)
                 .compact();
     }
 
-    public String validate(String token){
+    public String validate(final String token){
         try{
-            Claims claims = Jwts.parserBuilder().setSigningKey(SECURITY_KEY).build().parseClaimsJws(token).getBody();
+            final Claims claims = Jwts.parserBuilder().setSigningKey(SECURITY_KEY).build().parseClaimsJws(token).getBody();
             return claims.getSubject();
-        } catch (Exception e){
+
+        } catch (Exception ex){
             throw new CustomException(ExceptionCode.TOKEN_NOT_VALID);
         }
 

@@ -45,7 +45,7 @@ public class UserInfo {
     @Column(columnDefinition ="BOOLEAN", nullable = false)
     private boolean isDisabled;
 
-    public UserInfo(SignUpRequestDto requestDto){
+    public UserInfo(final SignUpRequestDto requestDto){
         this.userName = requestDto.getUserName();
         this.userEmail = requestDto.getUserEmail();
         this.userPassword = requestDto.getUserPassword();

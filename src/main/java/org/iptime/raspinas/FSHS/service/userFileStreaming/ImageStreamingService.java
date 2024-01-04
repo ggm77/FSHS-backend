@@ -14,7 +14,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 
 @Service
 public class ImageStreamingService {
@@ -22,25 +21,33 @@ public class ImageStreamingService {
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
 
-    public ResponseEntity streamingImageFile(String path, String fileName){
+    public ResponseEntity streamingImageFile(
+            final String path,
+            final String fileName
+    ){
+
         try {
-            InputStream image = new FileInputStream(UserFileDirPath+path+fileName);
-            String fileExtension = StringUtils.getFilenameExtension(fileName);
-            byte[] imageByteArray = IOUtils.toByteArray(image);
+            final InputStream image = new FileInputStream(UserFileDirPath+path+fileName);
+            final String fileExtension = StringUtils.getFilenameExtension(fileName);
+            final byte[] imageByteArray = IOUtils.toByteArray(image);
             image.close();
-            HttpHeaders responseHeaders = new HttpHeaders();
+
+            final HttpHeaders responseHeaders = new HttpHeaders();
+
+            //Handle SVG file processing. | svg 파일 예외 처리
             if(fileExtension.equals("svg") || fileExtension.equals("SVG")){
                 responseHeaders.set("content-type", "image/svg+xml");
             }
             else{
                 responseHeaders.set("content-type", "image/"+fileExtension);
             }
+
             return new ResponseEntity<byte[]>(imageByteArray, responseHeaders, HttpStatus.OK);
-        } catch (FileNotFoundException e) {
+
+        } catch (FileNotFoundException ex) {
             throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
-        } catch (IOException e) {
+        } catch (IOException ex) {
             throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
         }
-
     }
 }

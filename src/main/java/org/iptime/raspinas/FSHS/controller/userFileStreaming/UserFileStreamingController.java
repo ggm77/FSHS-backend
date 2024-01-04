@@ -1,5 +1,7 @@
 package org.iptime.raspinas.FSHS.controller.userFileStreaming;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.iptime.raspinas.FSHS.exception.CustomException;
@@ -13,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.*;
-import java.nio.file.Path;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -27,57 +28,90 @@ public class UserFileStreamingController {
 
     //@GetMapping("/streaming-video/{token}/{path}/{fileName}")
     @GetMapping("/streaming-video/{userId}/{path}/{fileName}/{hlsFile}")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "hls 프로토콜 조회 성공"
+            )
+    })
     public ResponseEntity<InputStreamResource> streamVideo(
             //@PathVariable String token
-            @PathVariable String userId,
-            @PathVariable String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable String fileName,
-            @PathVariable String hlsFile
+            @PathVariable final String userId,
+            @PathVariable final String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
+            @PathVariable final String fileName,
+            @PathVariable final String hlsFile
     ){
+
 //        String userId = tokenProvider.validate(token);
-        path = path.replaceAll("@","/");
-        File file = hlsService.getHlsFile("/"+userId+path,fileName, hlsFile);
+        final String changedPath = path.replaceAll("@","/");
+
+        final File file = hlsService.getHlsFile("/"+userId+changedPath,fileName, hlsFile);
+
         try {
-            InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
+            final InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
+
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("application/x-mpegURL"))
                     .body(resource);
-        } catch (FileNotFoundException e) {
+
+        } catch (FileNotFoundException ex) {
             throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
         }
     }
 
     @GetMapping("/streaming-audio/{userId}/{path}/{fileName}/{hlsFile}")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "hls 프로토콜 조회 성공"
+            )
+    })
     public ResponseEntity<InputStreamResource> streamAudio(
-            @PathVariable String userId,
-            @PathVariable String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable String fileName,
-            @PathVariable String hlsFile
+            @PathVariable final String userId,
+            @PathVariable final String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
+            @PathVariable final String fileName,
+            @PathVariable final String hlsFile
     ){
-        path = path.replaceAll("@","/");
-        File file = hlsService.getHlsFile("/"+userId+path, fileName, hlsFile);
+
+        final String changedPath = path.replaceAll("@","/");
+
+        final File file = hlsService.getHlsFile("/"+userId+changedPath, fileName, hlsFile);
+
         try{
-            InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
+            final InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
+
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("application/x-mpegURL"))
                     .body(resource);
-        } catch (FileNotFoundException e){
+
+        } catch (FileNotFoundException ex){
             throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
         }
     }
 
     @GetMapping("/streaming-image/{userId}/{path}/{fileNameAndExtension}")
-    public ResponseEntity streamImageFile(
-            @RequestHeader(value = "Authorization") String token,
-            @PathVariable String userId,
-            @PathVariable String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable String fileNameAndExtension
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "이미지 조회 성공"
+            )
+    })
+    public ResponseEntity<?> streamImageFile(
+            @RequestHeader(value = "Authorization") final String token,
+            @PathVariable final String userId,
+            @PathVariable final String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
+            @PathVariable final String fileNameAndExtension
     ){
-        String id = tokenProvider.validate(token.substring(7));
+
+        final String id = tokenProvider.validate(token.substring(7));
+
+        //Restricting access for other users. | 다른 유저 접근 제한
         if(!id.equals(userId)){
             throw new CustomException(ExceptionCode.TOKEN_AND_ID_NOT_MATCHED);
         }
-        path = path.replaceAll("@","/");
-        return imageStreamingService.streamingImageFile("/"+userId+path,fileNameAndExtension);
+
+        final String changedPath = path.replaceAll("@","/");
+
+        return imageStreamingService.streamingImageFile("/"+userId+changedPath,fileNameAndExtension);
     }
 }

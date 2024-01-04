@@ -1,5 +1,7 @@
 package org.iptime.raspinas.FSHS.controller.auth.signUp;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.auth.signUp.request.SignUpRequestDto;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
@@ -21,13 +23,22 @@ public class SignUpController {
     private final AuthService authService;
 
     @PostMapping("/sign-up")
-    public ResponseEntity signUp(@RequestBody SignUpRequestDto requestDto){
-        UserInfo result = authService.signUp(requestDto);
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201",
+                    description = "회원가입 성공"
+            )
+    })
+    public ResponseEntity<?> signUp(
+            @RequestBody final SignUpRequestDto requestDto
+    ){
+        final UserInfo result = authService.signUp(requestDto);
 
-        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
+        final URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/v1/user/{id}")
                 .buildAndExpand(result.getId())
                 .toUri();
+
         return ResponseEntity.created(location).build();
     }
 }

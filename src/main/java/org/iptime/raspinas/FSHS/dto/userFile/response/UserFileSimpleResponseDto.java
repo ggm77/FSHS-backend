@@ -14,7 +14,7 @@ public class UserFileSimpleResponseDto {
     private Long fileSize;
 
 
-    public UserFileSimpleResponseDto(UserFile userFile){
+    public UserFileSimpleResponseDto(final UserFile userFile){
         this.id = userFile.getId();
         this.originalFileName = userFile.getOriginalFileName();
         this.fileSize = userFile.getFileSize();

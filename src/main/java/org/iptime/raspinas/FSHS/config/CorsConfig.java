@@ -12,11 +12,12 @@ public class CorsConfig {
     public WebMvcConfigurer corsConfigurer(){
         return new WebMvcConfigurer() {
             @Override
-            public void addCorsMappings(CorsRegistry corsRegistry){
+            public void addCorsMappings(final CorsRegistry corsRegistry){
                 corsRegistry.addMapping("/api/v1/streaming-video/**").allowedOriginPatterns("*")
                         .allowedMethods("GET","OPTIONS");
 //                        .allowedHeaders("Origin", "Content-Type", "Accept")
 //                        .allowCredentials(true).maxAge(3600);
+
                 corsRegistry.addMapping("/api/v1/streaming-audio/**").allowedOriginPatterns("*")
                         .allowedMethods("GET","OPTIONS");
 
