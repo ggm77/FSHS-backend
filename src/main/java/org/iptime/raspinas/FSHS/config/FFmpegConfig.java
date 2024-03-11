@@ -79,19 +79,24 @@ public class FFmpegConfig {
             final String thumbnailPath
     ){
 
-        final String command = "ffmpeg -i " + filePath + " -an -vcodec copy "+thumbnailPath;
-        try {
-            final Process process = Runtime.getRuntime().exec(command);
+        final FFmpegBuilder builder = new FFmpegBuilder()
+                .setInput(filePath)
+                .overrideOutputFiles(true)
+                .addOutput(thumbnailPath)
+                .addExtraArgs("-an")
+                .addExtraArgs("-vcodec", "copy")
+                .done();
 
-            final int exitCode = process.waitFor();
 
-            //Handling exceptions in case of unsuccessful processing. | 정상처리 되지 않았을 때
-            if (exitCode != 0) {
-                throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
+        final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
+        executor.createJob(builder, progress -> {
+            log.info("progress ==> {}", progress);
+
+            //Successfully completed the operation. | 작업이 정상 종료 되었을 때
+            if (progress.status.equals(Progress.Status.END)) {
+                log.info("================================= JOB FINISHED =================================");
             }
-        } catch (IOException | InterruptedException ex) {
-            throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
-        }
+        }).run();
     }
 
     @Async
@@ -134,7 +139,6 @@ public class FFmpegConfig {
             final String filePath,
             final String hlsPath
     ){
-
         final FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(filePath) // 입력 소스
                 .overrideOutputFiles(true)
@@ -150,15 +154,22 @@ public class FFmpegConfig {
                 .addExtraArgs("-hls_segment_filename", hlsPath + "/master_%08d.ts") // 청크 파일 이름
                 .done();
 
-        final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
-        executor.createJob(builder, progress -> {
-            log.info("progress ==> {}", progress);
+        try {
+            final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
+            executor.createJob(builder, progress -> {
+                log.info("progress ==> {}", progress);
 
-            //Successfully completed the operation. | 작업이 정상 종료 되었을 때
-            if (progress.status.equals(Progress.Status.END)) {
-                log.info("================================= JOB FINISHED =================================");
-            }
-        }).run();
+                //Successfully completed the operation. | 작업이 정상 종료 되었을 때
+                if (progress.status.equals(Progress.Status.END)) {
+                    log.info("================================= JOB FINISHED =================================");
+                }
+            }).run();
+        } catch (IllegalArgumentException ex) {
+            log.error("FFmpegConfig.convertToHlsAudio message:{}", ex.getMessage(), ex);
+        } catch (Exception ex) {
+            log.error("FFmpegConfig.convertToHlsAudio message:{}", ex.getMessage(), ex);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
 
         final File complete = new File(hlsPath+"/complete.txt");
         try {
