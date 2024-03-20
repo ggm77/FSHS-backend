@@ -28,7 +28,7 @@ public class UserFileController {
     private final UserFileDeleteService userFileDeleteService;
     private final TokenProvider tokenProvider;
 
-    @PostMapping(value = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)//upload file
+    @PostMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)//upload file
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
@@ -47,13 +47,13 @@ public class UserFileController {
 
 
         final URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/api/v1/file/{id}")
+                .path("/api/v1/files/{id}")
                 .buildAndExpand(result.get(0).getId())
                 .toUri();
         return ResponseEntity.created(location).build();
     }
 
-    @GetMapping("/file/{id}")//download file
+    @GetMapping("/files/{id}")//download file
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -79,7 +79,7 @@ public class UserFileController {
 //    }
 
 
-    @DeleteMapping("/file/{id}")
+    @DeleteMapping("/files/{id}")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "204",

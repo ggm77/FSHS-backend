@@ -22,7 +22,7 @@ public class UserInfoController {
     private final UserInfoService userInfoService;
     private final TokenProvider tokenProvider;
 
-    @GetMapping("/user/{id}")
+    @GetMapping("/users/{id}")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -49,7 +49,7 @@ public class UserInfoController {
         return ResponseEntity.ok(result);
     }
 
-    @PatchMapping("/user/{id}")
+    @PatchMapping("/users/{id}")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -77,7 +77,7 @@ public class UserInfoController {
         return ResponseEntity.ok(result);
     }
 
-    @DeleteMapping("/user/{id}")
+    @DeleteMapping("/users/{id}")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "204",
