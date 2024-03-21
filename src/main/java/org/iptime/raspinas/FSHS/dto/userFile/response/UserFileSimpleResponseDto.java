@@ -13,6 +13,7 @@ public class UserFileSimpleResponseDto {
     private String originalFileName;
     private String fileName;
     private String fileExtension;
+    private String url;
     private Long fileSize;
 
 
@@ -21,6 +22,7 @@ public class UserFileSimpleResponseDto {
         this.originalFileName = userFile.getOriginalFileName();
         this.fileName = userFile.getFileName();
         this.fileExtension = userFile.getFileExtension();
+        this.url = userFile.getUrl();
         this.fileSize = userFile.getFileSize();
     }
 }
