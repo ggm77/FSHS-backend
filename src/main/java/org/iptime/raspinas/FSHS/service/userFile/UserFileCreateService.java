@@ -49,7 +49,7 @@ public class UserFileCreateService {
         }
 
         //Validate the correctness of the provided file path. | 경로가 올바른지 체크
-        if(!requestDto.getPath().startsWith("/") || !requestDto.getPath().endsWith("/")){
+        if(!requestDto.getPath().startsWith("/") || !requestDto.getPath().endsWith("/") || requestDto.getPath().contains(".")){
             throw new CustomException(ExceptionCode.PATH_NOT_VALID);
         }
 
