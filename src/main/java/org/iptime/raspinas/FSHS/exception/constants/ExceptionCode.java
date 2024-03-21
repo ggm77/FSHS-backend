@@ -8,15 +8,15 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ExceptionCode {
     EMAIL_DUPLICATE(HttpStatus.CONFLICT, "Email already exist."),
-    USER_EMAIL_NOT_EXIST(HttpStatus.NOT_ACCEPTABLE, "User email not exist."),
-    USER_ID_NOT_EXIST(HttpStatus.NOT_ACCEPTABLE, "User not exist."),
-    FILE_ID_NOT_EXIST(HttpStatus.NOT_ACCEPTABLE, "File not exist."),
+    USER_EMAIL_NOT_EXIST(HttpStatus.BAD_REQUEST, "User email not exist."),
+    USER_ID_NOT_EXIST(HttpStatus.BAD_REQUEST, "User not exist."),
+    FILE_ID_NOT_EXIST(HttpStatus.BAD_REQUEST, "File not exist."),
     PASSWORD_NOT_MATCHED(HttpStatus.FORBIDDEN, "Password not correct."),
     TOKEN_AND_ID_NOT_MATCHED(HttpStatus.UNAUTHORIZED, "Token and id not matched."),
     FILE_NOT_UPLOADED(HttpStatus.BAD_REQUEST, "No files were uploaded."),
     FILE_ACCESS_DENY(HttpStatus.FORBIDDEN, "Cannot access other people's files."),
-    PATH_NOT_VALID(HttpStatus.NOT_ACCEPTABLE, "Path is not valid; it must start with a '/' and end with a '/'."),
-    FILE_NOT_EXIST(HttpStatus.NOT_ACCEPTABLE, "File not exist."),
+    PATH_NOT_VALID(HttpStatus.BAD_REQUEST, "Path is not valid; it must start with a '/' and end with a '/'."),
+    FILE_NOT_EXIST(HttpStatus.BAD_REQUEST, "File not exist."),
     TOKEN_NOT_VALID(HttpStatus.UNAUTHORIZED, "Token is not valid."),
 
 
