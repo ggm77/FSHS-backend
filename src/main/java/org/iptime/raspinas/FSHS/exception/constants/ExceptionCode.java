@@ -15,7 +15,7 @@ public enum ExceptionCode {
     TOKEN_AND_ID_NOT_MATCHED(HttpStatus.UNAUTHORIZED, "Token and id not matched."),
     FILE_NOT_UPLOADED(HttpStatus.BAD_REQUEST, "No files were uploaded."),
     FILE_ACCESS_DENY(HttpStatus.FORBIDDEN, "Cannot access other people's files."),
-    PATH_NOT_VALID(HttpStatus.BAD_REQUEST, "Path is not valid; it must start with a '/' and end with a '/'."),
+    PATH_NOT_VALID(HttpStatus.BAD_REQUEST, "Path is not valid."),
     FILE_NOT_EXIST(HttpStatus.BAD_REQUEST, "File not exist."),
     TOKEN_NOT_VALID(HttpStatus.UNAUTHORIZED, "Token is not valid."),
 
