@@ -26,6 +26,11 @@ public class ImageStreamingService {
             final String fileName
     ){
 
+        //Validate the correctness of the provided file path. | 경로가 올바른지 체크
+        if(!path.startsWith("/") || !path.endsWith("/") || path.contains(".")){
+            throw new CustomException(ExceptionCode.PATH_NOT_VALID);
+        }
+
         try {
             final InputStream image = new FileInputStream(UserFileDirPath+path+fileName);
             final String fileExtension = StringUtils.getFilenameExtension(fileName);
