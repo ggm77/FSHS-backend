@@ -21,7 +21,7 @@ import java.nio.file.Paths;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserFolderService {
+public class UserFolderCreateService {
 
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;

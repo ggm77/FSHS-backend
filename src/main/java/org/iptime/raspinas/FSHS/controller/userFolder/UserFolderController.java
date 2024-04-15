@@ -4,9 +4,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.userFolder.request.UserFolderRequestDto;
-import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
-import org.iptime.raspinas.FSHS.service.userFolder.UserFolderService;
+import org.iptime.raspinas.FSHS.service.userFolder.UserFolderCreateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -18,7 +17,7 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class UserFolderController {
 
-    private final UserFolderService userFolderService;
+    private final UserFolderCreateService userFolderCreateService;
     private final TokenProvider tokenProvider;
 
     @PostMapping(value = "/folder")
@@ -36,7 +35,7 @@ public class UserFolderController {
         final String userId = tokenProvider.validate(token.substring(7));
         final Long id = Long.parseLong(userId);
 
-        userFolderService.createUserFolder(userFolderRequestDto, id);
+        userFolderCreateService.createUserFolder(userFolderRequestDto, id);
 
         final URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/v1/files")
