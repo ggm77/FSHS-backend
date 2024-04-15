@@ -1,14 +1,19 @@
 package org.iptime.raspinas.FSHS.controller.userFile;
 
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
+import org.iptime.raspinas.FSHS.dto.userFolder.response.UserFolderResponseDto;
+import org.iptime.raspinas.FSHS.dto.userInfo.response.UserInfoResponseDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileCreateService;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileDeleteService;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileReadService;
+import org.iptime.raspinas.FSHS.service.userFolder.UserFolderReadService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +22,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -25,6 +31,7 @@ public class UserFileController {
 
     private final UserFileCreateService userFileCreateService;
     private final UserFileReadService userFileReadService;
+    private final UserFolderReadService userFolderReadService;
     private final UserFileDeleteService userFileDeleteService;
     private final TokenProvider tokenProvider;
 
@@ -53,6 +60,27 @@ public class UserFileController {
         return ResponseEntity.created(location).build();
     }
 
+
+    @GetMapping("/files")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "유저 파일 조회 성공",
+                    content = @Content(schema = @Schema(implementation = UserFolderResponseDto.class))
+            )
+    })
+    public ResponseEntity<?> getUserAllFile(
+            @RequestHeader(value = "Authorization") final String token
+    ){
+        final String userId = tokenProvider.validate(token.substring(7));
+        final Long longUserId = Long.parseLong(userId);
+
+        final Optional<UserFile> root = userFolderReadService.getUserAllFile(longUserId);
+
+        return root.map(node -> ResponseEntity.ok(UserFolderResponseDto.fromEntity(node)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/files/{id}")//download file
     @ApiResponses(value = {
             @ApiResponse(
@@ -69,14 +97,6 @@ public class UserFileController {
 
         return userFileReadService.readUserFile(id, longUserId);
     }
-
-//    @PostMapping("/file/get-files")
-//    public ResponseEntity getManyUserFile(@RequestHeader(value = "Authorization") String token, @RequestBody UserFileReadRequestDto requestDto){
-//        String userId = tokenProvider.validate(token.substring(7));
-//        Long longUserId = Long.parseLong(userId);
-//
-//        return userFileReadService.readManyUserFile(requestDto.getIdList(), longUserId);
-//    }
 
 
     @DeleteMapping("/files/{id}")
