@@ -48,7 +48,7 @@ public class UserFileCreateService {
             throw new CustomException(ExceptionCode.FILE_NOT_UPLOADED);
         }
 
-        //Validate the correctness of the provided file path. | 경로가 올바른지 체크
+        //Validate the correctness of the provided file path. | 경로가 올바른지 체크(형식 체크)
         if(!requestDto.getPath().startsWith("/") || !requestDto.getPath().endsWith("/") || requestDto.getPath().contains(".")){
             throw new CustomException(ExceptionCode.PATH_NOT_VALID);
         }
@@ -56,9 +56,19 @@ public class UserFileCreateService {
         final List<UserFile> result = new ArrayList<>();
 
         final UserInfo userInfo = userInfoRepository.findById(id).get();
-        final String filePath = generatePath("/"+id+requestDto.getPath()); // input : ' /{folderName}/{folderName}/ '   -->>  ' /userId/{folderName}/{folderName}/ '
-        final String thumbnailPath = generatePath("/thumbnail/"+id+requestDto.getPath());
+        final String filePath = checkPath("/"+id+requestDto.getPath()); // input : ' /{folderName}/{folderName}/ '   -->>  ' /userId/{folderName}/{folderName}/ '
+        final String thumbnailPath = checkPath("/thumbnail/"+id+requestDto.getPath());
         final boolean isSecrete = requestDto.isSecrete();
+        final UserFile parentFile;
+
+        try {
+            parentFile = userFileRepository.findByUrlAndIsDirectory(getParentPath(filePath), true);
+        } catch (DataAccessResourceFailureException ex){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
+        } catch (Exception ex){
+            log.error("UserFileCreateService.createUserFile message:{}",ex.getMessage(),ex);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
 
         //Process multiple files. | 복수의 파일 처리
         for(MultipartFile multipartFile : files){
@@ -68,7 +78,7 @@ public class UserFileCreateService {
                 continue;
             }
 
-            result.add(saveFile(multipartFile, filePath, thumbnailPath, userInfo, isSecrete));
+            result.add(saveFile(multipartFile, filePath, thumbnailPath, userInfo, isSecrete, parentFile));
         }
 
         return result;
@@ -80,7 +90,8 @@ public class UserFileCreateService {
             final String path,
             final String thumbnailPath,
             final UserInfo userInfo,
-            final boolean isSecrete){
+            final boolean isSecrete,
+            final UserFile parentFile){
 
         final String fileExtension = StringUtils.getFilenameExtension(file.getOriginalFilename());
         final String fileName = generateSaveFileName();//uuid
@@ -167,7 +178,7 @@ public class UserFileCreateService {
 
             isStreaming = true;
             //hls convert
-            final String hlsPath = UserFileDirPath+generatePath(path+"."+fileName);
+            final String hlsPath = UserFileDirPath+ checkPath(path+"."+fileName);
             fFmpegConfig.convertToHlsVideo(filePath, hlsPath); // <- async
         }
 
@@ -187,7 +198,7 @@ public class UserFileCreateService {
 
             isStreaming = true;
             //hls convert
-            final String hlsPath = UserFileDirPath+generatePath(path+"."+fileName);
+            final String hlsPath = UserFileDirPath+ checkPath(path+"."+fileName);
             fFmpegConfig.convertToHlsAudio(filePath, hlsPath); // <- async
         }
 
@@ -198,8 +209,10 @@ public class UserFileCreateService {
                 .fileExtension(fileExtension)
                 .fileSize(file.getSize())
                 .url(path)
+                .isDirectory(false)
                 .isStreaming(isStreaming)
                 .isSecrete(isSecrete)
+                .parent(parentFile)
                 .build();
 
         final UserFile result;
@@ -215,22 +228,22 @@ public class UserFileCreateService {
         return result;
     }
 
-    private String generatePath(final String path){ //use relative path
+    private String checkPath(final String path){ //use relative path
         final File folderPath = new File(UserFileDirPath+path);
 
         //Handle the case when the folder does not exist. | 폴더 위치가 존재하지 않을 때
         if(!folderPath.exists()){
-            try{
-                folderPath.mkdirs();
-            } catch (Exception ex){
-                log.error("UserFileCreateService.generatePath message:{}",ex.getMessage(),ex);
-                throw new CustomException(ExceptionCode.FAILED_TO_MAKE_DIR);
-            }
+            throw new CustomException(ExceptionCode.PATH_NOT_VALID);
         }
         return path;
     }
 
     private String generateSaveFileName(){
         return UUID.randomUUID().toString().replaceAll("-","");
+    }
+
+    private String getParentPath(String path) {
+        int lastSlashIndex = path.lastIndexOf('/');
+        return lastSlashIndex > 0 ? path.substring(0, lastSlashIndex) : "";
     }
 }

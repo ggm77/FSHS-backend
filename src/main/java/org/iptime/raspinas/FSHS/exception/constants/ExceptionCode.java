@@ -18,6 +18,8 @@ public enum ExceptionCode {
     PATH_NOT_VALID(HttpStatus.BAD_REQUEST, "Path is not valid."),
     FILE_NOT_EXIST(HttpStatus.BAD_REQUEST, "File not exist."),
     TOKEN_NOT_VALID(HttpStatus.UNAUTHORIZED, "Token is not valid."),
+    DIR_NOT_EXIST(HttpStatus.BAD_REQUEST, "Directory is not exist."),
+    DIR_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "Directory is already exist."),
 
 
     FAILED_TO_CONVERT_SVG_TO_JPEG(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to convert svg file to jpeg."),
