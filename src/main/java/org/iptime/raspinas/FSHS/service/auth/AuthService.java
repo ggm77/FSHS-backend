@@ -6,14 +6,21 @@ import org.iptime.raspinas.FSHS.config.WebSecurityConfig;
 import org.iptime.raspinas.FSHS.dto.auth.signIn.reqeust.SignInRequestDto;
 import org.iptime.raspinas.FSHS.dto.auth.signIn.response.SignInResponseDto;
 import org.iptime.raspinas.FSHS.dto.auth.signUp.request.SignUpRequestDto;
+import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
+import org.iptime.raspinas.FSHS.repository.userFile.UserFileRepository;
 import org.iptime.raspinas.FSHS.repository.userInfo.UserInfoRepository;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.NoSuchElementException;
 
 @Service
@@ -21,6 +28,10 @@ import java.util.NoSuchElementException;
 @Slf4j
 public class AuthService {
 
+    @Value("${user-file.directory.path}")
+    private String UserFileDirPath;
+
+    private final UserFileRepository userFileRepository;
     private final UserInfoRepository userInfoRepository;
     private final TokenProvider tokenProvider;
     private final WebSecurityConfig webSecurityConfig;
@@ -48,15 +59,55 @@ public class AuthService {
         }
 
         final UserInfo userInfo = new UserInfo(putDto);
+        final UserInfo result;
 
         try {
-            return userInfoRepository.save(userInfo);
+            result = userInfoRepository.save(userInfo);
         } catch (DataAccessResourceFailureException e){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
         } catch (Exception ex){
             log.error("AuthService.signUp message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
+
+
+        final String userDirPath = UserFileDirPath + "/" + result.getId().toString();
+        final String userThumbnailDirPath = UserFileDirPath + "/thumbnail/" + result.getId().toString();
+
+        try {
+            final Path path = Paths.get(userDirPath);
+            final Path thumbnailPath = Paths.get(userThumbnailDirPath);
+            if(!Files.exists(path)){
+                Files.createDirectories(path);
+            }
+            if(!Files.exists(thumbnailPath)){
+                Files.createDirectories(thumbnailPath);
+            }
+        } catch (IOException ex){
+            log.error("AuthService.signUp message:{}",ex.getMessage(), ex);
+            throw new CustomException(ExceptionCode.FAILED_TO_MAKE_DIR);
+        }
+
+        final UserFile root = UserFile.builder()
+                .userInfo(result)
+                .originalFileName(result.getId().toString())
+                .fileName(result.getId().toString())
+                .url("/" + result.getId().toString())
+                .isDirectory(true)
+                .isStreaming(false)
+                .isSecrete(false)
+                .build();
+
+        try {
+            userFileRepository.save(root);
+        } catch (DataAccessResourceFailureException ex){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
+        } catch (Exception ex){
+            log.error("AuthService.signUp message:{}",ex.getMessage(),ex);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
+
+        return result;
     }
 
     public SignInResponseDto signIn(final SignInRequestDto requestDto){

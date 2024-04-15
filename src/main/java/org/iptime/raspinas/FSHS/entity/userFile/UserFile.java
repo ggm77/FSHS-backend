@@ -9,11 +9,14 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class UserFile {
 
     @Id
@@ -30,10 +33,10 @@ public class UserFile {
     @Column(length = 47, nullable = false) //extension max len = 10
     private String fileName;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Long fileSize;
 
-    @Column(length = 10, nullable = false)
+    @Column(length = 10, nullable = true)
     private String fileExtension;
 
     @CreationTimestamp
@@ -44,6 +47,9 @@ public class UserFile {
 
     @Column(length = 2048, nullable = false)
     private String url;
+
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
+    private boolean isDirectory;
 
     @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isFavorite;
@@ -69,32 +75,11 @@ public class UserFile {
     @Column(nullable = true)
     private Timestamp deletedDate;
 
+    @ManyToOne
+    @JoinColumn(name = "parent_id")
+    private UserFile parent;
 
-    @Builder
-    public UserFile(
-            final UserInfo userInfo,
-            final String originalFileName,
-            final String fileName,
-            final String fileExtension,
-            final Long fileSize,
-            final String url,
-            final boolean isStreaming,
-            final boolean isSecrete
-    ){
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserFile> children = new ArrayList<>();
 
-        this.userInfo = userInfo;
-        this.originalFileName = originalFileName;
-        this.fileName = fileName;
-        this.fileExtension = fileExtension;
-        this.fileSize = fileSize;
-        this.url = url;
-        this.isStreaming = isStreaming;
-        this.isStreamingMusic = false;
-        this.isStreamingVideo = false;
-        this.isFavorite = false;
-        this.isShared = false;
-        this.isSecrete = isSecrete;
-        this.isDeleted = false;
-
-    }
 }
