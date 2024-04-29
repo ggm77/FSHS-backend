@@ -178,7 +178,7 @@ public class UserFileCreateService {
 
             isStreaming = true;
             //hls convert
-            final String hlsPath = UserFileDirPath+ checkPath(path+"."+fileName);
+            final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
             fFmpegConfig.convertToHlsVideo(filePath, hlsPath); // <- async
         }
 
@@ -198,7 +198,7 @@ public class UserFileCreateService {
 
             isStreaming = true;
             //hls convert
-            final String hlsPath = UserFileDirPath+ checkPath(path+"."+fileName);
+            final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
             fFmpegConfig.convertToHlsAudio(filePath, hlsPath); // <- async
         }
 
@@ -234,6 +234,21 @@ public class UserFileCreateService {
         //Handle the case when the folder does not exist. | 폴더 위치가 존재하지 않을 때
         if(!folderPath.exists()){
             throw new CustomException(ExceptionCode.PATH_NOT_VALID);
+        }
+        return path;
+    }
+
+    private String generatePath(final String path){ //use relative path
+        final File folderPath = new File(UserFileDirPath+path);
+
+        //Handle the case when the folder does not exist. | 폴더 위치가 존재하지 않을 때
+        if(!folderPath.exists()){
+            try{
+                folderPath.mkdirs();
+            } catch (Exception ex){
+                log.error("UserFileCreateService.generatePath message:{}",ex.getMessage(),ex);
+                throw new CustomException(ExceptionCode.FAILED_TO_MAKE_DIR);
+            }
         }
         return path;
     }
