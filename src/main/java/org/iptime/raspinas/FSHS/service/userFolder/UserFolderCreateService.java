@@ -95,7 +95,7 @@ public class UserFolderCreateService {
                 .userInfo(userInfo)
                 .originalFileName(folderName)
                 .fileName(folderName)
-                .url(path)
+                .url(parentPath+"/")
                 .isDirectory(true)
                 .isStreaming(false)
                 .isSecrete(false)
