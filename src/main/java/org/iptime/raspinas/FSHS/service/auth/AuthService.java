@@ -92,7 +92,7 @@ public class AuthService {
                 .userInfo(result)
                 .originalFileName(result.getId().toString())
                 .fileName(result.getId().toString())
-                .url("/")
+                .url("/" + result.getId().toString())
                 .isDirectory(true)
                 .isStreaming(false)
                 .isSecrete(false)
