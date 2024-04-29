@@ -30,7 +30,7 @@ public class UserFile {
     @Column(length = 260, nullable = false)
     private String originalFileName;
 
-    @Column(length = 47, nullable = false) //extension max len = 10
+    @Column(length = 255, nullable = false) //extension max len = 10
     private String fileName;
 
     @Column(nullable = true)
