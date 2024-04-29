@@ -208,7 +208,7 @@ public class UserFileCreateService {
                 .fileName(fileName)
                 .fileExtension(fileExtension)
                 .fileSize(file.getSize())
-                .url(path)
+                .url(path+fileName+"."+fileExtension)
                 .isDirectory(false)
                 .isStreaming(isStreaming)
                 .isSecrete(isSecrete)

@@ -53,7 +53,7 @@ public class UserFileDeleteService {
             throw new CustomException(ExceptionCode.FILE_ACCESS_DENY);
         }
 
-        final Path path = Paths.get(UserFileDirPath+file.getUrl()+file.getFileName()+"."+file.getFileExtension());
+        final Path path = Paths.get(UserFileDirPath+file.getUrl());
 
         try{
             userFileRepository.deleteById(fileId);
@@ -80,7 +80,7 @@ public class UserFileDeleteService {
 
             //delete thumbnail file | 썸네일 지우기
             if(mimeType.startsWith("image") || mimeType.startsWith("video") || mimeType.startsWith("audio")){
-                final String thumbnailPath = UserFileDirPath+"/thumbnail"+file.getUrl()+"s_"+file.getFileName();
+                final String thumbnailPath = UserFileDirPath+convertToThumbnailPath(file.getUrl());
                 try{
                     //Handle SVG file processing. | svg 파일 예외 처리
                     if(file.getFileExtension().equals("svg")){
@@ -109,5 +109,11 @@ public class UserFileDeleteService {
             log.error("UserFileDeleteService.deleteUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private String convertToThumbnailPath(final String filePath){
+        final Integer lastSlashIndex = filePath.lastIndexOf("/");
+
+        return "/thumbnail"+filePath.substring(0,lastSlashIndex+1)+"s_"+filePath.substring(lastSlashIndex+1);
     }
 }

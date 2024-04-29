@@ -61,7 +61,7 @@ public class UserFileReadService {
             throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
         }
 
-        final String path = UserFileDirPath+file.getUrl()+file.getFileName()+"."+file.getFileExtension();
+        final String path = UserFileDirPath+file.getUrl();
         final String originalFileName = file.getOriginalFileName();
         final String encodedFileName;
 
