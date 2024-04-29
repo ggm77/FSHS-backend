@@ -45,7 +45,9 @@ public class UserFileStreamingController {
 //        String userId = tokenProvider.validate(token);
         final String changedPath = path.replaceAll("@","/");
 
-        final File file = hlsService.getHlsFile("/"+userId+changedPath,fileName, hlsFile);
+        final String hlsFileName = hlsFile.substring(0, hlsFile.lastIndexOf("."));
+
+        final File file = hlsService.getHlsFile("/"+userId+changedPath,fileName, hlsFileName);
 
         try {
             final InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
