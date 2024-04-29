@@ -56,6 +56,11 @@ public class UserFileReadService {
             throw new CustomException(ExceptionCode.FILE_ACCESS_DENY);
         }
 
+        //Restricting download folder | 폴더 다운로드 제한
+        if(file.isDirectory()){
+            throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
+        }
+
         final String path = UserFileDirPath+file.getUrl()+file.getFileName()+"."+file.getFileExtension();
         final String originalFileName = file.getOriginalFileName();
         final String encodedFileName;
