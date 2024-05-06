@@ -22,6 +22,7 @@ public enum ExceptionCode {
     DIR_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "Directory is already exist."),
 
 
+    FAILED_TO_DELETE_FOLDER(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete folder."),
     FAILED_TO_CONVERT_SVG_TO_JPEG(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to convert svg file to jpeg."),
     FAILED_TO_GET_MEDIA_INFO(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to get info from media."),
     FAILED_TO_GENERATE_THUMBNAIL(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate thumbnail from uploaded file."),

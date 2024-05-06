@@ -5,9 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.iptime.raspinas.FSHS.dto.userFolder.request.UserFolderRequestDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
+import org.iptime.raspinas.FSHS.entity.userInfo.UserInfo;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.repository.userFile.UserFileRepository;
+import org.iptime.raspinas.FSHS.repository.userInfo.UserInfoRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class UserFolderUpdateService {
     private String UserFileDirPath;
 
     private final UserFileRepository userFileRepository;
+    private final UserInfoRepository userInfoRepository;
 
     @Transactional
     public Optional<UserFile> updateUserFolder(
@@ -52,10 +55,14 @@ public class UserFolderUpdateService {
         final String newFolderName = newFolderPath.substring(newFolderPath.lastIndexOf("/")+1);
         final Integer oldFolderIndex;
         final Integer oldFolderLen;
+        final UserFile userFile;
+        final UserInfo userInfo;
 
         final boolean isDuplicated;
         try{
             isDuplicated = userFileRepository.existsByUrlAndIsDirectory("/" + userId + newFolderPath, true);
+            userInfo = userInfoRepository.findById(userId).get();
+            userFile = userFileRepository.findById(folderId).get();
         } catch (DataAccessResourceFailureException ex){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
         } catch (Exception ex){
@@ -66,6 +73,11 @@ public class UserFolderUpdateService {
         //중복 폴더 예외 처리
         if(isDuplicated){
             throw new CustomException(ExceptionCode.DIR_ALREADY_EXIST);
+        }
+
+        //check validation | 권한 체크
+        if( !userInfo.getId().equals(userFile.getUserInfo().getId()) ){
+            throw new CustomException(ExceptionCode.FILE_ACCESS_DENY);
         }
 
 
