@@ -101,6 +101,23 @@ public class UserFileCreateService {
 
         final File saveFile = new File(filePath);
 
+
+        final boolean isFileNameDuplicated;
+        try{
+            isFileNameDuplicated = userFileRepository.existsByParentIdAndOriginalFileName(parentFile.getId(), file.getOriginalFilename());
+        } catch (DataAccessResourceFailureException ex){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
+        } catch (Exception ex){
+            log.error("UserFileCreateService.saveFile message:{}",ex.getMessage(),ex);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
+
+        //Prevent the upload of duplicate file names | 같은 이름의 파일 업로드 방지
+        if(isFileNameDuplicated){
+            throw new CustomException(ExceptionCode.FILE_NAME_DUPLICATED);
+        }
+
+
         try { // saving file
             file.transferTo(saveFile);
         } catch (IOException ex){

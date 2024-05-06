@@ -20,6 +20,7 @@ public enum ExceptionCode {
     TOKEN_NOT_VALID(HttpStatus.UNAUTHORIZED, "Token is not valid."),
     DIR_NOT_EXIST(HttpStatus.BAD_REQUEST, "Directory is not exist."),
     DIR_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "Directory is already exist."),
+    FILE_NAME_DUPLICATED(HttpStatus.BAD_REQUEST, "File name is duplicated."),
 
 
     FAILED_TO_DELETE_FOLDER(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete folder."),
