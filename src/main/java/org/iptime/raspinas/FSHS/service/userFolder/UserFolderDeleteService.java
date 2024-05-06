@@ -59,8 +59,8 @@ public class UserFolderDeleteService {
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
-        final String folderPath = UserFileDirPath + "/" + userId + userFile.getUrl();
-        final String thumbnailFolderPath = UserFileDirPath + "/thumbnail/" + userId + userFile.getUrl();
+        final String folderPath = UserFileDirPath + userFile.getUrl();
+        final String thumbnailFolderPath = UserFileDirPath + "/thumbnail/" + userFile.getUrl();
 
         folderDelete(folderPath);
         folderDelete(thumbnailFolderPath);

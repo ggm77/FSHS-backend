@@ -101,9 +101,12 @@ public class UserFolderUpdateService {
 
         Path source = Paths.get(UserFileDirPath + folder.getUrl());
         Path target = Paths.get(UserFileDirPath + "/"+userId+newFolderPath);
+        Path thumbnailSource = Paths.get(UserFileDirPath + "/thumbnail" + folder.getUrl());
+        Path thumbnailTarget = Paths.get(UserFileDirPath + "/thumbnail/" + userId + newFolderPath);
 
         try {
             Files.move(source, target);
+            Files.move(thumbnailSource, thumbnailTarget);
         } catch (IOException ex) {
             log.error("UserFolderUpdateService.updateUserFolder message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.FAILED_TO_MAKE_DIR);
@@ -111,7 +114,7 @@ public class UserFolderUpdateService {
 
         folder.setFileName(newFolderName);
         folder.setOriginalFileName(newFolderName);
-        folder.setUrl(newFolderPath);
+        folder.setUrl("/" + userId + newFolderPath);
         if (folder.getChildren() != null && !folder.getChildren().isEmpty()) {
             for (UserFile child : folder.getChildren()) {
             updateFolderPath(child, newFolderName, oldFolderIndex, oldFolderLen);
@@ -133,7 +136,7 @@ public class UserFolderUpdateService {
 
        if (folder.getChildren() != null && !folder.getChildren().isEmpty()) {
            for (UserFile child : folder.getChildren()) {
-               updateFolderPath(child, newName, oldNameIndex, oldNameIndex);
+               updateFolderPath(child, newName, oldNameIndex, oldNameLen);
            }
        }
     }
