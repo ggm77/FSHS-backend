@@ -11,6 +11,7 @@ import org.iptime.raspinas.FSHS.dto.userInfo.response.UserInfoResponseDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
 import org.iptime.raspinas.FSHS.service.userFolder.UserFolderCreateService;
+import org.iptime.raspinas.FSHS.service.userFolder.UserFolderDeleteService;
 import org.iptime.raspinas.FSHS.service.userFolder.UserFolderUpdateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -26,6 +27,7 @@ public class UserFolderController {
 
     private final UserFolderCreateService userFolderCreateService;
     private final UserFolderUpdateService userFolderUpdateService;
+    private final UserFolderDeleteService userFolderDeleteService;
     private final TokenProvider tokenProvider;
 
     @PostMapping(value = "/folder")
@@ -76,5 +78,25 @@ public class UserFolderController {
 
         return result.map(node -> ResponseEntity.ok(UserFolderResponseDto.fromEntity(node)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping(value = "/folder/{folderId}")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "폴더 삭제 성공"
+            )
+    })
+    public ResponseEntity<?> deleteUserFolder(
+            @RequestHeader(value = "Authorization") final String token,
+            @PathVariable final Long folderId
+    ){
+
+        final String userId = tokenProvider.validate(token.substring(7));
+        final Long id = Long.parseLong(userId);
+
+        userFolderDeleteService.deleteUserFolder(folderId, id);
+
+        return ResponseEntity.noContent().build();
     }
 }
