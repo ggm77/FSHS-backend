@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
+import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileUpdateRequestDto;
+import org.iptime.raspinas.FSHS.dto.userFile.response.UserFileSimpleResponseDto;
 import org.iptime.raspinas.FSHS.dto.userFolder.response.UserFolderResponseDto;
 import org.iptime.raspinas.FSHS.dto.userInfo.response.UserInfoResponseDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
@@ -13,6 +15,7 @@ import org.iptime.raspinas.FSHS.security.TokenProvider;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileCreateService;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileDeleteService;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileReadService;
+import org.iptime.raspinas.FSHS.service.userFile.UserFileUpdateService;
 import org.iptime.raspinas.FSHS.service.userFolder.UserFolderReadService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +35,7 @@ public class UserFileController {
     private final UserFileCreateService userFileCreateService;
     private final UserFileReadService userFileReadService;
     private final UserFolderReadService userFolderReadService;
+    private final UserFileUpdateService userFileUpdateService;
     private final UserFileDeleteService userFileDeleteService;
     private final TokenProvider tokenProvider;
 
@@ -96,6 +100,28 @@ public class UserFileController {
         final Long longUserId = Long.parseLong(userId);
 
         return userFileReadService.readUserFile(id, longUserId);
+    }
+
+    @PatchMapping("/files/{id}")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "유저 파일 수정 성공",
+                    content = @Content(schema = @Schema(implementation = UserFileSimpleResponseDto.class))
+            )
+    })
+    public ResponseEntity<?> updateUserFile(
+            @PathVariable final Long id,
+            @RequestHeader(value = "Authorization") final String token,
+            @RequestBody final UserFileUpdateRequestDto userFileUpdateRequestDto
+    ){
+
+        final String userId = tokenProvider.validate(token.substring(7));
+        final Long longUserId = Long.parseLong(userId);
+
+        final UserFileSimpleResponseDto result = userFileUpdateService.updateUserFile(longUserId, id, userFileUpdateRequestDto);
+
+        return ResponseEntity.ok(result);
     }
 
 
