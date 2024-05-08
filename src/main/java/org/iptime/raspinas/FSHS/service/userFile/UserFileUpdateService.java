@@ -9,16 +9,9 @@ import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.repository.userFile.UserFileRepository;
-import org.iptime.raspinas.FSHS.repository.userInfo.UserInfoRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 @Service
 @Slf4j
@@ -61,8 +54,41 @@ public class UserFileUpdateService {
             throw new CustomException(ExceptionCode.FILE_NAME_DUPLICATED);
         }
 
+        final String originalFileName = userFileUpdateRequestDto.getOriginalFileName();
+        final Boolean isFavorite = userFileUpdateRequestDto.getIsFavorite();
+        final Boolean isStreaming = userFileUpdateRequestDto.getIsStreaming();
+        final Boolean isStreamingMusic = userFileUpdateRequestDto.getIsStreamingMusic();
+        final Boolean isStreamingVideo = userFileUpdateRequestDto.getIsStreamingVideo();
+        final Boolean isShared = userFileUpdateRequestDto.getIsShared();
+        final Boolean isSecrete = userFileUpdateRequestDto.getIsSecrete();
 
-        userFile.setOriginalFileName(userFileUpdateRequestDto.getOriginalFileName());
+        if( !originalFileName.isEmpty() && originalFileName != null ){
+            userFile.setOriginalFileName(userFileUpdateRequestDto.getOriginalFileName());
+        }
+
+        if( isFavorite != null ){
+            userFile.setFavorite(isFavorite);
+        }
+
+        if( isStreaming != null ){
+            userFile.setStreaming(isStreaming);
+        }
+
+        if( isStreamingMusic != null ){
+            userFile.setStreamingMusic(isStreamingMusic);
+        }
+
+        if( isStreamingVideo != null ){
+            userFile.setStreamingVideo(isStreamingVideo);
+        }
+
+        if( isShared != null ){
+            userFile.setShared(isShared);
+        }
+
+        if( isSecrete != null ){
+            userFile.setSecrete(isSecrete);
+        }
 
         return new UserFileSimpleResponseDto(userFile);
     }
