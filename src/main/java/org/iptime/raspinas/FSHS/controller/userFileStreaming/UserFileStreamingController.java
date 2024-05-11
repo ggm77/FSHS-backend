@@ -120,6 +120,17 @@ public class UserFileStreamingController {
 
         final String changedPath = path.substring(0, path.lastIndexOf("/")+1);
 
-        return imageStreamingService.streamingImageFile("/thumbnail"+changedPath,"s_" + path.substring(path.lastIndexOf("/")+1));
+        if(path.endsWith("svg") || path.endsWith("SVG")){
+            return imageStreamingService.streamingImageFile("/thumbnail"+changedPath,"s_" + path.substring(path.lastIndexOf("/")+1));
+        } else {
+            return imageStreamingService.streamingImageFile(
+                    "/thumbnail"+changedPath,
+                    "s_" + path.substring(
+                        path.lastIndexOf("/")+1,
+                        path.lastIndexOf(".")
+                    ) + ".jpeg"
+            );
+        }
+
     }
 }
