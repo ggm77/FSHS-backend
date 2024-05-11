@@ -98,6 +98,8 @@ public class UserFileCreateService {
         final String filePath = UserFileDirPath+path+fileName+"."+fileExtension;
 
         boolean isStreaming = false;
+        boolean isStreamingMusic = false;
+        boolean isStreamingVideo = false;
 
         final File saveFile = new File(filePath);
 
@@ -194,6 +196,7 @@ public class UserFileCreateService {
 
 
             isStreaming = true;
+            isStreamingVideo = true;
             //hls convert
             final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
             fFmpegConfig.convertToHlsVideo(filePath, hlsPath); // <- async
@@ -214,6 +217,7 @@ public class UserFileCreateService {
             }
 
             isStreaming = true;
+            isStreamingMusic = true;
             //hls convert
             final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
             fFmpegConfig.convertToHlsAudio(filePath, hlsPath); // <- async
@@ -228,6 +232,8 @@ public class UserFileCreateService {
                 .url(path+fileName+"."+fileExtension)
                 .isDirectory(false)
                 .isStreaming(isStreaming)
+                .isStreamingMusic(isStreamingMusic)
+                .isStreamingVideo(isStreamingVideo)
                 .isSecrete(isSecrete)
                 .parent(parentFile)
                 .build();
