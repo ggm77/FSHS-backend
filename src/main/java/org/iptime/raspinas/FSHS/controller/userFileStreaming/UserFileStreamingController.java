@@ -27,7 +27,7 @@ public class UserFileStreamingController {
     private final TokenProvider tokenProvider;
 
     //@GetMapping("/streaming-video/{token}/{path}/{fileName}")
-    @GetMapping("/streaming-video/{userId}/{path}/{fileName}/{hlsFile}")
+    @GetMapping("/streaming-video/{path}/{hlsFile}")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -36,9 +36,7 @@ public class UserFileStreamingController {
     })
     public ResponseEntity<InputStreamResource> streamVideo(
             //@PathVariable String token
-            @PathVariable final String userId,
             @PathVariable final String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable final String fileName,
             @PathVariable final String hlsFile
     ){
 
@@ -47,7 +45,7 @@ public class UserFileStreamingController {
 
         final String hlsFileName = hlsFile.substring(0, hlsFile.lastIndexOf("."));
 
-        final File file = hlsService.getHlsFile("/"+userId+changedPath,fileName, hlsFileName);
+        final File file = hlsService.getHlsFile(changedPath, hlsFileName);
 
         try {
             final InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
@@ -61,7 +59,7 @@ public class UserFileStreamingController {
         }
     }
 
-    @GetMapping("/streaming-audio/{userId}/{path}/{fileName}/{hlsFile}")
+    @GetMapping("/streaming-audio/{path}/{hlsFile}")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -69,9 +67,7 @@ public class UserFileStreamingController {
             )
     })
     public ResponseEntity<InputStreamResource> streamAudio(
-            @PathVariable final String userId,
             @PathVariable final String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable final String fileName,
             @PathVariable final String hlsFile
     ){
 
@@ -79,7 +75,7 @@ public class UserFileStreamingController {
 
         final String hlsFileName = hlsFile.substring(0, hlsFile.lastIndexOf("."));
 
-        final File file = hlsService.getHlsFile("/"+userId+changedPath, fileName, hlsFileName);
+        final File file = hlsService.getHlsFile(changedPath, hlsFileName);
 
         try{
             final InputStreamResource resource = new InputStreamResource(new FileInputStream(file));
@@ -93,7 +89,7 @@ public class UserFileStreamingController {
         }
     }
 
-    @GetMapping("/streaming-image/{userId}/{path}/{fileNameAndExtension}")
+    @GetMapping("/streaming-image")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -102,21 +98,13 @@ public class UserFileStreamingController {
     })
     public ResponseEntity<?> streamImageFile(
             @RequestHeader(value = "Authorization") final String token,
-            @PathVariable final String userId,
-            @PathVariable final String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable final String fileNameAndExtension
+            @RequestParam final String path // ' @{userFolder}@{userFolder}@ '   @ ==> /
     ){
 
         final String id = tokenProvider.validate(token.substring(7));
+        final String fileName = path.substring(path.lastIndexOf('/')+1);
 
-        //Restricting access for other users. | 다른 유저 접근 제한
-        if(!id.equals(userId)){
-            throw new CustomException(ExceptionCode.TOKEN_AND_ID_NOT_MATCHED);
-        }
-
-        final String changedPath = path.replaceAll("@","/");
-
-        return imageStreamingService.streamingImageFile("/"+userId+changedPath,fileNameAndExtension);
+        return imageStreamingService.streamingImageFile(path.substring(0,path.lastIndexOf('/')+1),fileName);
     }
 
     @GetMapping("/streaming-thumbnail")
