@@ -119,7 +119,7 @@ public class UserFileStreamingController {
         return imageStreamingService.streamingImageFile("/"+userId+changedPath,fileNameAndExtension);
     }
 
-    @GetMapping("/streaming-thumbnail/{userId}/{path}/{fileNameAndExtension}")
+    @GetMapping("/streaming-thumbnail")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
@@ -127,21 +127,11 @@ public class UserFileStreamingController {
             )
     })
     public ResponseEntity<?> streamThumbnailImageFile(
-            @RequestHeader(value = "Authorization") final String token,
-            @PathVariable final String userId,
-            @PathVariable final String path, // ' @{userFolder}@{userFolder}@ '   @ ==> /
-            @PathVariable final String fileNameAndExtension
+            @RequestParam final String path
     ){
 
-        final String id = tokenProvider.validate(token.substring(7));
+        final String changedPath = path.substring(0, path.lastIndexOf("/")+1);
 
-        //Restricting access for other users. | 다른 유저 접근 제한
-        if(!id.equals(userId)){
-            throw new CustomException(ExceptionCode.TOKEN_AND_ID_NOT_MATCHED);
-        }
-
-        final String changedPath = path.replaceAll("@","/");
-
-        return imageStreamingService.streamingImageFile("/thumbnail/"+userId+changedPath,"s_" + fileNameAndExtension);
+        return imageStreamingService.streamingImageFile("/thumbnail"+changedPath,"s_" + path.substring(path.lastIndexOf("/")+1));
     }
 }
