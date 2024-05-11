@@ -62,7 +62,7 @@ public class UserFileUpdateService {
         final Boolean isShared = userFileUpdateRequestDto.getIsShared();
         final Boolean isSecrete = userFileUpdateRequestDto.getIsSecrete();
 
-        if( !originalFileName.isEmpty() && originalFileName != null ){
+        if( originalFileName != null && !originalFileName.isEmpty()){
             userFile.setOriginalFileName(userFileUpdateRequestDto.getOriginalFileName());
         }
 
