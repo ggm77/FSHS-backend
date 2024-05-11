@@ -84,10 +84,10 @@ public class UserFileDeleteService {
                 try{
                     //Handle SVG file processing. | svg 파일 예외 처리
                     if(file.getFileExtension().equals("svg")){
-                        Files.delete(Paths.get(thumbnailPath+".svg"));
+                        Files.delete(Paths.get(thumbnailPath.substring(0,thumbnailPath.lastIndexOf('.'))+".svg"));
                     }
                     else {
-                        Files.delete(Paths.get(thumbnailPath + ".jpeg"));
+                        Files.delete(Paths.get(thumbnailPath));
                     }
                 } catch (FileNotFoundException ex){
                     throw new CustomException(ExceptionCode.FILE_MISSING);
