@@ -26,6 +26,7 @@ public class UserFolderResponseDto {
     private boolean isFavorite;
     private boolean isStreaming;
     private boolean isStreamingMusic;
+    private boolean isStreamingVideo;
     private boolean isShared;
     private boolean isSecrete;
     private boolean isDeleted;
@@ -46,6 +47,7 @@ public class UserFolderResponseDto {
         dto.setFavorite(file.isFavorite());
         dto.setStreaming(file.isStreaming());
         dto.setStreamingMusic(file.isStreamingMusic());
+        dto.setStreamingVideo(file.isStreamingVideo());
         dto.setShared(file.isShared());
         dto.setSecrete(file.isSecrete());
         dto.setDeleted(file.isDeleted());
