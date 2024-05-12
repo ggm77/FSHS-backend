@@ -97,6 +97,7 @@ public class UserFileCreateService {
         final String fileName = generateSaveFileName();//uuid
         final String filePath = UserFileDirPath+path+fileName+"."+fileExtension;
 
+        boolean hasThumbnail = false;
         boolean isStreaming = false;
         boolean isStreamingMusic = false;
         boolean isStreamingVideo = false;
@@ -173,6 +174,7 @@ public class UserFileCreateService {
                     throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
                 }
             }
+            hasThumbnail = true;
         }
 
         //for video files | 비디오 파일인 경우
@@ -194,7 +196,7 @@ public class UserFileCreateService {
                 throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
             }
 
-
+            hasThumbnail = true;
             isStreaming = true;
             isStreamingVideo = true;
             //hls convert
@@ -216,6 +218,7 @@ public class UserFileCreateService {
                 throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
             }
 
+            hasThumbnail = true;
             isStreaming = true;
             isStreamingMusic = true;
             //hls convert
@@ -231,6 +234,7 @@ public class UserFileCreateService {
                 .fileSize(file.getSize())
                 .url(path+fileName+"."+fileExtension)
                 .isDirectory(false)
+                .hasThumbnail(hasThumbnail)
                 .isStreaming(isStreaming)
                 .isStreamingMusic(isStreamingMusic)
                 .isStreamingVideo(isStreamingVideo)

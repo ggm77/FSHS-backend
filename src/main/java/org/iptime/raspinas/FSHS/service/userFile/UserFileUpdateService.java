@@ -56,6 +56,7 @@ public class UserFileUpdateService {
 
         final String originalFileName = userFileUpdateRequestDto.getOriginalFileName();
         final Boolean isFavorite = userFileUpdateRequestDto.getIsFavorite();
+        final Boolean hasThumbnail = userFileUpdateRequestDto.getHasThumbnail();
         final Boolean isStreaming = userFileUpdateRequestDto.getIsStreaming();
         final Boolean isStreamingMusic = userFileUpdateRequestDto.getIsStreamingMusic();
         final Boolean isStreamingVideo = userFileUpdateRequestDto.getIsStreamingVideo();
@@ -68,6 +69,10 @@ public class UserFileUpdateService {
 
         if( isFavorite != null ){
             userFile.setFavorite(isFavorite);
+        }
+
+        if( hasThumbnail != null ){
+            userFile.setHasThumbnail(hasThumbnail);
         }
 
         if( isStreaming != null ){

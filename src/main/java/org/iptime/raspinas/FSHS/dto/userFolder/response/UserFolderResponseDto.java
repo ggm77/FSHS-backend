@@ -1,6 +1,5 @@
 package org.iptime.raspinas.FSHS.dto.userFolder.response;
 
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -24,6 +23,7 @@ public class UserFolderResponseDto {
     private String url;
     private boolean isDirectory;
     private boolean isFavorite;
+    private boolean hasThumbnail;
     private boolean isStreaming;
     private boolean isStreamingMusic;
     private boolean isStreamingVideo;
@@ -45,6 +45,7 @@ public class UserFolderResponseDto {
         dto.setUrl(file.getUrl());
         dto.setDirectory(file.isDirectory());
         dto.setFavorite(file.isFavorite());
+        dto.setHasThumbnail(file.isHasThumbnail());
         dto.setStreaming(file.isStreaming());
         dto.setStreamingMusic(file.isStreamingMusic());
         dto.setStreamingVideo(file.isStreamingVideo());

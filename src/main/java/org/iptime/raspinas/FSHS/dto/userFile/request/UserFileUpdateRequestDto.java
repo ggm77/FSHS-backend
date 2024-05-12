@@ -6,6 +6,7 @@ import lombok.Getter;
 public class UserFileUpdateRequestDto {
     private String originalFileName;
     private Boolean isFavorite;
+    private Boolean hasThumbnail;
     private Boolean isStreaming;
     private Boolean isStreamingMusic;
     private Boolean isStreamingVideo;
