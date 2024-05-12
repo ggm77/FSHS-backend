@@ -97,7 +97,7 @@ public class UserFileDeleteService {
             //delete hls file | hls 파일 지우기
             if(file.isStreaming()){
                 final File hlsPath;
-                hlsPath = Paths.get(UserFileDirPath+file.getUrl()+"."+file.getFileName()+"/").toFile();
+                hlsPath = Paths.get(UserFileDirPath+file.getUrl().substring(0, file.getUrl().lastIndexOf("/")+1)+"."+file.getFileName()+"/").toFile();
                 FileUtils.cleanDirectory(hlsPath);
                 hlsPath.delete();
             }
@@ -113,7 +113,8 @@ public class UserFileDeleteService {
 
     private String convertToThumbnailPath(final String filePath){
         final Integer lastSlashIndex = filePath.lastIndexOf("/");
+        final Integer lastDotIndex = filePath.lastIndexOf(".");
 
-        return "/thumbnail"+filePath.substring(0,lastSlashIndex+1)+"s_"+filePath.substring(lastSlashIndex+1);
+        return "/thumbnail"+filePath.substring(0,lastSlashIndex+1)+"s_"+filePath.substring(lastSlashIndex+1, lastDotIndex)+".jpeg";
     }
 }
