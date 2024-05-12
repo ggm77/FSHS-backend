@@ -55,6 +55,9 @@ public class UserFile {
     private boolean isFavorite;
 
     @Column(columnDefinition = "BOOLEAN", nullable = false)
+    private boolean hasThumbnail;
+
+    @Column(columnDefinition = "BOOLEAN", nullable = false)
     private boolean isStreaming;
 
     @Column(columnDefinition = "BOOLEAN", nullable = false)
