@@ -21,6 +21,10 @@ public class CorsConfig {
                 corsRegistry.addMapping("/api/v1/streaming-audio/**").allowedOriginPatterns("*")
                         .allowedMethods("GET","OPTIONS");
 
+                corsRegistry.addMapping("/api/v1/files/**").allowedOriginPatterns("*")
+                        .allowedMethods("GET","POST","PATCH","DELETE","OPTION")
+                        .exposedHeaders("Content-Disposition");
+
                 corsRegistry.addMapping("/**").allowedOriginPatterns("*")
                         .allowedMethods("GET","POST","PATCH","DELETE","OPTION");
             }
