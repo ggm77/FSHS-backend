@@ -76,7 +76,8 @@ public class FFmpegConfig {
 
     public void getAlbumCoverImage(
             final String filePath,
-            final String thumbnailPath
+            final String thumbnailPath,
+            final String fileName
     ){
 
         final FFmpegBuilder builder = new FFmpegBuilder()
@@ -89,20 +90,23 @@ public class FFmpegConfig {
 
 
         final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
+        log.info("'{}' album cover extraction started", fileName);
         executor.createJob(builder, progress -> {
-            log.info("progress ==> {}", progress);
+            log.info("file:'{}' progress ==> {}", fileName, progress);
 
             //Successfully completed the operation. | 작업이 정상 종료 되었을 때
             if (progress.status.equals(Progress.Status.END)) {
-                log.info("================================= JOB FINISHED =================================");
+                log.info("================================= '{}' JOB FINISHED =================================", fileName);
             }
         }).run();
+        log.info("'{}' album cover extraction completed", fileName);
     }
 
     @Async
     public void convertToHlsVideo(
             final String filePath,
-            final String hlsPath
+            final String hlsPath,
+            final String fileName
     ){
 
         final FFmpegBuilder builder = new FFmpegBuilder()
@@ -116,14 +120,16 @@ public class FFmpegConfig {
                 .done();
 
         final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
+        log.info("'{}' HLS conversion started", fileName);
         executor.createJob(builder, progress -> {
-            log.info("progress ==> {}", progress);
+            log.info("file:'{}' progress ==> {}", fileName, progress);
 
             //Successfully completed the operation. | 작업이 정상 종료 되었을 때
             if (progress.status.equals(Progress.Status.END)) {
-                log.info("================================= JOB FINISHED =================================");
+                log.info("================================= '{}' JOB FINISHED =================================", fileName);
             }
         }).run();
+        log.info("'{}' HLS conversion completed", fileName);
 
         final File complete = new File(hlsPath+"/complete.txt");
         try {
@@ -137,7 +143,8 @@ public class FFmpegConfig {
     @Async
     public void convertToHlsAudio(
             final String filePath,
-            final String hlsPath
+            final String hlsPath,
+            final String fileName
     ){
         final FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(filePath) // 입력 소스
@@ -156,14 +163,16 @@ public class FFmpegConfig {
 
         try {
             final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
+            log.info("'{}' HLS conversion started", fileName);
             executor.createJob(builder, progress -> {
-                log.info("progress ==> {}", progress);
+                log.info("file:'{}' progress ==> {}", fileName, progress);
 
                 //Successfully completed the operation. | 작업이 정상 종료 되었을 때
                 if (progress.status.equals(Progress.Status.END)) {
-                    log.info("================================= JOB FINISHED =================================");
+                    log.info("================================= '{}' JOB FINISHED =================================", fileName);
                 }
             }).run();
+            log.info("'{}' HLS conversion completed", fileName);
         } catch (IllegalArgumentException ex) {
             log.error("FFmpegConfig.convertToHlsAudio message:{}", ex.getMessage(), ex);
         } catch (Exception ex) {
