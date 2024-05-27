@@ -201,7 +201,7 @@ public class UserFileCreateService {
             isStreamingVideo = true;
             //hls convert
             final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
-            fFmpegConfig.convertToHlsVideo(filePath, hlsPath); // <- async
+            fFmpegConfig.convertToHlsVideo(filePath, hlsPath, file.getOriginalFilename()); // <- async
         }
 
         //for audio files | 오디오 파일인 경우
@@ -211,7 +211,7 @@ public class UserFileCreateService {
             final File thumbnailSaveFile = new File(thumbnailSaveName);
 
             try{
-                fFmpegConfig.getAlbumCoverImage(filePath, thumbnailSaveName);
+                fFmpegConfig.getAlbumCoverImage(filePath, thumbnailSaveName, file.getOriginalFilename());
                 Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
             } catch (Exception ex){
                 log.error("UserFileCreateService.saveFile message:{}",ex.getMessage(),ex);
@@ -223,7 +223,7 @@ public class UserFileCreateService {
             isStreamingMusic = true;
             //hls convert
             final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
-            fFmpegConfig.convertToHlsAudio(filePath, hlsPath); // <- async
+            fFmpegConfig.convertToHlsAudio(filePath, hlsPath, file.getOriginalFilename()); // <- async
         }
 
         final UserFile fileEntity = UserFile.builder()
