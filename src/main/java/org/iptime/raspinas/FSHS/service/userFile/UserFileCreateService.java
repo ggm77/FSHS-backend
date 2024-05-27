@@ -207,18 +207,21 @@ public class UserFileCreateService {
         //for audio files | 오디오 파일인 경우
         else if(mimeType.startsWith("audio")){
 
-            final String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".jpeg";
-            final File thumbnailSaveFile = new File(thumbnailSaveName);
+            if(!fileExtension.equals("M4A") && !fileExtension.equals("m4a")) {
+                final String thumbnailSaveName = UserFileDirPath + thumbnailPath + "s_" + fileName + ".jpeg";
+                final File thumbnailSaveFile = new File(thumbnailSaveName);
 
-            try{
-                fFmpegConfig.getAlbumCoverImage(filePath, thumbnailSaveName, file.getOriginalFilename());
-                Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
-            } catch (Exception ex){
-                log.error("UserFileCreateService.saveFile message:{}",ex.getMessage(),ex);
-                throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+                try {
+                    fFmpegConfig.getAlbumCoverImage(filePath, thumbnailSaveName, file.getOriginalFilename());
+                    Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
+                } catch (Exception ex) {
+                    log.error("UserFileCreateService.saveFile message:{}", ex.getMessage(), ex);
+                    throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+                }
+
+                hasThumbnail = true;
             }
 
-            hasThumbnail = true;
             isStreaming = true;
             isStreamingMusic = true;
             //hls convert
