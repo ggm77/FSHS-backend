@@ -81,6 +81,8 @@ public class UserFileCreateService {
             result.add(saveFile(multipartFile, filePath, thumbnailPath, userInfo, isSecrete, parentFile));
         }
 
+        log.info("<=== UPLOAD COMPLETE ===>");
+
         return result;
     }
 
