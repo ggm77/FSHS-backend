@@ -178,7 +178,8 @@ public class UserFileCreateService {
         }
 
         //for video files | 비디오 파일인 경우
-        else if(mimeType.startsWith("video")){
+        //tika가 m4a 파일을 잘못 인식함
+        else if(mimeType.startsWith("video") && !fileExtension.endsWith("m4a") && !fileExtension.endsWith("M4A")){
             //generate thumbnail
             final String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".jpeg";
             final File thumbnailSaveFile = new File(thumbnailSaveName);
@@ -205,7 +206,7 @@ public class UserFileCreateService {
         }
 
         //for audio files | 오디오 파일인 경우
-        else if(mimeType.startsWith("audio")){
+        else if(mimeType.startsWith("audio") || fileExtension.equals("M4A") || fileExtension.equals("m4a")){
 
             if(!fileExtension.equals("M4A") && !fileExtension.equals("m4a")) {
                 final String thumbnailSaveName = UserFileDirPath + thumbnailPath + "s_" + fileName + ".jpeg";
