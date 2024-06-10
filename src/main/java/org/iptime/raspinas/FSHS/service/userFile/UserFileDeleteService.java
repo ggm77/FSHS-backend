@@ -79,7 +79,7 @@ public class UserFileDeleteService {
 
 
             //delete thumbnail file | 썸네일 지우기
-            if(mimeType.startsWith("image") || mimeType.startsWith("video") || mimeType.startsWith("audio")){
+            if(file.isHasThumbnail()){
                 final String thumbnailPath = UserFileDirPath+convertToThumbnailPath(file.getUrl());
                 try{
                     //Handle SVG file processing. | svg 파일 예외 처리
