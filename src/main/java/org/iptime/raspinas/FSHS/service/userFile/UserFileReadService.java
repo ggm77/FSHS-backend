@@ -77,6 +77,7 @@ public class UserFileReadService {
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .cacheControl(CacheControl.noCache())
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''"+encodedFileName)
+                    .contentLength(file.getFileSize())
                     .body(resource);
 
         } catch (FileNotFoundException ex) {
