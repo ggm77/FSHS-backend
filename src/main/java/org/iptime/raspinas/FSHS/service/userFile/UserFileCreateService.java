@@ -187,17 +187,15 @@ public class UserFileCreateService {
             try {
                 fFmpegConfig.generateThumbnail(filePath, thumbnailSaveName);
                 Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
-            } catch (IllegalArgumentException ex){
-                throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
+                hasThumbnail = true;
             } catch (IOException ex) {
                 log.error("UserFileCreateService.saveFile message:{}",ex.getMessage(),ex);
                 throw new CustomException(ExceptionCode.FAILED_TO_GENERATE_THUMBNAIL);
             } catch (Exception ex){
                 log.error("UserFileCreateService.saveFile message:{}",ex.getMessage(),ex);
-                throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
             }
 
-            hasThumbnail = true;
+
             isStreaming = true;
             isStreamingVideo = true;
             //hls convert
@@ -215,12 +213,13 @@ public class UserFileCreateService {
                 try {
                     fFmpegConfig.getAlbumCoverImage(filePath, thumbnailSaveName, file.getOriginalFilename());
                     Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
+                    hasThumbnail = true;
                 } catch (Exception ex) {
                     log.error("UserFileCreateService.saveFile message:{}", ex.getMessage(), ex);
-                    throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+//                    throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
                 }
 
-                hasThumbnail = true;
+
             }
 
             isStreaming = true;
