@@ -7,14 +7,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileUpdateRequestDto;
+import org.iptime.raspinas.FSHS.dto.userFile.response.UserFileResponseDto;
 import org.iptime.raspinas.FSHS.dto.userFile.response.UserFileSimpleResponseDto;
 import org.iptime.raspinas.FSHS.dto.userFolder.response.UserFolderResponseDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
-import org.iptime.raspinas.FSHS.service.userFile.UserFileCreateService;
-import org.iptime.raspinas.FSHS.service.userFile.UserFileDeleteService;
-import org.iptime.raspinas.FSHS.service.userFile.UserFileDownloadService;
-import org.iptime.raspinas.FSHS.service.userFile.UserFileUpdateService;
+import org.iptime.raspinas.FSHS.service.userFile.*;
 import org.iptime.raspinas.FSHS.service.userFolder.UserFolderReadService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +31,7 @@ public class UserFileController {
 
     private final UserFileCreateService userFileCreateService;
     private final UserFileDownloadService userFileDownloadService;
+    private final UserFileReadService userFileReadService;
     private final UserFolderReadService userFolderReadService;
     private final UserFileUpdateService userFileUpdateService;
     private final UserFileDeleteService userFileDeleteService;
@@ -99,6 +98,25 @@ public class UserFileController {
         final Long longUserId = Long.parseLong(userId);
 
         return userFileDownloadService.downloadUserFile(id, longUserId);
+    }
+
+
+    @GetMapping("/files/{id}")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "유저 파일 정보 조회 성공",
+                    content = @Content(schema = @Schema(implementation = UserFileResponseDto.class))
+            )
+    })
+    public ResponseEntity<?> getUserFileInfo(
+            @PathVariable final Long id,
+            @RequestHeader(value = "Authorization") final String token
+    ){
+        final String userId = tokenProvider.validate(token.substring(7));
+        final Long longUserId = Long.parseLong(userId);
+
+        return userFileReadService.readUserFileInfo(longUserId, id);
     }
 
     @PatchMapping("/files/{id}")
