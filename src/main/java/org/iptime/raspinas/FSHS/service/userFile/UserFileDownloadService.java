@@ -24,14 +24,14 @@ import java.util.NoSuchElementException;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserFileReadService {
+public class UserFileDownloadService {
 
     private final UserFileRepository userFileRepository;
 
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
 
-    public ResponseEntity readUserFile(
+    public ResponseEntity downloadUserFile(
             final Long id,
             final Long userId
     ){
@@ -45,7 +45,7 @@ public class UserFileReadService {
         } catch (DataAccessResourceFailureException ex){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
         } catch (Exception ex){
-            log.error("UserFileReadService.readUserFile message:{}",ex.getMessage(),ex);
+            log.error("UserFileDownloadService.downloadUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
@@ -83,7 +83,7 @@ public class UserFileReadService {
         } catch (FileNotFoundException ex) {
             throw new CustomException(ExceptionCode.FILE_MISSING);
         } catch (Exception ex){
-            log.error("UserFileReadService.readUserFile message:{}",ex.getMessage(),ex);
+            log.error("UserFileDownloadService.downloadUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
     }

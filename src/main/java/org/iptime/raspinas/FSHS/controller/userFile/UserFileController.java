@@ -9,12 +9,11 @@ import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileCreateRequestDto;
 import org.iptime.raspinas.FSHS.dto.userFile.request.UserFileUpdateRequestDto;
 import org.iptime.raspinas.FSHS.dto.userFile.response.UserFileSimpleResponseDto;
 import org.iptime.raspinas.FSHS.dto.userFolder.response.UserFolderResponseDto;
-import org.iptime.raspinas.FSHS.dto.userInfo.response.UserInfoResponseDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 import org.iptime.raspinas.FSHS.security.TokenProvider;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileCreateService;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileDeleteService;
-import org.iptime.raspinas.FSHS.service.userFile.UserFileReadService;
+import org.iptime.raspinas.FSHS.service.userFile.UserFileDownloadService;
 import org.iptime.raspinas.FSHS.service.userFile.UserFileUpdateService;
 import org.iptime.raspinas.FSHS.service.userFolder.UserFolderReadService;
 import org.springframework.http.MediaType;
@@ -33,7 +32,7 @@ import java.util.Optional;
 public class UserFileController {
 
     private final UserFileCreateService userFileCreateService;
-    private final UserFileReadService userFileReadService;
+    private final UserFileDownloadService userFileDownloadService;
     private final UserFolderReadService userFolderReadService;
     private final UserFileUpdateService userFileUpdateService;
     private final UserFileDeleteService userFileDeleteService;
@@ -99,7 +98,7 @@ public class UserFileController {
         final String userId = tokenProvider.validate(token.substring(7));
         final Long longUserId = Long.parseLong(userId);
 
-        return userFileReadService.readUserFile(id, longUserId);
+        return userFileDownloadService.downloadUserFile(id, longUserId);
     }
 
     @PatchMapping("/files/{id}")
