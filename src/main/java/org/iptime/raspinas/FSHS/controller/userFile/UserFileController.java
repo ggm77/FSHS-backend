@@ -85,7 +85,7 @@ public class UserFileController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/files/{id}")//download file
+    @GetMapping("/files/{id}/download")//download file
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "200",
