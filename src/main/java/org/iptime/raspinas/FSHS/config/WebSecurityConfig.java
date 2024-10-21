@@ -29,7 +29,13 @@ public class WebSecurityConfig {
                 .httpBasic((httpBasic) -> httpBasic.disable())
                 .sessionManagement((sessionManagement) -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests.requestMatchers(
-                        "/api/v1/refresh-token", "/api/v1/streaming-thumbnail/**", "/api/v1/streaming-video/**", "/api/v1/streaming-audio/**", "/api/v1/test/**", "/v3/api-docs/**","/swagger-ui/**","/api/v1/auth/**", "/"
+                        "/api/v1/auth/**",
+                        "/api/v1/refresh-token",
+                        "/api/v1/streaming-thumbnail/**",
+                        "/api/v1/streaming-video/**",
+                        "/api/v1/streaming-audio/**",
+                        "/api/v1/test/**",
+                        "/api/swagger/**"
                         ).permitAll().anyRequest().authenticated());
 
         httpSecurity.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
