@@ -21,6 +21,7 @@ public enum ExceptionCode {
     DIR_NOT_EXIST(HttpStatus.BAD_REQUEST, "Directory is not exist."),
     DIR_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "Directory is already exist."),
     FILE_NAME_DUPLICATED(HttpStatus.BAD_REQUEST, "File name is duplicated."),
+    CANNOT_DELETE_ADMIN(HttpStatus.BAD_REQUEST, "Cannot delete admin account."),
 
 
     FAILED_TO_DELETE_FOLDER(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete folder."),

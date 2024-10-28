@@ -96,6 +96,23 @@ public class UserInfoService {
 
     public void deleteUserInfo(final Long id){
 
+        final UserInfo userInfo;
+
+        try{
+            userInfo = userInfoRepository.findById(id).get();
+        } catch (NoSuchElementException ex) {
+            throw new CustomException(ExceptionCode.USER_ID_NOT_EXIST);
+        } catch (DataAccessResourceFailureException ex){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
+        } catch (Exception ex){
+            log.error("UserInfoService.deleteUserInfo message:{}",ex.getMessage(),ex);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
+
+        if(userInfo.isAdmin()){
+            throw new CustomException(ExceptionCode.CANNOT_DELETE_ADMIN);
+        }
+
         try{
             userInfoRepository.deleteById(id);
         } catch (NoSuchElementException ex) {
