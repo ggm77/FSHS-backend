@@ -4,5 +4,5 @@ import lombok.Getter;
 
 @Getter
 public class UserFolderRequestDto {
-    private String path;
+    private String folderName;
 }

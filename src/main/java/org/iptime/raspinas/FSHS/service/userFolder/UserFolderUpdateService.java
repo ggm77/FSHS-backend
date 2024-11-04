@@ -33,26 +33,30 @@ public class UserFolderUpdateService {
 
     @Transactional
     public Optional<UserFile> updateUserFolder(
-            final UserFolderRequestDto userFolderRequestDto,
             final Long folderId,
-            final Long userId
+            final Long userId,
+            final UserFolderRequestDto userFolderRequestDto
     ){
 
-        //Validate the correctness of the provided file path. | 경로가 올바른지 체크(형식 체크)
-        if(!userFolderRequestDto.getPath().startsWith("/") || userFolderRequestDto.getPath().contains(".")){
+        // 경로에 '/'가 포함된 경우 제외
+        if(userFolderRequestDto.getFolderName().contains("/")){
             throw new CustomException(ExceptionCode.PATH_NOT_VALID);
         }
 
-        final String newFolderPath;
-        //파일 경로 마지막 '/' 없애기로 통일
-        if (userFolderRequestDto.getPath().endsWith("/")) {
-            newFolderPath = userFolderRequestDto.getPath().substring(0, userFolderRequestDto.getPath().length() - 1);
-        }
-        else {
-            newFolderPath = userFolderRequestDto.getPath();
+        final UserFile folder;
+        try{
+            folder = userFileRepository.findById(folderId).get();
+        } catch (DataAccessResourceFailureException ex){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
+        } catch (Exception ex){
+            log.error("UserFolderUpdateService.updateUserFolder message:{}",ex.getMessage(),ex);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
 
-        final String newFolderName = newFolderPath.substring(newFolderPath.lastIndexOf("/")+1);
+
+        final String newFolderPath = folder.getParent().getUrl()+"/"+userFolderRequestDto.getFolderName();
+
+        final String newFolderName = userFolderRequestDto.getFolderName();
         final Integer oldFolderIndex;
         final Integer oldFolderLen;
         final UserFile userFile;
@@ -60,7 +64,7 @@ public class UserFolderUpdateService {
 
         final boolean isDuplicated;
         try{
-            isDuplicated = userFileRepository.existsByUrlAndIsDirectory("/" + userId + newFolderPath, true);
+            isDuplicated = userFileRepository.existsByUrlAndIsDirectory(newFolderPath, true);
             userInfo = userInfoRepository.findById(userId).get();
             userFile = userFileRepository.findById(folderId).get();
         } catch (DataAccessResourceFailureException ex){
@@ -81,28 +85,13 @@ public class UserFolderUpdateService {
         }
 
 
-        final UserFile folder;
-        try{
-            folder = userFileRepository.findById(folderId).get();
-        } catch (DataAccessResourceFailureException ex){
-            throw new CustomException(ExceptionCode.DATABASE_DOWN);
-        } catch (Exception ex){
-            log.error("UserFolderUpdateService.updateUserFolder message:{}",ex.getMessage(),ex);
-            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
-        }
-
-        //대상 폴더가 잘못된 경우 제외
-        if( !getParentPath(folder.getUrl().substring(userId.toString().length()+1), userId).equals(getParentPath(userFolderRequestDto.getPath(), userId))){
-            throw new CustomException(ExceptionCode.PATH_NOT_VALID);
-        }
-
         oldFolderIndex = folder.getUrl().lastIndexOf("/") + 1;
         oldFolderLen = folder.getUrl().substring(folder.getUrl().lastIndexOf("/")+1).length();
 
         Path source = Paths.get(UserFileDirPath + folder.getUrl());
-        Path target = Paths.get(UserFileDirPath + "/"+userId+newFolderPath);
+        Path target = Paths.get(UserFileDirPath + newFolderPath);
         Path thumbnailSource = Paths.get(UserFileDirPath + "/thumbnail" + folder.getUrl());
-        Path thumbnailTarget = Paths.get(UserFileDirPath + "/thumbnail/" + userId + newFolderPath);
+        Path thumbnailTarget = Paths.get(UserFileDirPath + "/thumbnail" + newFolderPath);
 
         try {
             Files.move(source, target);
@@ -114,7 +103,7 @@ public class UserFolderUpdateService {
 
         folder.setFileName(newFolderName);
         folder.setOriginalFileName(newFolderName);
-        folder.setUrl("/" + userId + newFolderPath);
+        folder.setUrl(newFolderPath);
         if (folder.getChildren() != null && !folder.getChildren().isEmpty()) {
             for (UserFile child : folder.getChildren()) {
             updateFolderPath(child, newFolderName, oldFolderIndex, oldFolderLen);
@@ -141,16 +130,4 @@ public class UserFolderUpdateService {
        }
     }
 
-    private String getParentPath(final String path, final Long userId) {
-        final int lastSlashIndex = path.lastIndexOf('/');
-        final String result = lastSlashIndex > 0 ? path.substring(0, lastSlashIndex) : "";
-
-        //root폴더 예외 처리
-        if(result.equals('/')){
-            return "/" + userId;
-        }
-        else {
-            return result;
-        }
-    }
 }

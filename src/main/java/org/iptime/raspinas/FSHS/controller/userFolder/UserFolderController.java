@@ -30,7 +30,7 @@ public class UserFolderController {
     private final UserFolderDeleteService userFolderDeleteService;
     private final TokenProvider tokenProvider;
 
-    @PostMapping(value = "/folder")
+    @PostMapping(value = "/folder/{fileId}")
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
@@ -39,13 +39,14 @@ public class UserFolderController {
     })
     public ResponseEntity<?> createUserFolder(
             @RequestHeader(value = "Authorization") final String token,
+            @PathVariable final Long fileId,//부모 폴더 아이디
             @RequestBody final UserFolderRequestDto userFolderRequestDto
     ){
 
         final String userId = tokenProvider.validate(token.substring(7));
         final Long id = Long.parseLong(userId);
 
-        userFolderCreateService.createUserFolder(userFolderRequestDto, id);
+        userFolderCreateService.createUserFolder(fileId, id, userFolderRequestDto);
 
         final URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/v1/files")
@@ -67,14 +68,14 @@ public class UserFolderController {
     })
     public ResponseEntity<?> updateUserFolder(
             @RequestHeader(value = "Authorization") final String token,
-            @PathVariable final Long folderId,
+            @PathVariable final Long folderId,//고칠 폴더의 아이디
             @RequestBody final UserFolderRequestDto userFolderRequestDto
     ){
 
         final String userId = tokenProvider.validate(token.substring(7));
         final Long id = Long.parseLong(userId);
 
-        final Optional<UserFile> result = userFolderUpdateService.updateUserFolder(userFolderRequestDto, folderId, id);
+        final Optional<UserFile> result = userFolderUpdateService.updateUserFolder(folderId, id, userFolderRequestDto);
 
         return result.map(node -> ResponseEntity.ok(UserFolderResponseDto.fromEntity(node)))
                 .orElseGet(() -> ResponseEntity.notFound().build());

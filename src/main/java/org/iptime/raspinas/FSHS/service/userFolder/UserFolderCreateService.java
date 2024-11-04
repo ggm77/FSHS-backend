@@ -30,35 +30,28 @@ public class UserFolderCreateService {
     private final UserInfoRepository userInfoRepository;
 
     public UserFile createUserFolder(
-            final UserFolderRequestDto userFolderRequestDto,
-            final Long userId
+            final Long fileId,
+            final Long userId,
+            final UserFolderRequestDto userFolderRequestDto
     ){
 
-        //Validate the correctness of the provided file path. | 경로가 올바른지 체크(형식 체크)
-        if(!userFolderRequestDto.getPath().startsWith("/") || userFolderRequestDto.getPath().contains(".")){
-            throw new CustomException(ExceptionCode.PATH_NOT_VALID);
-        }
-
-        final String requestPath;
-        //파일 경로 마지막 '/' 없애기로 통일
-        if (userFolderRequestDto.getPath().endsWith("/")) {
-            requestPath = userFolderRequestDto.getPath().substring(0, userFolderRequestDto.getPath().length() - 1);
-        }
-        else {
-            requestPath = userFolderRequestDto.getPath();
-        }
-
-
-
-        final String path = "/" + userId + requestPath;
-        final String parentPath = getParentPath(path, userId);
-        final String folderName = getFolderName(requestPath);
         final UserFile parentFile;
+        try{
+            parentFile = userFileRepository.findById(fileId).get();
+        } catch (DataAccessResourceFailureException ex){
+            throw new CustomException(ExceptionCode.DATABASE_DOWN);
+        } catch (Exception ex){
+            log.error("UserFolderService.createUserFolder message:{}",ex.getMessage(),ex);
+            throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
+        }
+
+
+        final String path = parentFile.getUrl()+"/"+userFolderRequestDto.getFolderName();
+        final String folderName = userFolderRequestDto.getFolderName();
         final UserInfo userInfo;
 
         try {
             userInfo = userInfoRepository.findById(userId).get();
-            parentFile = userFileRepository.findByUrlAndIsDirectory(parentPath, true);
         } catch (DataAccessResourceFailureException ex){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
         } catch (Exception ex){
@@ -110,23 +103,5 @@ public class UserFolderCreateService {
             log.error("UserFolderService.createUserFolder message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
-    }
-
-    private String getParentPath(final String path, final Long userId) {
-        final int lastSlashIndex = path.lastIndexOf('/');
-        final String result = lastSlashIndex > 0 ? path.substring(0, lastSlashIndex) : "";
-
-        //root폴더 예외 처리
-        if(result.equals('/')){
-            return "/" + userId;
-        }
-        else {
-            return result;
-        }
-    }
-
-    private String getFolderName(final String path) {
-        int lastSlashIndex = path.lastIndexOf('/');
-        return path.substring(lastSlashIndex+1);
     }
 }
