@@ -1,7 +1,6 @@
 package org.iptime.raspinas.FSHS.dto.userFile.response;
 
 import lombok.Getter;
-import org.iptime.raspinas.FSHS.dto.userFolder.response.UserFolderResponseDto;
 import org.iptime.raspinas.FSHS.entity.userFile.UserFile;
 
 import java.sql.Timestamp;
@@ -30,6 +29,7 @@ public class UserFileResponseDto {
     private boolean isSecrete;
     private boolean isDeleted;
     private Timestamp deletedDate;
+    private Long parentId;
     private List<UserFileSimpleResponseDto> children;
 
     public UserFileResponseDto(final UserFile userFile){
@@ -52,6 +52,9 @@ public class UserFileResponseDto {
         this.isSecrete = userFile.isSecrete();
         this.isDeleted = userFile.isDeleted();
         this.deletedDate = userFile.getDeletedDate();
+        if (userFile.getParent() != null) {
+            this.parentId = userFile.getParent().getId();
+        }
         if (userFile.getChildren() != null) {
             this.children = userFile.getChildren().stream()
                     .map(UserFileSimpleResponseDto::new)
