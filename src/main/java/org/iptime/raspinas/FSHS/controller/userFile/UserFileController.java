@@ -37,7 +37,7 @@ public class UserFileController {
     private final UserFileDeleteService userFileDeleteService;
     private final TokenProvider tokenProvider;
 
-    @PostMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)//upload file
+    @PostMapping(value = "/files/{fileId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)//upload file
     @ApiResponses(value = {
             @ApiResponse(
                     responseCode = "201",
@@ -45,6 +45,7 @@ public class UserFileController {
             )
     })
     public ResponseEntity<?> createUserFile(
+            @PathVariable final Long fileId,
             @RequestPart(value = "files") final List<MultipartFile> multipartFiles,
             @RequestPart(value = "info") final UserFileCreateRequestDto requestDto,
             @RequestHeader(value = "Authorization") final String token
@@ -52,7 +53,7 @@ public class UserFileController {
         final String userId = tokenProvider.validate(token.substring(7));
         final Long id = Long.parseLong(userId);
 
-        final List<UserFile> result = userFileCreateService.createUserFile(multipartFiles, requestDto, id);
+        final List<UserFile> result = userFileCreateService.createUserFile(fileId, multipartFiles, requestDto, id);
 
 
         final URI location = ServletUriComponentsBuilder.fromCurrentContextPath()

@@ -38,6 +38,7 @@ public class UserFileCreateService {
     private String UserFileDirPath;
 
     public List<UserFile> createUserFile(
+            final Long fileId,
             final List<MultipartFile> files,
             final UserFileCreateRequestDto requestDto,
             final Long id
@@ -48,27 +49,23 @@ public class UserFileCreateService {
             throw new CustomException(ExceptionCode.FILE_NOT_UPLOADED);
         }
 
-        //Validate the correctness of the provided file path. | 경로가 올바른지 체크(형식 체크)
-        if(!requestDto.getPath().startsWith("/") || !requestDto.getPath().endsWith("/") || requestDto.getPath().contains(".")){
-            throw new CustomException(ExceptionCode.PATH_NOT_VALID);
-        }
-
-        final List<UserFile> result = new ArrayList<>();
-
-        final UserInfo userInfo = userInfoRepository.findById(id).get();
-        final String filePath = checkPath("/"+id+requestDto.getPath()); // input : ' /{folderName}/{folderName}/ '   -->>  ' /userId/{folderName}/{folderName}/ '
-        final String thumbnailPath = checkPath("/thumbnail/"+id+requestDto.getPath());
-        final boolean isSecrete = requestDto.isSecrete();
         final UserFile parentFile;
-
-        try {
-            parentFile = userFileRepository.findByUrlAndIsDirectory(getParentPath(filePath), true);
+        try{
+            parentFile = userFileRepository.findById(fileId).get();
         } catch (DataAccessResourceFailureException ex){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
         } catch (Exception ex){
             log.error("UserFileCreateService.createUserFile message:{}",ex.getMessage(),ex);
             throw new CustomException(ExceptionCode.INTERNAL_SERVER_ERROR);
         }
+
+        final List<UserFile> result = new ArrayList<>();
+
+        final UserInfo userInfo = userInfoRepository.findById(id).get();
+        final String filePath = checkPath(parentFile.getUrl()+"/");
+        final String thumbnailPath = checkPath("/thumbnail/"+parentFile.getUrl()+"/");
+        final boolean isSecrete = requestDto.isSecrete();
+
 
         //Process multiple files. | 복수의 파일 처리
         for(MultipartFile multipartFile : files){

@@ -8,6 +8,5 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserFileCreateRequestDto {
-    private String path; // '/user/~~~'
     private boolean isSecrete;
 }
