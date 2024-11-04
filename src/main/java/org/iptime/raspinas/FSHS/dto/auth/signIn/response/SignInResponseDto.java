@@ -24,7 +24,6 @@ public class SignInResponseDto {
     private String userEmail;
     private String userProfilePictureUrl;
     private Timestamp signUpDate;
-    private List<UserFileSimpleResponseDto> userFileList;
     private boolean isAdmin;
     private boolean isDisabled;
 
@@ -45,12 +44,6 @@ public class SignInResponseDto {
         this.userEmail = userInfo.getUserEmail();
         this.userProfilePictureUrl = userInfo.getUserProfilePictureUrl();
         this.signUpDate = userInfo.getSignUpDate();
-        //Null handling to prevent potential NullPointerExceptions. | null 방지
-        if(userInfo.getUserFile() != null){
-            this.userFileList = userInfo.getUserFile().stream()
-                    .map(UserFileSimpleResponseDto:: new)
-                    .collect(Collectors.toList());
-        }
         this.isAdmin = userInfo.isAdmin();
         this.isDisabled = userInfo.isDisabled();
     }
