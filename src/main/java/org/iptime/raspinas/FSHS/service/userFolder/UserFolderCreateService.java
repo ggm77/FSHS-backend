@@ -35,6 +35,13 @@ public class UserFolderCreateService {
             final UserFolderRequestDto userFolderRequestDto
     ){
 
+        final String folderName = userFolderRequestDto.getFolderName();
+
+        //폴더명 확인
+        if(folderName.matches(".*[!\"#$%&'()*+.,/:;<=>?@\\[\\]\\\\|].*")){
+            throw new CustomException(ExceptionCode.PATH_NOT_VALID);
+        }
+
         final UserFile parentFile;
         try{
             parentFile = userFileRepository.findById(fileId).get();
@@ -47,7 +54,6 @@ public class UserFolderCreateService {
 
 
         final String path = parentFile.getUrl()+"/"+userFolderRequestDto.getFolderName();
-        final String folderName = userFolderRequestDto.getFolderName();
         final UserInfo userInfo;
 
         try {

@@ -38,8 +38,8 @@ public class UserFolderUpdateService {
             final UserFolderRequestDto userFolderRequestDto
     ){
 
-        // 경로에 '/'가 포함된 경우 제외
-        if(userFolderRequestDto.getFolderName().contains("/")){
+        //폴더명 확인
+        if(userFolderRequestDto.getFolderName().matches(".*[!\"#$%&'()*+.,/:;<=>?@\\[\\]\\\\|].*")){
             throw new CustomException(ExceptionCode.PATH_NOT_VALID);
         }
 
