@@ -31,6 +31,11 @@ public class UserFileUpdateService {
             final UserFileUpdateRequestDto userFileUpdateRequestDto
     ){
 
+        //파일명 확인
+        if(userFileUpdateRequestDto.getNewFileName().matches(".*[!\"#$%&'()*+.,/:;<=>?@\\[\\]\\\\|].*")){
+            throw new CustomException(ExceptionCode.FILE_NAME_NOT_VALID);
+        }
+
         final UserFile userFile;
         final boolean isDuplicateFilePresent;
         final String originalFileName;

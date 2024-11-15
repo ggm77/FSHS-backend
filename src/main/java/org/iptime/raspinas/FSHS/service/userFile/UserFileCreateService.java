@@ -91,6 +91,12 @@ public class UserFileCreateService {
             final UserFile parentFile){
 
         final String fileExtension = StringUtils.getFilenameExtension(file.getOriginalFilename());
+
+        //파일명 확인
+        if(file.getOriginalFilename().replaceFirst("\\."+fileExtension, "").matches(".*[!\"#$%&'()*+.,/:;<=>?@\\[\\]\\\\|].*")){
+            throw new CustomException(ExceptionCode.FILE_NAME_NOT_VALID);
+        }
+
         final String fileName = generateSaveFileName();//uuid
         final String filePath = UserFileDirPath+path+fileName+"."+fileExtension;
 
