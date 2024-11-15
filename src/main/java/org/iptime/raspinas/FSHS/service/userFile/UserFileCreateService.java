@@ -69,12 +69,6 @@ public class UserFileCreateService {
 
         //Process multiple files. | 복수의 파일 처리
         for(MultipartFile multipartFile : files){
-
-            //Exclude when the file does not exist. | 파일 없을 때 제외
-            if(multipartFile.isEmpty()){
-                continue;
-            }
-
             result.add(saveFile(multipartFile, filePath, thumbnailPath, userInfo, isSecrete, parentFile));
         }
 
