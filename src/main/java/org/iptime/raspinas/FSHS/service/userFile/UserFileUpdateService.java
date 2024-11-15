@@ -33,10 +33,14 @@ public class UserFileUpdateService {
 
         final UserFile userFile;
         final boolean isDuplicateFilePresent;
+        final String originalFileName;
 
         try{
             userFile = userFileRepository.findById(fileId).get();
-            isDuplicateFilePresent = userFileRepository.existsByParentIdAndOriginalFileName(userFile.getParent().getId(), userFileUpdateRequestDto.getOriginalFileName());
+
+            originalFileName = userFileUpdateRequestDto.getNewFileName() + "." + userFile.getFileExtension();
+
+            isDuplicateFilePresent = userFileRepository.existsByParentIdAndOriginalFileName(userFile.getParent().getId(), originalFileName);
         } catch (DataAccessResourceFailureException ex){
             throw new CustomException(ExceptionCode.DATABASE_DOWN);
         } catch (Exception ex){
@@ -54,7 +58,6 @@ public class UserFileUpdateService {
             throw new CustomException(ExceptionCode.FILE_NAME_DUPLICATED);
         }
 
-        final String originalFileName = userFileUpdateRequestDto.getOriginalFileName();
         final Boolean isFavorite = userFileUpdateRequestDto.getIsFavorite();
         final Boolean hasThumbnail = userFileUpdateRequestDto.getHasThumbnail();
         final Boolean isStreaming = userFileUpdateRequestDto.getIsStreaming();
@@ -64,7 +67,7 @@ public class UserFileUpdateService {
         final Boolean isSecrete = userFileUpdateRequestDto.getIsSecrete();
 
         if( originalFileName != null && !originalFileName.isEmpty()){
-            userFile.setOriginalFileName(userFileUpdateRequestDto.getOriginalFileName());
+            userFile.setOriginalFileName(originalFileName);
         }
 
         if( isFavorite != null ){

@@ -4,7 +4,7 @@ import lombok.Getter;
 
 @Getter
 public class UserFileUpdateRequestDto {
-    private String originalFileName;
+    private String newFileName; //not include file extension
     private Boolean isFavorite;
     private Boolean hasThumbnail;
     private Boolean isStreaming;
