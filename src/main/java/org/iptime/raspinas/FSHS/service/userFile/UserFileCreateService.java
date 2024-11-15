@@ -92,7 +92,16 @@ public class UserFileCreateService {
         }
 
         final String fileName = generateSaveFileName();//uuid
-        final String filePath = UserFileDirPath+path+fileName+"."+fileExtension;
+
+        final String filePath;
+
+        //확장자 없는 경우 예외처리
+        if(fileExtension == null){
+            filePath = UserFileDirPath+path+fileName;
+        } else {
+            filePath = UserFileDirPath+path+fileName+"."+fileExtension;
+        }
+
 
         boolean hasThumbnail = false;
         boolean isStreaming = false;
@@ -144,7 +153,7 @@ public class UserFileCreateService {
             final File originalImage = saveFile;
 
             //Handle SVG file processing. | svg 파일 예외 처리
-            if(fileExtension.endsWith("svg") || fileExtension.endsWith("SVG")){
+            if(fileExtension != null && (fileExtension.endsWith("svg") || fileExtension.endsWith("SVG"))){
 
                 final String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".svg";
                 thumbnailFile = new File(thumbnailSaveName);
@@ -176,7 +185,7 @@ public class UserFileCreateService {
 
         //for video files | 비디오 파일인 경우
         //tika가 m4a 파일을 잘못 인식함
-        else if(mimeType.startsWith("video") && !fileExtension.endsWith("m4a") && !fileExtension.endsWith("M4A")){
+        else if(fileExtension != null && mimeType.startsWith("video") && !fileExtension.endsWith("m4a") && !fileExtension.endsWith("M4A")){
             //generate thumbnail
             final String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".jpeg";
             final File thumbnailSaveFile = new File(thumbnailSaveName);
@@ -201,9 +210,9 @@ public class UserFileCreateService {
         }
 
         //for audio files | 오디오 파일인 경우
-        else if(mimeType.startsWith("audio") || fileExtension.equals("M4A") || fileExtension.equals("m4a")){
+        else if(fileExtension != null && (mimeType.startsWith("audio") || fileExtension.equals("M4A") || fileExtension.equals("m4a"))){
 
-            if(!fileExtension.equals("M4A") && !fileExtension.equals("m4a")) {
+            if(fileExtension != null && !fileExtension.equals("M4A") && !fileExtension.equals("m4a")) {
                 final String thumbnailSaveName = UserFileDirPath + thumbnailPath + "s_" + fileName + ".jpeg";
                 final File thumbnailSaveFile = new File(thumbnailSaveName);
 
@@ -226,21 +235,45 @@ public class UserFileCreateService {
             fFmpegConfig.convertToHlsAudio(filePath, hlsPath, file.getOriginalFilename()); // <- async
         }
 
-        final UserFile fileEntity = UserFile.builder()
-                .userInfo(userInfo)
-                .originalFileName(file.getOriginalFilename())
-                .fileName(fileName)
-                .fileExtension(fileExtension)
-                .fileSize(file.getSize())
-                .url(path+fileName+"."+fileExtension)
-                .isDirectory(false)
-                .hasThumbnail(hasThumbnail)
-                .isStreaming(isStreaming)
-                .isStreamingMusic(isStreamingMusic)
-                .isStreamingVideo(isStreamingVideo)
-                .isSecrete(isSecrete)
-                .parent(parentFile)
-                .build();
+        final UserFile fileEntity;
+
+        //fileExtension null 예외처리
+        if(fileExtension == null){
+            fileEntity = UserFile.builder()
+                    .userInfo(userInfo)
+                    .originalFileName(file.getOriginalFilename())
+                    .fileName(fileName)
+                    .fileExtension("")
+                    .fileSize(file.getSize())
+                    .url(path+fileName)
+                    .isDirectory(false)
+                    .hasThumbnail(false)
+                    .isStreaming(false)
+                    .isStreamingMusic(false)
+                    .isStreamingVideo(false)
+                    .isSecrete(isSecrete)
+                    .parent(parentFile)
+                    .build();
+
+        } else {
+            fileEntity = UserFile.builder()
+                    .userInfo(userInfo)
+                    .originalFileName(file.getOriginalFilename())
+                    .fileName(fileName)
+                    .fileExtension(fileExtension)
+                    .fileSize(file.getSize())
+                    .url(path+fileName+"."+fileExtension)
+                    .isDirectory(false)
+                    .hasThumbnail(hasThumbnail)
+                    .isStreaming(isStreaming)
+                    .isStreamingMusic(isStreamingMusic)
+                    .isStreamingVideo(isStreamingVideo)
+                    .isSecrete(isSecrete)
+                    .parent(parentFile)
+                    .build();
+        }
+
+
 
         final UserFile result;
         try{
