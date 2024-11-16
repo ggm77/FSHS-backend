@@ -2,6 +2,7 @@ package org.iptime.raspinas.FSHS.config;
 
 import lombok.RequiredArgsConstructor;
 import org.iptime.raspinas.FSHS.filter.JwtAuthenticationFilter;
+import org.iptime.raspinas.FSHS.service.oAuth2.PrincipalOauth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -19,6 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class WebSecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final PrincipalOauth2UserService principalOauth2UserService;
 
     @Bean
     protected SecurityFilterChain configure(final HttpSecurity httpSecurity) throws Exception {
@@ -28,6 +30,7 @@ public class WebSecurityConfig {
                 .csrf((csrf) -> csrf.disable())
                 .httpBasic((httpBasic) -> httpBasic.disable())
                 .sessionManagement((sessionManagement) -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2Login(oauth -> oauth.loginPage("/login").defaultSuccessUrl("/").userInfoEndpoint(userInfo -> userInfo.userService(principalOauth2UserService)))
                 .authorizeHttpRequests((authorizeHttpRequests) -> authorizeHttpRequests.requestMatchers(
                         "/api/v1/auth/**",
                         "/api/v1/refresh-token",
