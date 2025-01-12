@@ -1,4 +1,4 @@
-package org.iptime.raspinas.FSHS.tool.detector;
+package org.iptime.raspinas.FSHS.utils.detector;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

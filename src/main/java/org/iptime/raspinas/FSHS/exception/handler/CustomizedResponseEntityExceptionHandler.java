@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.iptime.raspinas.FSHS.exception.CustomException;
 import org.iptime.raspinas.FSHS.exception.constants.ExceptionCode;
 import org.iptime.raspinas.FSHS.exception.response.ExceptionResponse;
-import org.iptime.raspinas.FSHS.tool.detector.DatabaseDownDetector;
+import org.iptime.raspinas.FSHS.utils.detector.DatabaseDownDetector;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
