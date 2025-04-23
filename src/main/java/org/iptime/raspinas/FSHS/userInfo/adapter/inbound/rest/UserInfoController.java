@@ -1,4 +1,4 @@
-package org.iptime.raspinas.FSHS.userInfo.adapter.inbound;
+package org.iptime.raspinas.FSHS.userInfo.adapter.inbound.rest;
 
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;

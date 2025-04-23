@@ -1,4 +1,4 @@
-package org.iptime.raspinas.FSHS.userFileStreaming.adapter.inbound;
+package org.iptime.raspinas.FSHS.userFileStreaming.adapter.inbound.rest;
 
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
