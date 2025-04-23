@@ -1,114 +1,41 @@
-package org.iptime.raspinas.FSHS.common.config;
+package org.iptime.raspinas.FSHS.infrastructure.ffmpeg;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.FFprobe;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
-import net.bramp.ffmpeg.probe.FFmpegProbeResult;
 import net.bramp.ffmpeg.progress.Progress;
 import org.iptime.raspinas.FSHS.common.exception.CustomException;
 import org.iptime.raspinas.FSHS.common.exception.constants.ExceptionCode;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
+import org.iptime.raspinas.FSHS.media.domain.port.out.FileConvertPort;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalTime;
 
 @Slf4j
-@Configuration
-public class FFmpegConfig {
+@Component
+@RequiredArgsConstructor
+public class FfmpegAdapter implements FileConvertPort {
 
-    @Value("${ffmpeg.path.mpeg}")
-    private String mpeg;
+    private final FFmpeg ffmpeg;
+    private final FFprobe ffprobe;
 
-    @Value("${ffmpeg.path.probe}")
-    private String probe;
-
-    public FFmpeg ffmpeg(){
-        try {
-            return new FFmpeg(mpeg);
-        } catch (IOException ex) {
-            throw new CustomException(ExceptionCode.FAILED_TO_GET_MEDIA_INFO);
-        }
+    private FFmpegExecutor executor() {
+        return new FFmpegExecutor(ffmpeg, ffprobe);
     }
 
-    public FFprobe ffprobe(){
-        try{
-            return new FFprobe(probe);
-        } catch (IOException ex){
-            throw new CustomException(ExceptionCode.FAILED_TO_GET_MEDIA_INFO);
-        }
-    }
-
-    public FFmpegProbeResult getProbeResult(final String filePath){
-
-        final FFmpegProbeResult ffmpegProbeResult;
-        try{
-            ffmpegProbeResult = ffprobe().probe(filePath);
-        } catch (IOException ex){
-            throw new CustomException(ExceptionCode.FAILED_TO_GET_MEDIA_INFO);
-        }
-
-        return ffmpegProbeResult;
-    }
-
-    public void generateThumbnail(
-            final String filePath,
-            final String thumbnailPath
-    ){
-
-        final double duration = getProbeResult(filePath).getStreams().get(0).duration;
-        final LocalTime timeOfDay = LocalTime.ofSecondOfDay((long) duration/2);
-        final String halfOfTime = timeOfDay.toString();
-        final FFmpegBuilder builder = new FFmpegBuilder()
-                .overrideOutputFiles(true)
-                .setInput(filePath)
-                .addExtraArgs("-ss",halfOfTime)
-                .addOutput(thumbnailPath)
-                .setFrames(1)
-                .done();
-
-        final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
-        executor.createJob(builder).run();
-    }
-
-    public void getAlbumCoverImage(
-            final String filePath,
-            final String thumbnailPath,
-            final String fileName
-    ){
-
-        final FFmpegBuilder builder = new FFmpegBuilder()
-                .setInput(filePath)
-                .overrideOutputFiles(true)
-                .addOutput(thumbnailPath)
-                .addExtraArgs("-an")
-                .addExtraArgs("-vcodec", "copy")
-                .done();
-
-
-        final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
-        log.info("'{}' album cover extraction started", fileName);
-        executor.createJob(builder, progress -> {
-            log.info("file:'{}' progress ==> {}", fileName, progress);
-
-            //Successfully completed the operation. | 작업이 정상 종료 되었을 때
-            if (progress.status.equals(Progress.Status.END)) {
-                log.info("================================= '{}' JOB FINISHED =================================", fileName);
-            }
-        }).run();
-        log.info("'{}' album cover extraction completed", fileName);
-    }
-
+    @Override
     @Async
-    public void convertToHlsVideo(
+    public void videoToHls(
             final String filePath,
             final String hlsPath,
             final String fileName
-    ){
-
+    ) {
         final FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(filePath) // 입력 소스
                 .overrideOutputFiles(true)
@@ -119,9 +46,8 @@ public class FFmpegConfig {
                 .addExtraArgs("-hls_segment_filename", hlsPath + "/master_%08d.ts") // 청크 파일 이름
                 .done();
 
-        final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
         log.info("'{}' HLS conversion started", fileName);
-        executor.createJob(builder, progress -> {
+        executor().createJob(builder, progress -> {
             log.info("file:'{}' progress ==> {}", fileName, progress);
 
             //Successfully completed the operation. | 작업이 정상 종료 되었을 때
@@ -140,12 +66,13 @@ public class FFmpegConfig {
         }
     }
 
+    @Override
     @Async
-    public void convertToHlsAudio(
+    public void audioToHls(
             final String filePath,
             final String hlsPath,
             final String fileName
-    ){
+    ) {
         final FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(filePath) // 입력 소스
                 .overrideOutputFiles(true)
@@ -162,9 +89,8 @@ public class FFmpegConfig {
                 .done();
 
         try {
-            final FFmpegExecutor executor = new FFmpegExecutor(ffmpeg(), ffprobe());
             log.info("'{}' HLS conversion started", fileName);
-            executor.createJob(builder, progress -> {
+            executor().createJob(builder, progress -> {
                 log.info("file:'{}' progress ==> {}", fileName, progress);
 
                 //Successfully completed the operation. | 작업이 정상 종료 되었을 때
@@ -189,4 +115,57 @@ public class FFmpegConfig {
         }
     }
 
+    @Override
+    public void thumbnail(
+            final String filePath,
+            final String thumbnailPath
+    ){
+
+        final double durationInSeconds;
+        try {
+            durationInSeconds = ffprobe.probe(filePath).getFormat().duration;
+        } catch (IOException ex) {
+            throw new CustomException(ExceptionCode.FAILED_TO_GET_MEDIA_INFO);
+        }
+
+        final LocalTime timeOfDay = LocalTime.ofSecondOfDay((long) durationInSeconds/2);
+        final String halfOfTime = timeOfDay.toString();
+
+        final FFmpegBuilder builder = new FFmpegBuilder()
+                .overrideOutputFiles(true)
+                .setInput(filePath)
+                .addExtraArgs("-ss", halfOfTime)
+                .addOutput(thumbnailPath)
+                .setFrames(1)
+                .done();
+
+        executor().createJob(builder).run();
+    }
+
+    @Override
+    public void albumCoverImage(
+            final String filePath,
+            final String thumbnailPath,
+            final String fileName
+    ) {
+
+        final FFmpegBuilder builder = new FFmpegBuilder()
+                .setInput(filePath)
+                .overrideOutputFiles(true)
+                .addOutput(thumbnailPath)
+                .addExtraArgs("-an")
+                .addExtraArgs("-vcodec", "copy")
+                .done();
+
+        log.info("'{}' album cover extraction started", fileName);
+        executor().createJob(builder, progress -> {
+            log.info("file:'{}' progress ==> {}", fileName, progress);
+
+            //Successfully completed the operation. | 작업이 정상 종료 되었을 때
+            if (progress.status.equals(Progress.Status.END)) {
+                log.info("================================= '{}' JOB FINISHED =================================", fileName);
+            }
+        }).run();
+        log.info("'{}' album cover extraction completed", fileName);
+    }
 }

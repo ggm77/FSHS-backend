@@ -6,14 +6,14 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.iptime.raspinas.FSHS.common.exception.CustomException;
 import org.iptime.raspinas.FSHS.common.exception.constants.ExceptionCode;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
-@Service
+@Component
 public class TokenProvider {
 
     private static final Key SECURITY_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS512);

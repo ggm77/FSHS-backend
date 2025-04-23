@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnailator;
 import org.apache.tika.Tika;
-import org.iptime.raspinas.FSHS.common.config.FFmpegConfig;
+import org.iptime.raspinas.FSHS.media.domain.port.out.FileConvertPort;
 import org.iptime.raspinas.FSHS.userFile.adapter.inbound.dto.UserFileCreateRequestDto;
 import org.iptime.raspinas.FSHS.userFile.domain.UserFile;
 import org.iptime.raspinas.FSHS.userInfo.domain.UserInfo;
@@ -32,7 +32,7 @@ public class UserFileCreateService {
 
     private final UserFileRepository userFileRepository;
     private final UserInfoRepository userInfoRepository;
-    private final FFmpegConfig fFmpegConfig;
+    private final FileConvertPort fileConvertPort;
 
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
@@ -191,7 +191,7 @@ public class UserFileCreateService {
             final File thumbnailSaveFile = new File(thumbnailSaveName);
 
             try {
-                fFmpegConfig.generateThumbnail(filePath, thumbnailSaveName);
+                fileConvertPort.thumbnail(filePath, thumbnailSaveName);
                 Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
                 hasThumbnail = true;
             } catch (IOException ex) {
@@ -206,7 +206,7 @@ public class UserFileCreateService {
             isStreamingVideo = true;
             //hls convert
             final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
-            fFmpegConfig.convertToHlsVideo(filePath, hlsPath, file.getOriginalFilename()); // <- async
+            fileConvertPort.videoToHls(filePath, hlsPath, file.getOriginalFilename()); // <-- async
         }
 
         //for audio files | 오디오 파일인 경우
@@ -217,7 +217,7 @@ public class UserFileCreateService {
                 final File thumbnailSaveFile = new File(thumbnailSaveName);
 
                 try {
-                    fFmpegConfig.getAlbumCoverImage(filePath, thumbnailSaveName, file.getOriginalFilename());
+                    fileConvertPort.albumCoverImage(filePath, thumbnailSaveName, file.getOriginalFilename());
                     Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
                     hasThumbnail = true;
                 } catch (Exception ex) {
@@ -232,7 +232,7 @@ public class UserFileCreateService {
             isStreamingMusic = true;
             //hls convert
             final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
-            fFmpegConfig.convertToHlsAudio(filePath, hlsPath, file.getOriginalFilename()); // <- async
+            fileConvertPort.audioToHls(filePath, hlsPath, file.getOriginalFilename());// <- async
         }
 
         final UserFile fileEntity;
