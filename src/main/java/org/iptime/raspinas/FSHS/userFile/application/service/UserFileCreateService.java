@@ -147,7 +147,7 @@ public class UserFileCreateService {
         }
 
         //for image files | 이미지 파일인 경우
-        if(mimeType.startsWith("image")){
+        if(mimeType.startsWith("image") || fileExtension.toLowerCase().endsWith("heic")){
 
             final File thumbnailFile;
             final File originalImage = saveFile;
@@ -172,7 +172,14 @@ public class UserFileCreateService {
 
                 try {
 
-                    Thumbnailator.createThumbnail(originalImage, thumbnailFile, 100, 100);
+                    //heic to jpeg
+                    if(fileExtension.toLowerCase().endsWith("heic")){
+                        fileConvertPort.thumbnail(filePath, thumbnailSaveName);
+                        Thumbnailator.createThumbnail(thumbnailFile, thumbnailFile, 100, 100);
+                    } else {
+                        Thumbnailator.createThumbnail(originalImage, thumbnailFile, 100, 100);
+                    }
+
                 } catch (IOException ex){
                     throw new CustomException(ExceptionCode.FAILED_TO_CREATE_THUMBNAIL);
                 } catch (Exception ex){
@@ -185,7 +192,7 @@ public class UserFileCreateService {
 
         //for video files | 비디오 파일인 경우
         //tika가 m4a 파일을 잘못 인식함
-        else if(fileExtension != null && mimeType.startsWith("video") && !fileExtension.endsWith("m4a") && !fileExtension.endsWith("M4A")){
+        else if(fileExtension != null && mimeType.startsWith("video") && !fileExtension.toLowerCase().endsWith("m4a") && fileExtension.toLowerCase().endsWith("hevc")){
             //generate thumbnail
             final String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".jpeg";
             final File thumbnailSaveFile = new File(thumbnailSaveName);

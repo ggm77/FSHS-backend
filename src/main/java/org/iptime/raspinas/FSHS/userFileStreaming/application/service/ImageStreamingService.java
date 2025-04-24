@@ -33,7 +33,7 @@ public class ImageStreamingService {
 
         try {
             final InputStream image = new FileInputStream(UserFileDirPath+path+fileName);
-            final String fileExtension = StringUtils.getFilenameExtension(fileName);
+            final String fileExtension = StringUtils.getFilenameExtension(fileName).toLowerCase();
             final byte[] imageByteArray = IOUtils.toByteArray(image);
             image.close();
 
