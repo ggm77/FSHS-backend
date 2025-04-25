@@ -134,7 +134,6 @@ public class FfmpegAdapter implements FileConvertPort {
         final FFmpegBuilder builder = new FFmpegBuilder()
                 .overrideOutputFiles(true)
                 .setInput(filePath)
-                .addExtraArgs("-ss", halfOfTime)
                 .addOutput(thumbnailPath)
                 .setFrames(1)
                 .done();

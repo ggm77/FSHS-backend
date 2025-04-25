@@ -63,7 +63,7 @@ public class UserFileCreateService {
 
         final UserInfo userInfo = userInfoRepository.findById(id).get();
         final String filePath = checkPath(parentFile.getUrl()+"/");
-        final String thumbnailPath = checkPath("/thumbnail/"+parentFile.getUrl()+"/");
+        final String thumbnailPath = checkPath("/thumbnail"+parentFile.getUrl()+"/");
         final boolean isSecrete = requestDto.isSecrete();
 
 
@@ -192,7 +192,10 @@ public class UserFileCreateService {
 
         //for video files | 비디오 파일인 경우
         //tika가 m4a 파일을 잘못 인식함
-        else if(fileExtension != null && mimeType.startsWith("video") && !fileExtension.toLowerCase().endsWith("m4a") && fileExtension.toLowerCase().endsWith("hevc")){
+        else if(fileExtension != null &&
+                ((mimeType.startsWith("video") && !fileExtension.toLowerCase().endsWith("m4a")) || fileExtension.toLowerCase().endsWith("hevc"))
+        ){
+
             //generate thumbnail
             final String thumbnailSaveName = UserFileDirPath+thumbnailPath+"s_"+fileName+".jpeg";
             final File thumbnailSaveFile = new File(thumbnailSaveName);
