@@ -1,6 +1,6 @@
 package org.iptime.raspinas.FSHS.global.common.file;
 
-public interface FileConvertPort {
+public interface FileConverter {
 
     void videoToHls(
             final String filePath,

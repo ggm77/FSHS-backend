@@ -9,7 +9,7 @@ import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.progress.Progress;
 import org.iptime.raspinas.FSHS.global.exception.CustomException;
 import org.iptime.raspinas.FSHS.global.exception.constants.ExceptionCode;
-import org.iptime.raspinas.FSHS.global.common.file.FileConvertPort;
+import org.iptime.raspinas.FSHS.global.common.file.FileConverter;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +20,7 @@ import java.time.LocalTime;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class FfmpegConverter implements FileConvertPort {
+public class FfmpegConverter implements FileConverter {
 
     private final FFmpeg ffmpeg;
     private final FFprobe ffprobe;

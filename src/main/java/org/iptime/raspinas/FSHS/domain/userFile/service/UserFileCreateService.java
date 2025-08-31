@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnailator;
 import org.apache.tika.Tika;
-import org.iptime.raspinas.FSHS.global.common.file.FileConvertPort;
+import org.iptime.raspinas.FSHS.global.common.file.FileConverter;
 import org.iptime.raspinas.FSHS.domain.userFile.dto.UserFileCreateRequestDto;
 import org.iptime.raspinas.FSHS.domain.userFile.domain.UserFile;
 import org.iptime.raspinas.FSHS.domain.userInfo.domain.UserInfo;
@@ -32,7 +32,7 @@ public class UserFileCreateService {
 
     private final UserFileRepository userFileRepository;
     private final UserInfoRepository userInfoRepository;
-    private final FileConvertPort fileConvertPort;
+    private final FileConverter fileConverter;
 
     @Value("${user-file.directory.path}")
     private String UserFileDirPath;
@@ -174,7 +174,7 @@ public class UserFileCreateService {
 
                     //heic to jpeg
                     if(fileExtension.toLowerCase().endsWith("heic")){
-                        fileConvertPort.thumbnail(filePath, thumbnailSaveName);
+                        fileConverter.thumbnail(filePath, thumbnailSaveName);
                         Thumbnailator.createThumbnail(thumbnailFile, thumbnailFile, 100, 100);
                     } else {
                         Thumbnailator.createThumbnail(originalImage, thumbnailFile, 100, 100);
@@ -201,7 +201,7 @@ public class UserFileCreateService {
             final File thumbnailSaveFile = new File(thumbnailSaveName);
 
             try {
-                fileConvertPort.thumbnail(filePath, thumbnailSaveName);
+                fileConverter.thumbnail(filePath, thumbnailSaveName);
                 Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
                 hasThumbnail = true;
             } catch (IOException ex) {
@@ -216,7 +216,7 @@ public class UserFileCreateService {
             isStreamingVideo = true;
             //hls convert
             final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
-            fileConvertPort.videoToHls(filePath, hlsPath, file.getOriginalFilename()); // <-- async
+            fileConverter.videoToHls(filePath, hlsPath, file.getOriginalFilename()); // <-- async
         }
 
         //for audio files | 오디오 파일인 경우
@@ -227,7 +227,7 @@ public class UserFileCreateService {
                 final File thumbnailSaveFile = new File(thumbnailSaveName);
 
                 try {
-                    fileConvertPort.albumCoverImage(filePath, thumbnailSaveName, file.getOriginalFilename());
+                    fileConverter.albumCoverImage(filePath, thumbnailSaveName, file.getOriginalFilename());
                     Thumbnailator.createThumbnail(thumbnailSaveFile, thumbnailSaveFile, 100, 100);
                     hasThumbnail = true;
                 } catch (Exception ex) {
@@ -242,7 +242,7 @@ public class UserFileCreateService {
             isStreamingMusic = true;
             //hls convert
             final String hlsPath = UserFileDirPath+ generatePath(path+"."+fileName);
-            fileConvertPort.audioToHls(filePath, hlsPath, file.getOriginalFilename());// <- async
+            fileConverter.audioToHls(filePath, hlsPath, file.getOriginalFilename());// <- async
         }
 
         final UserFile fileEntity;
