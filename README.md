@@ -5,9 +5,6 @@
 >## File Streaming Home Server - backend
 >  클라우드 서비스와 음악 스트리밍, 영상 스트리밍을 제공하는 서비스의 백엔드 입니다.
 
-<a href="https://seohamin.com">💻 __***서비스 이용해보기***__</a>
-
-
 ---
 
 ## 개발 환경
