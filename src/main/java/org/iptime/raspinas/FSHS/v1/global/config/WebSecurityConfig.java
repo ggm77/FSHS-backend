@@ -5,6 +5,7 @@ import org.iptime.raspinas.FSHS.v1.global.auth.filter.JwtAuthenticationFilter;
 import org.iptime.raspinas.FSHS.v1.global.auth.oauth.PrincipalOauth2UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -23,9 +24,11 @@ public class WebSecurityConfig {
     private final PrincipalOauth2UserService principalOauth2UserService;
 
     @Bean
+    @Order(2)
     protected SecurityFilterChain configure(final HttpSecurity httpSecurity) throws Exception {
 
         httpSecurity
+                .securityMatcher("/api/v1/**")
                 .cors(Customizer.withDefaults())
                 .csrf((csrf) -> csrf.disable())
                 .httpBasic((httpBasic) -> httpBasic.disable())
