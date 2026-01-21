@@ -2,6 +2,7 @@ package org.iptime.raspinas.FSHS.v1.global.config;
 
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
@@ -27,6 +28,9 @@ import java.util.Map;
 )
 public class V1DatabaseConfig {
 
+    @Value("${spring.v1.jpa.hibernate.ddl-auto}")
+    private String V1_DDL_AUTO;
+
     @Primary
     @Bean
     @ConfigurationProperties(prefix = "spring.v1.datasource")
@@ -45,6 +49,8 @@ public class V1DatabaseConfig {
 
         properties.put("hibernate.implicit_naming_strategy",
                 "org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl");
+
+        properties.put("hibernate.hbm2ddl.auto", V1_DDL_AUTO);
 
         return builder
                 .dataSource(v1DataSource())

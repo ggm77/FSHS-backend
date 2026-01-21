@@ -2,6 +2,7 @@ package org.iptime.raspinas.FSHS.v2.global.config;
 
 import jakarta.persistence.EntityManagerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
@@ -24,6 +25,9 @@ import java.util.Map;
 )
 public class V2DatabaseConfig {
 
+    @Value("${spring.v2.jpa.hibernate.ddl-auto}")
+    private String V2_DDL_AUTO;
+
     @Bean
     @ConfigurationProperties(prefix = "spring.v2.datasource")
     public DataSource v2DataSource() {
@@ -36,6 +40,7 @@ public class V2DatabaseConfig {
     ) {
         final Map<String, Object> properties = new HashMap<>();
         properties.put("hibernate.dialect", "org.hibernate.community.dialect.SQLiteDialect");
+        properties.put("hibernate.hbm2ddl.auto", V2_DDL_AUTO);
 
         return builder
                 .dataSource(v2DataSource())
