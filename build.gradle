@@ -51,6 +51,14 @@ dependencies {
 	implementation 'org.apache.tika:tika-parsers:1.18'
 	//hwp viewer
 	implementation 'kr.dogfoot:hwplib:1.1.4'
+
+
+	// v2
+	//SQLite JDBC
+	implementation 'org.xerial:sqlite-jdbc:3.51.1.0'
+
+	//Hibernate Community Dialects
+	implementation 'org.hibernate.orm:hibernate-community-dialects:6.2.49.Final'
 }
 
 tasks.named('bootBuildImage') {
