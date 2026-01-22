@@ -24,6 +24,12 @@ public class UserV2 {
     @Column(length = 100, nullable = false)
     private String password;
 
+    // 유저 Role
+    @Enumerated(EnumType.STRING)
+    private Role role;   // enum Role { USER, ADMIN }
+
+    // 폴더 엔티티 추가 되면 루트 폴더만 N:1
+
     @Builder
     public UserV2(
             final String username,
@@ -31,6 +37,7 @@ public class UserV2 {
     ) {
         this.username = username;
         this.password = password;
+        this.role = Role.USER;
     }
 
     // 이름 변경용 메서드
@@ -41,5 +48,10 @@ public class UserV2 {
     // 비밀번호 변경용 메서드
     public void updatePassword(final String password) {
         this.password = password;
+    }
+
+    // Role 변경용 메서드
+    public void updateRole(final Role role) {
+        this.role = role;
     }
 }
