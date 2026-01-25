@@ -5,8 +5,8 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.iptime.raspinas.FSHS.v2.domain.user.entity.Role;
-import org.iptime.raspinas.FSHS.v2.global.exception.CustomExceptionV2;
-import org.iptime.raspinas.FSHS.v2.global.exception.constants.ExceptionCodeV2;
+import org.iptime.raspinas.FSHS.v2.global.exception.CustomException;
+import org.iptime.raspinas.FSHS.v2.global.exception.constants.ExceptionCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
@@ -104,7 +104,7 @@ public class JwtProvider {
                     .parseClaimsJws(token)
                     .getBody();
         } catch (final JwtException ex) {
-            throw new CustomExceptionV2(ExceptionCodeV2.INVALID_TOKEN);
+            throw new CustomException(ExceptionCode.INVALID_TOKEN);
         }
     }
 
