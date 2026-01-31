@@ -36,14 +36,12 @@
 ```text
 com.seohamin.fshs.v2
  ├ domain
- |  ├ auth (인증 관련 API)
  |  ├ file (파일 관련 API)
  |  ├ folder (폴더 관련 API)
  |  ├ user (유저 관련 API)
  |  ├ share (공유 관련 API)
  |  └ system (시스템 관련 API)
  └ global
-    ├ auth (각종 인증 관련 설정)
     ├ config (스웨거 등 공통 설정)
     ├ util (유틸 도구 모음)
     └ exception (커스텀 예외 처리)
@@ -82,7 +80,7 @@ com.seohamin.fshs.v2
 ## 5. 개발 로드맵
 
 ### 5.1 v2 로드맵
-1.  [ ] 세션 기반 인증 방식 구현 및 유저 API
+1.  [X] 세션 기반 인증 방식 구현 및 유저 API
 2.  [ ] 파일 및 폴더 조회/관리 API 구현
 3.  [ ] FFmpeg 기반 실시간 트랜스코딩 스트리밍 구현
 4.  [ ] 디스크 정보 동기화 및 파일 탐색 기능

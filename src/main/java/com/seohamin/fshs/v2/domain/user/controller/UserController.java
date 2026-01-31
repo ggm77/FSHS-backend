@@ -1,5 +1,7 @@
 package com.seohamin.fshs.v2.domain.user.controller;
 
+import com.seohamin.fshs.v2.global.util.SessionUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final SessionUtil sessionUtil;
 
     // 추가 유저 등록하는 API
     @PostMapping("/users")
@@ -39,19 +42,36 @@ public class UserController {
     @PatchMapping("/users/{userId}")
     public ResponseEntity<UserResponseDto> updateUser(
             @PathVariable final Long userId,
-            @Validated(Update.class) @RequestBody final UserRequestDto userRequestDto
+            @Validated(Update.class) @RequestBody final UserRequestDto userRequestDto,
+            final HttpServletRequest request
     ) {
 
-        return ResponseEntity.ok().body(userService.updateUser(userId, userRequestDto));
+        final UserResponseDto userResponseDto = userService.updateUser(userId, userRequestDto);
+
+        if(isSecuritySensitiveChange(userRequestDto)) {
+            sessionUtil.forceLogout(request);
+        }
+
+        return ResponseEntity.ok().body(userResponseDto);
     }
 
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<Void> deleteUser(
-            @PathVariable final Long userId
+            @PathVariable final Long userId,
+            final HttpServletRequest request
     ) {
 
         userService.deleteUser(userId);
 
+        sessionUtil.forceLogout(request);
+
         return ResponseEntity.noContent().build();
+    }
+
+    // 요청 DTO에 username이나 password가 있는지 확인하는 메서드
+    private boolean isSecuritySensitiveChange(final UserRequestDto dto) {
+        boolean isPasswordChanged = dto.getPassword() != null && !dto.getPassword().isEmpty();
+        boolean isUsernameChanged = dto.getUsername() != null && !dto.getUsername().isEmpty();
+        return isPasswordChanged || isUsernameChanged;
     }
 }

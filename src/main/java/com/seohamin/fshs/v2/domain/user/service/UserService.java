@@ -7,13 +7,16 @@ import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements UserDetailsService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
@@ -127,5 +130,25 @@ public class UserService {
     @Transactional
     public void deleteUser(final Long userId) {
         userRepository.deleteById(userId);
+    }
+
+    /**
+     * 세션 기반 인증시 스프링 시큐리티가 사용하는 메서드
+     * @param username the username identifying the user whose data is required.
+     * @return 스프링 시큐리티에서 사용하는 유저 객체
+     */
+    @Override
+    public UserDetails loadUserByUsername(final String username) throws UsernameNotFoundException {
+
+        // 1) DB에서 유저 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        // 2) 스프링 시큐리티가 사용하는 객체로 리턴
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .roles(user.getRole().name())
+                .build();
     }
 }

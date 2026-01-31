@@ -17,7 +17,7 @@ public class User {
     private Long id;
 
     // 유저 이름
-    @Column(length = 255, nullable = false)
+    @Column(length = 255, nullable = false, unique = true)
     private String username;
 
     // 유저 비밀번호

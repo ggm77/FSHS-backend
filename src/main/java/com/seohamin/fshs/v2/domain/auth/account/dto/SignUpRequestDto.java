@@ -1,10 +1,10 @@
-package com.seohamin.fshs.v2.domain.auth.login.dto;
+package com.seohamin.fshs.v2.domain.auth.account.dto;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
 @Getter
-public class LoginRequestDto {
+public class SignUpRequestDto {
 
     @NotNull
     private String username;
