@@ -6,6 +6,7 @@ import com.seohamin.fshs.v2.domain.user.entity.User;
 
 @Getter
 public class UserResponseDto {
+    private final Long id;
     private final String username;
     private final String role;
     private final Long rootFolderId;
@@ -15,6 +16,7 @@ public class UserResponseDto {
             final User user,
             final Long rootFolderId
     ) {
+        this.id = user.getId();
         this.username = user.getUsername();
         this.role = user.getRole().name();
         this.rootFolderId = rootFolderId;
