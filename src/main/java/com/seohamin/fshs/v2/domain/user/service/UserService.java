@@ -134,6 +134,13 @@ public class UserService implements UserDetailsService {
      */
     @Transactional
     public void deleteUser(final Long userId) {
+
+        // 1) 유저 존재 확인
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(ExceptionCode.USER_NOT_EXIST);
+        }
+
+        // 2) 삭제
         userRepository.deleteById(userId);
     }
 
