@@ -1,7 +1,8 @@
-package com.seohamin.fshs.v2.domain.user.repository;
+package com.seohamin.fshs.v2.domain.user;
 
 import com.seohamin.fshs.v2.domain.user.entity.Role;
 import com.seohamin.fshs.v2.domain.user.entity.User;
+import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

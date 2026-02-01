@@ -1,6 +1,7 @@
-package com.seohamin.fshs.v2.domain.user.controller;
+package com.seohamin.fshs.v2.domain.user;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.seohamin.fshs.v2.domain.user.controller.UserController;
 import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
 import com.seohamin.fshs.v2.domain.user.entity.User;

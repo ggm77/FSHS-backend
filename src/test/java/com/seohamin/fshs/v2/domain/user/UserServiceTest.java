@@ -1,9 +1,10 @@
-package com.seohamin.fshs.v2.domain.user.service;
+package com.seohamin.fshs.v2.domain.user;
 
 import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
+import com.seohamin.fshs.v2.domain.user.service.UserService;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import org.junit.jupiter.api.DisplayName;
