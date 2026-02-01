@@ -38,21 +38,26 @@ public class UserService implements UserDetailsService {
         final String username = userRequestDto.getUsername();
         final String password = passwordEncoder.encode(userRequestDto.getPassword());
 
-        // 3) 유저명 겹치는지 확인
+        // 3) 유저명 길이 체크
+        if(username == null || username.isEmpty()){
+            throw new CustomException(ExceptionCode.INVALID_USERNAME);
+        }
+
+        // 4) 유저명 겹치는지 확인
         if(userRepository.existsByUsername(username)) {
             throw new CustomException(ExceptionCode.USERNAME_DUPLICATE);
         }
 
-        // 4) 엔티티 만들기
+        // 5) 엔티티 만들기
         final User user = User.builder()
                 .username(username)
                 .password(password)
                 .build();
 
-        // 5) DB에 저장
+        // 6) DB에 저장
         final User savedUser = userRepository.save(user);
 
-        // 6) DTO에 담아 리턴
+        // 7) DTO에 담아 리턴
         return UserResponseDto.builder()
                 .user(savedUser)
                 .build();

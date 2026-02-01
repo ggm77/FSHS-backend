@@ -15,6 +15,7 @@ public enum ExceptionCode {
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "잘못된 토큰입니다."),
     LOGIN_FAILED(HttpStatus.BAD_REQUEST, "로그인에 실패했습니다."),
     INVALID_ENUM_VALUE(HttpStatus.BAD_REQUEST, "올바르지 않은 Enum입니다."),
+    INVALID_USERNAME(HttpStatus.BAD_REQUEST, "올바르지 않은 유저명입니다."),
 
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버에서 에러가 발생했습니다.")
     ;
