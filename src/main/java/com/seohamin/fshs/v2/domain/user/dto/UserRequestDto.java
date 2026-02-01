@@ -1,6 +1,7 @@
 package com.seohamin.fshs.v2.domain.user.dto;
 
 import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.Getter;
 import com.seohamin.fshs.v2.global.validation.Create;
 
@@ -8,8 +9,17 @@ import com.seohamin.fshs.v2.global.validation.Create;
 public class UserRequestDto {
 
     @NotNull(groups = Create.class)
-    public String username;
+    private String username;
 
     @NotNull(groups = Create.class)
-    public String password;
+    private String password;
+
+    @Builder
+    public UserRequestDto(
+            final String username,
+            final String password
+    ) {
+        this.username = username;
+        this.password = password;
+    }
 }
