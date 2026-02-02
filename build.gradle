@@ -51,7 +51,7 @@ dependencies {
 	implementation 'org.xerial:sqlite-jdbc:3.51.1.0'
 
 	//Hibernate Community Dialects
-	implementation 'org.hibernate.orm:hibernate-community-dialects:7.2.0.Final'
+	implementation 'org.hibernate.orm:hibernate-community-dialects:7.2.3.Final'
 
 	//lombok
 	compileOnly 'org.projectlombok:lombok'
