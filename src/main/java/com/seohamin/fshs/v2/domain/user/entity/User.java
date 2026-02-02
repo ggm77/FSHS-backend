@@ -3,6 +3,8 @@ package com.seohamin.fshs.v2.domain.user.entity;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -38,22 +40,30 @@ public class User {
 
     // 유저 이름
     @Column(length = 255, nullable = false, unique = true)
+    @Size(max = 255)
+    @NotNull
     private String username;
 
     // 유저 비밀번호
     @Column(length = 100, nullable = false)
+    @Size(max = 100)
+    @NotNull
     private String password;
 
     // 유저 Role
     @Enumerated(EnumType.STRING)
+    @Column(length = 20, nullable = false)
+    @NotNull
     private Role role;   // enum Role { USER, ADMIN }
 
     @CreatedDate
     @Column(nullable = false)
+    @NotNull
     private Instant createdAt;
 
     @LastModifiedDate
     @Column(nullable = false)
+    @NotNull
     private Instant updatedAt;
 
     @Builder

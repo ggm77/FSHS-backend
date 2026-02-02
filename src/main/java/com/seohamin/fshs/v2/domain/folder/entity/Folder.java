@@ -3,6 +3,8 @@ package com.seohamin.fshs.v2.domain.folder.entity;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -52,31 +54,40 @@ public class Folder {
 
     // 폴더 상대 위치
     @Column(length = 4096, nullable = false)
+    @Size(max = 4096)
+    @NotNull
     private String relativePath;
 
     // 폴더 이름
     @Column(length = 255, nullable = false)
+    @Size(max = 255)
+    @NotNull
     private String name;
 
     // 파일 생성 시점
     @Column(nullable = false)
+    @NotNull
     private Instant originCreatedAt;
 
     // 파일 수정 시점
     @Column(nullable = false)
+    @NotNull
     private Instant originUpdatedAt;
 
     // DB 저장 시점
     @CreatedDate
     @Column(nullable = false)
+    @NotNull
     private Instant createdAt;
 
     // DB 수정 시점
     @LastModifiedDate
     @Column(nullable = false)
+    @NotNull
     private Instant updatedAt;
 
     @Column(nullable = false)
+    @NotNull
     private Boolean isNfd;
 
     @Builder

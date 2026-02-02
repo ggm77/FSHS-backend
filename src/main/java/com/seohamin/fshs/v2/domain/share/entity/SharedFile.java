@@ -3,6 +3,8 @@ package com.seohamin.fshs.v2.domain.share.entity;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,26 +29,32 @@ public class SharedFile {
 
     // 공유 키
     @Column(length = 50, nullable = false, unique = true, updatable = false)
+    @Size(max = 50)
+    @NotNull
     private String shareKey;
 
     // 생성 시점
     @CreatedDate
     @Column(nullable = false)
+    @NotNull
     private Instant createdAt;
 
     // 수정 시점
     @LastModifiedDate
     @Column(nullable = false)
+    @NotNull
     private Instant updatedAt;
 
     // 공유한 파일
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "file_id", updatable = false)
+    @JoinColumn(name = "file_id", updatable = false, nullable = false)
+    @NotNull
     private File file;
 
     // 공유한 유저
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", updatable = false)
+    @JoinColumn(name = "owner_id", updatable = false, nullable = false)
+    @NotNull
     private User owner;
 
     @Builder

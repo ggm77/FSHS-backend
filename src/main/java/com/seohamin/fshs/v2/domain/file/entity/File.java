@@ -3,6 +3,8 @@ package com.seohamin.fshs.v2.domain.file.entity;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -50,38 +52,52 @@ public class File {
 
     // 확장자 포함 파일명
     @Column(length = 255, nullable = false)
+    @Size(max = 255)
+    @NotNull
     private String name;
 
     // 확장자 제외 파일명
     @Column(length = 255, nullable = false)
+    @Size(max = 255)
+    @NotNull
     private String baseName;
 
     // 확장자
     @Column(length = 50, nullable = false)
+    @Size(max = 50)
+    @NotNull
     private String extension;
 
     // 파일 상대 경로
     @Column(length = 4096, nullable = false)
+    @Size(max = 4096)
+    @NotNull
     private String relativePath;
 
     // 부모 폴더 상대 경로 (비정규화)
     @Column(length = 4096, nullable = false)
+    @Size(max = 4096)
+    @NotNull
     private String parentPath;
 
     // MIME 타입
     @Column(length = 255, nullable = true)
+    @Size(max = 255)
     private String mimeType;
 
     // 파일 크기
     @Column(nullable = false)
+    @NotNull
     private Long size;
 
     // 비디오 코덱
     @Column(length = 255, nullable = true)
+    @Size(max = 255)
     private String videoCodec;
 
     // 오디오 코덱
     @Column(length = 255, nullable = true)
+    @Size(max = 255)
     private String audioCodec;
 
     // 이미지 너비
@@ -102,29 +118,35 @@ public class File {
 
     // 파일 생성 시점
     @Column(nullable = false)
+    @NotNull
     private Instant originCreatedAt;
 
     // 파일 수정 시점
     @Column(nullable = false)
+    @NotNull
     private Instant originUpdatedAt;
 
     // DB 저장 시점
     @CreatedDate
     @Column(nullable = false)
+    @NotNull
     private Instant createdAt;
 
     // DB 수정 시점
     @LastModifiedDate
     @Column(nullable = false)
+    @NotNull
     private Instant updatedAt;
 
     // 파일의 카테고리
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
+    @NotNull
     private Category category;
 
     // 파일명이 NFD로 되어있는지 여부
     @Column(nullable = false)
+    @NotNull
     private Boolean isNfd;
 
     @Builder
