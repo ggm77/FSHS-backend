@@ -20,6 +20,8 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Table(name = "folders")
+// schema.sql 파일이 parent_folder_id, name, is_nfd 컬럼이 유니크로 묶음
+// parent_folder_id가 null인 경우를 대비하기 위함
 public class Folder {
 
     // 폴더 ID
@@ -74,6 +76,9 @@ public class Folder {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    @Column(nullable = false)
+    private Boolean isNfd;
+
     @Builder
     public Folder(
             final Folder parentFolder,
@@ -81,7 +86,8 @@ public class Folder {
             final String relativePath,
             final String name,
             final Instant originCreatedAt,
-            final Instant originUpdatedAt
+            final Instant originUpdatedAt,
+            final Boolean isNfd
     ) {
         this.parentFolder = parentFolder;
         this.ownerId = ownerId;
@@ -89,6 +95,7 @@ public class Folder {
         this.name = name;
         this.originCreatedAt = originCreatedAt;
         this.originUpdatedAt = originUpdatedAt;
+        this.isNfd = isNfd;
     }
 
     // 상위 폴더 상대 경로 변경 메서드
@@ -119,5 +126,10 @@ public class Folder {
     // 폴더 수정 시점 변경 메서드
     public void updateOriginUpdatedAt(final Instant originUpdatedAt) {
         this.originUpdatedAt = originUpdatedAt;
+    }
+
+    // NFD 여부 변경 메서드
+    public void updateIsNfd(final Boolean isNfd) {
+        this.isNfd = isNfd;
     }
 }

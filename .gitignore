@@ -6,6 +6,14 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+application.properties
+application-dev.properties
+application-prod.properties
+
+application.yml
+application-dev.yml
+application-prod.yml
+
 ### STS ###
 .apt_generated
 .classpath
@@ -19,10 +27,6 @@ bin/
 !**/src/test/**/bin/
 
 ### IntelliJ IDEA ###
-application.properties
-application-dev.properties
-application-prod.properties
-
 .idea
 *.iws
 *.iml
