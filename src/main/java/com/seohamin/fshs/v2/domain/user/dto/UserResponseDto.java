@@ -22,7 +22,7 @@ public class UserResponseDto {
     ) {
         this.id = user.getId();
         this.username = user.getUsername();
-        this.role = user.getRole().name();
+        this.role = user.getUserRole().name();
         this.rootFolderId = rootFolderId;
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
