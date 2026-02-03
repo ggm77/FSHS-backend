@@ -22,7 +22,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 @Table(
-        name = "folders",
+        name = "folder",
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_folder_path",

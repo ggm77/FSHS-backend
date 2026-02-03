@@ -21,7 +21,7 @@ import java.util.List;
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Table(name = "users")
+@Table(name = "member")
 public class User {
 
     // 유저 ID
@@ -54,7 +54,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
     @NotNull
-    private Role role;   // enum Role { USER, ADMIN }
+    private Role userRole;   // enum Role { USER, ADMIN }
 
     @CreatedDate
     @Column(nullable = false)
@@ -73,7 +73,7 @@ public class User {
     ) {
         this.username = username;
         this.password = password;
-        this.role = Role.USER;
+        this.userRole = Role.USER;
         this.rootFolder = null;
     }
 
@@ -88,8 +88,8 @@ public class User {
     }
 
     // Role 변경용 메서드
-    public void updateRole(final Role role) {
-        this.role = role;
+    public void updateRole(final Role userRole) {
+        this.userRole = userRole;
     }
 
     // 루트 폴더 변경용 메서드

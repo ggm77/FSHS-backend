@@ -19,7 +19,7 @@ import java.time.Instant;
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Table(name = "shared_files")
+@Table(name = "shared_file")
 public class SharedFile {
 
     // 공유 링크 ID
