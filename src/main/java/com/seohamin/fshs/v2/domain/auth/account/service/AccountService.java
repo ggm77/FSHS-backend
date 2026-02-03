@@ -8,6 +8,7 @@ import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +21,7 @@ public class AccountService {
      * 개발용 회원 가입용 메서드
      * @param signUpRequestDto 회원가입 정보 담긴 DTO
      */
+    @Transactional
     public void signUp(final SignUpRequestDto signUpRequestDto) {
 
         // 1) 회원가입 정보 변수 저장

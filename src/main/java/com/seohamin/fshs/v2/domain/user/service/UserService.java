@@ -27,6 +27,7 @@ public class UserService implements UserDetailsService {
      * @param userRequestDto 유저 정보 담긴 DTO
      * @return 저장된 유저 정보 담긴 DTO
      */
+    @Transactional
     public UserResponseDto createUser(final UserRequestDto userRequestDto) {
 
         // 1) 비밀번호 길이 검증
