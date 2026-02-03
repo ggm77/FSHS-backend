@@ -26,7 +26,7 @@
 ### 2.1 기술 스택
 * **Language**: Java 25
 * **Framework**: Spring Boot 4.0.2
-* **Database**: SQLite 3.51.0
+* **Database**: H2
 * **Media Processing**: FFmpeg
 
 ### 2.2 API 명세서

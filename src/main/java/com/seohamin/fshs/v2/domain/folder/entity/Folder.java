@@ -21,9 +21,15 @@ import java.util.List;
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Table(name = "folders")
-// schema.sql 파일이 parent_folder_id, name, is_nfd 컬럼들을 유니크로 묶음
-// parent_folder_id가 null인 경우를 대비하기 위함
+@Table(
+        name = "folders",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_folder_path",
+                        columnNames = {"parent_folder_id", "name", "is_nfd"}
+                )
+        }
+)
 public class Folder {
 
     // 폴더 ID

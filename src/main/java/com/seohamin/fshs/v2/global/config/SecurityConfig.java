@@ -30,6 +30,11 @@ public class SecurityConfig {
             );
         } else {
             httpSecurity.csrf(AbstractHttpConfigurer::disable);
+            httpSecurity.headers(headers -> headers
+                    .frameOptions(frameOptions -> frameOptions.sameOrigin())
+            );
+            httpSecurity.authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/h2-console").permitAll());
         }
 
         httpSecurity
