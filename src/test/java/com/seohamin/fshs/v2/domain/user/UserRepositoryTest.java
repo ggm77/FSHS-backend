@@ -211,7 +211,7 @@ public class UserRepositoryTest {
 
     @Test
     @DisplayName("유저 삭제 : 유저 삭제시 연관된 공유된 파일 정보 삭제됨")
-    void deleteSharedFile_ThenUserDeleted() {
+    void deleteUser_ThenSharedFileDeleted() {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);

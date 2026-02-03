@@ -71,6 +71,21 @@ public class UserServiceTest {
     }
 
     @Test
+    @DisplayName("유저 등록 : 유저명이 NULL인 경우 등록 불가")
+    void preventNullUsername() {
+        // Given
+        final UserRequestDto userRequestDto = UserRequestDto.builder()
+                .username(null)
+                .password("password123")
+                .build();
+
+        // When & Then
+        assertThatThrownBy(() -> userService.createUser(userRequestDto))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_USERNAME);
+    }
+
+    @Test
     @DisplayName("유저 등록 : 너무 짧은 비밀번호 등록 불가")
     void preventShortPassword() {
         // Given

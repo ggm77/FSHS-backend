@@ -224,7 +224,7 @@ public class FileRepositoryTest {
 
     @Test
     @DisplayName("파일 삭제 : 파일 삭제시 파일 공유 정보가 삭제됨")
-    void deleteSharedFile_ThenFileDeleted() {
+    void deleteFile_ThenSharedFileDeleted() {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
