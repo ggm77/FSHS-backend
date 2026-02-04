@@ -112,6 +112,10 @@ public class File {
     @Column(nullable = true)
     private Long duration;
 
+    // 영상 비트레이트
+    @Column(nullable = true)
+    private Integer bitrate;
+
     // 이미지 회전 정보
     @Column(nullable = true)
     private Integer orientation;
@@ -165,6 +169,7 @@ public class File {
             final Integer width,
             final Integer height,
             final Long duration,
+            final Integer bitrate,
             final Integer orientation,
             final Instant originCreatedAt,
             final Instant originUpdatedAt,
@@ -185,6 +190,7 @@ public class File {
         this.width = width;
         this.height = height;
         this.duration = duration;
+        this.bitrate = bitrate;
         this.orientation = orientation;
         this.originCreatedAt = originCreatedAt;
         this.originUpdatedAt = originUpdatedAt;
@@ -250,6 +256,11 @@ public class File {
     // 재생시간 변경 메서드
     public void updateDuration(final Long duration) {
         this.duration = duration;
+    }
+
+    // 비트레이트 변경 메서드
+    public void updateBitrate(final Integer bitrate) {
+        this.bitrate = bitrate;
     }
 
     // 이미지 회전 정보 변경 메서드

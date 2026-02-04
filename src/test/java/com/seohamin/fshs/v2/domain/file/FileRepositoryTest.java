@@ -46,7 +46,7 @@ public class FileRepositoryTest {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
-        final File file = createTestFile(folder, "fileName", "jpg");
+        final File file = createTestFile(folder, "fileName", "jpg", 0);
 
         // When
         final File savedFile = fileRepository.save(file);
@@ -65,11 +65,11 @@ public class FileRepositoryTest {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
-        final File file = createTestFile(folder, "fileName", "jpg");
+        final File file = createTestFile(folder, "fileName", "jpg", 0);
         fileRepository.save(file);
         testEntityManager.flush();
 
-        final File duplicateFile = createTestFile(folder, "fileName", "jpg");
+        final File duplicateFile = createTestFile(folder, "fileName", "jpg", 0);
         testEntityManager.clear();
 
         // When & Then
@@ -85,7 +85,7 @@ public class FileRepositoryTest {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
-        final File tooLongFile = createTestFile(folder, "fileName", "/home/user/documents/university/2026/spring/computer-science/project/v2/file.txt");
+        final File tooLongFile = createTestFile(folder, "fileName", "/home/user/documents/university/2026/spring/computer-science/project/v2/file.txt", 0);
 
         // When & Then
         assertThatThrownBy(() -> {
@@ -99,7 +99,7 @@ public class FileRepositoryTest {
     void noFileName_Fail() {
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
-        final File noNameFile = createTestFile(folder, "fileName", "jpg");
+        final File noNameFile = createTestFile(folder, "fileName", "jpg", 0);
         noNameFile.updateName(null);
 
         // When & Then
@@ -115,7 +115,7 @@ public class FileRepositoryTest {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
-        final File file = createTestFile(folder, "fileName", "jpg");
+        final File file = createTestFile(folder, "fileName", "jpg", 0);
         final Long fileId = fileRepository.save(file).getId();
 
         // When
@@ -135,7 +135,7 @@ public class FileRepositoryTest {
         testEntityManager.persist(folder);
         final Folder newFolder = createTestFolder("newFolderName");
         testEntityManager.persist(newFolder);
-        final File file = createTestFile(folder, "fileName", "jpg");
+        final File file = createTestFile(folder, "fileName", "jpg", 0);
         final Long fileId = fileRepository.save(file).getId();
         testEntityManager.flush();
         final Instant now = Instant.now();
@@ -154,6 +154,7 @@ public class FileRepositoryTest {
         foundFile.updateVideoCodec("newVideoCodec");
         foundFile.updateAudioCodec("newAudioCodec");
         foundFile.updateDuration(67L);
+        foundFile.updateBitrate(999);
         foundFile.updateOrientation(-90);
         foundFile.updateOriginCreatedAt(now);
         foundFile.updateOriginUpdatedAt(now);
@@ -177,6 +178,7 @@ public class FileRepositoryTest {
         assertThat(updatedFile.getVideoCodec()).isEqualTo("newVideoCodec");
         assertThat(updatedFile.getAudioCodec()).isEqualTo("newAudioCodec");
         assertThat(updatedFile.getDuration()).isEqualTo(67L);
+        assertThat(updatedFile.getBitrate()).isEqualTo(999);
         assertThat(updatedFile.getOrientation()).isEqualTo(-90);
         assertThat(updatedFile.getOriginCreatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFile.getOriginUpdatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
@@ -190,7 +192,7 @@ public class FileRepositoryTest {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
-        final File file = createTestFile(folder, "fileName", "jpg");
+        final File file = createTestFile(folder, "fileName", "jpg", 0);
         final Long fileId = fileRepository.save(file).getId();
         testEntityManager.flush();
 
@@ -210,7 +212,7 @@ public class FileRepositoryTest {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
-        final File file = createTestFile(folder, "fileName", "jpg");
+        final File file = createTestFile(folder, "fileName", "jpg", 0);
         final Long fileId = fileRepository.save(file).getId();
 
         // When
@@ -228,7 +230,7 @@ public class FileRepositoryTest {
         // Given
         final Folder folder = createTestFolder("folderName");
         testEntityManager.persist(folder);
-        final File file = createTestFile(folder, "fileName", "jpg");
+        final File file = createTestFile(folder, "fileName", "jpg", 0);
         final User user = User.builder()
                 .username("username")
                 .password("password")
@@ -268,7 +270,8 @@ public class FileRepositoryTest {
     private File createTestFile(
             final Folder folder,
             final String baseName,
-            final String extension
+            final String extension,
+            final Integer bitrate
     ) {
         return File.builder()
                 .parentFolder(folder)
@@ -285,6 +288,7 @@ public class FileRepositoryTest {
                 .width(2)
                 .height(3)
                 .duration(4L)
+                .bitrate(bitrate)
                 .orientation(0)
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
