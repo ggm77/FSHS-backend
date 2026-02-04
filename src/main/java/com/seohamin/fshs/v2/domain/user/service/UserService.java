@@ -31,13 +31,13 @@ public class UserService implements UserDetailsService {
     public UserResponseDto createUser(final UserRequestDto userRequestDto) {
 
         // 1) 비밀번호 길이 검증
-        if(userRequestDto.getPassword().length() < 4 ) {
+        if(userRequestDto.password().length() < 4 ) {
             throw new CustomException(ExceptionCode.TOO_SHORT_PASSWORD);
         }
 
         // 2) 변수에 저장 및 비밀번호 해싱
-        final String username = userRequestDto.getUsername();
-        final String password = passwordEncoder.encode(userRequestDto.getPassword());
+        final String username = userRequestDto.username();
+        final String password = passwordEncoder.encode(userRequestDto.password());
 
         // 3) 유저명 길이 체크
         if(username == null || username.isEmpty()){
@@ -59,9 +59,7 @@ public class UserService implements UserDetailsService {
         final User savedUser = userRepository.save(user);
 
         // 7) DTO에 담아 리턴
-        return UserResponseDto.builder()
-                .user(savedUser)
-                .build();
+        return UserResponseDto.of(savedUser, null);
     }
 
     /**
@@ -75,9 +73,7 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
 
         // 2) DTO에 담아 리턴
-        return UserResponseDto.builder()
-                .user(user)
-                .build();
+        return UserResponseDto.of(user, null);
     }
 
     /**
@@ -92,18 +88,18 @@ public class UserService implements UserDetailsService {
     ) {
 
         // 1) 유저 이름 변수에 저장
-        final String username = userRequestDto.getUsername();
+        final String username = userRequestDto.username();
 
         // 2) 비밀번호 비어있지 않으면 해싱
         final String password;
-        if(userRequestDto.getPassword() != null && !userRequestDto.getPassword().isEmpty()) {
+        if(userRequestDto.password() != null && !userRequestDto.password().isEmpty()) {
 
             // 비밀번호 길이 제한
-            if(userRequestDto.getPassword().length() < 4 ) {
+            if(userRequestDto.password().length() < 4 ) {
                 throw new CustomException(ExceptionCode.TOO_SHORT_PASSWORD);
             }
 
-            password = passwordEncoder.encode(userRequestDto.getPassword());
+            password = passwordEncoder.encode(userRequestDto.password());
         }
         else {
             password = null;
@@ -124,9 +120,7 @@ public class UserService implements UserDetailsService {
         }
 
         // 6) DTO에 담아서 리턴
-        return UserResponseDto.builder()
-                .user(user)
-                .build();
+        return UserResponseDto.of(user, null);
     }
 
     /**

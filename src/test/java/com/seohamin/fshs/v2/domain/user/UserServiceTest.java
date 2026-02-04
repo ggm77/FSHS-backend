@@ -38,13 +38,10 @@ public class UserServiceTest {
     @DisplayName("유저 등록 : 성공")
     void createUser_Success() {
         // Given
-        final UserRequestDto dto = UserRequestDto.builder()
-                .username("newbie")
-                .password("password123")
-                .build();
+        final UserRequestDto dto = new UserRequestDto("newbie", "password123");
 
-        given(passwordEncoder.encode(dto.getPassword())).willReturn("encoded_password");
-        given(userRepository.existsByUsername(dto.getUsername())).willReturn(false);
+        given(passwordEncoder.encode(dto.password())).willReturn("encoded_password");
+        given(userRepository.existsByUsername(dto.username())).willReturn(false);
         given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
@@ -59,10 +56,7 @@ public class UserServiceTest {
     @DisplayName("유저 등록 : 빈 유저명 등록 불가")
     void preventEmptyUsername() {
         // Given
-        final UserRequestDto userRequestDto = UserRequestDto.builder()
-                .username("")
-                .password("password123")
-                .build();
+        final UserRequestDto userRequestDto = new UserRequestDto("", "password123");
 
         // When & Then
         assertThatThrownBy(() -> userService.createUser(userRequestDto))
@@ -74,10 +68,7 @@ public class UserServiceTest {
     @DisplayName("유저 등록 : 유저명이 NULL인 경우 등록 불가")
     void preventNullUsername() {
         // Given
-        final UserRequestDto userRequestDto = UserRequestDto.builder()
-                .username(null)
-                .password("password123")
-                .build();
+        final UserRequestDto userRequestDto = new UserRequestDto(null, "password123");
 
         // When & Then
         assertThatThrownBy(() -> userService.createUser(userRequestDto))
@@ -89,10 +80,7 @@ public class UserServiceTest {
     @DisplayName("유저 등록 : 너무 짧은 비밀번호 등록 불가")
     void preventShortPassword() {
         // Given
-        final UserRequestDto userRequestDto = UserRequestDto.builder()
-                .username("test")
-                .password("1")
-                .build();
+        final UserRequestDto userRequestDto = new UserRequestDto("test", "1");
 
         // When & Then
         assertThatThrownBy(() -> userService.createUser(userRequestDto))
@@ -105,10 +93,7 @@ public class UserServiceTest {
     void preventDuplicateUsername() {
         // Given
         given(userRepository.existsByUsername("test")).willReturn(true);
-        final UserRequestDto userRequestDto = UserRequestDto.builder()
-                .username("test")
-                .password("test")
-                .build();
+        final UserRequestDto userRequestDto = new UserRequestDto("test", "test");
 
         // When & Then
         assertThatThrownBy(() -> userService.createUser(userRequestDto))
@@ -129,7 +114,7 @@ public class UserServiceTest {
 
         // Then
         assertThat(userResponseDto).isNotNull();
-        assertThat(userResponseDto.getUsername()).isEqualTo("oldName");
+        assertThat(userResponseDto.username()).isEqualTo("oldName");
         then(userRepository).should().findById(userId);
     }
 
@@ -151,10 +136,7 @@ public class UserServiceTest {
     void updateUser_NotFound() {
         // Given
         final Long userId = 1L;
-        final UserRequestDto updateDto = UserRequestDto.builder()
-                .username("newName")
-                .password("newPassword")
-                .build();
+        final UserRequestDto updateDto = new UserRequestDto("newName", "newPassword");
 
         given(userRepository.findById(userId)).willReturn(Optional.empty());
 
@@ -170,9 +152,7 @@ public class UserServiceTest {
         // Given
         final Long userId = 1L;
         final User existingUser = User.builder().username("oldName").password("oldPass").build();
-        final UserRequestDto updateDto = UserRequestDto.builder()
-                .password("newPassword")
-                .build();
+        final UserRequestDto updateDto = new UserRequestDto("", "newPassword");
 
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
         given(passwordEncoder.encode("newPassword")).willReturn("hashedNewPassword");
@@ -191,9 +171,7 @@ public class UserServiceTest {
         // Given
         final Long userId = 1L;
         final User existingUser = User.builder().username("oldName").password("oldPass").build();
-        final UserRequestDto updateDto = UserRequestDto.builder()
-                .username("newName")
-                .build();
+        final UserRequestDto updateDto = new UserRequestDto("newName", "");
 
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
 
@@ -211,8 +189,7 @@ public class UserServiceTest {
         // Given
         final Long userId = 1L;
         final User existingUser = User.builder().username("oldName").password("oldPass").build();
-        final UserRequestDto updateDto = UserRequestDto.builder()
-                .build();
+        final UserRequestDto updateDto = new UserRequestDto("", "");
 
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
 

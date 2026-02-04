@@ -1,30 +1,28 @@
 package com.seohamin.fshs.v2.domain.user.dto;
 
-import lombok.Builder;
-import lombok.Getter;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 
 import java.time.Instant;
 
-@Getter
-public class UserResponseDto {
-    private final Long id;
-    private final String username;
-    private final String role;
-    private final Long rootFolderId;
-    private final Instant createdAt;
-    private final Instant updatedAt;
-
-    @Builder
-    public UserResponseDto(
+public record UserResponseDto(
+    Long id,
+    String username,
+    String role,
+    Long rootFolderId,
+    Instant createdAt,
+    Instant updatedAt
+) {
+    public static UserResponseDto of(
             final User user,
             final Long rootFolderId
     ) {
-        this.id = user.getId();
-        this.username = user.getUsername();
-        this.role = user.getUserRole().name();
-        this.rootFolderId = rootFolderId;
-        this.createdAt = user.getCreatedAt();
-        this.updatedAt = user.getUpdatedAt();
+        return new UserResponseDto(
+                user.getId(),
+                user.getUsername(),
+                user.getUserRole().name(),
+                rootFolderId,
+                user.getCreatedAt(),
+                user.getUpdatedAt()
+        );
     }
 }

@@ -40,15 +40,9 @@ public class UserControllerTest {
     @DisplayName("유저 API : 유저 등록 API 성공")
     void createUser_Success() throws Exception {
         // Given
-        final UserRequestDto requestDto = UserRequestDto.builder()
-                .username("tester")
-                .password("password123")
-                .build();
+        final UserRequestDto requestDto = new UserRequestDto("tester", "password123");
         final String requestBody = new ObjectMapper().writeValueAsString(requestDto);
-        final UserResponseDto responseDto = UserResponseDto.builder()
-                .user(new User("tester", "hashedPassword123"))
-                .rootFolderId(null)
-                .build();
+        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "hashedPassword123"), null);
 
         given(userService.createUser(any(UserRequestDto.class))).willReturn(responseDto);
 
@@ -67,10 +61,7 @@ public class UserControllerTest {
     void getUser_Success() throws Exception {
         // Given
         final Long userId = 1L;
-        final UserResponseDto responseDto = UserResponseDto.builder()
-                .user(new User("tester", "password123"))
-                .rootFolderId(null)
-                .build();
+        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "password123"), null);
 
         given(userService.getUser(userId)).willReturn(responseDto);
 
@@ -86,15 +77,9 @@ public class UserControllerTest {
     void updateUser_Success() throws Exception {
         // Given
         final Long userId = 1L;
-        final UserRequestDto requestDto = UserRequestDto.builder()
-                .username("tester")
-                .password("password123")
-                .build();
+        final UserRequestDto requestDto = new UserRequestDto("tester", "password123");
         final String requestBody = new ObjectMapper().writeValueAsString(requestDto);
-        final UserResponseDto responseDto = UserResponseDto.builder()
-                .user(new User("tester", "hashedPassword123"))
-                .rootFolderId(null)
-                .build();
+        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "hashedPassword123"), null);
 
         given(userService.updateUser(eq(userId), any(UserRequestDto.class))).willReturn(responseDto);
 

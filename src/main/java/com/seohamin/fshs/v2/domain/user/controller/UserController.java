@@ -70,8 +70,8 @@ public class UserController {
 
     // 요청 DTO에 username이나 password가 있는지 확인하는 메서드
     private boolean isSecuritySensitiveChange(final UserRequestDto dto) {
-        boolean isPasswordChanged = dto.getPassword() != null && !dto.getPassword().isEmpty();
-        boolean isUsernameChanged = dto.getUsername() != null && !dto.getUsername().isEmpty();
+        boolean isPasswordChanged = dto.password() != null && !dto.password().isEmpty();
+        boolean isUsernameChanged = dto.username() != null && !dto.username().isEmpty();
         return isPasswordChanged || isUsernameChanged;
     }
 }
