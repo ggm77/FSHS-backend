@@ -5,10 +5,7 @@ import com.seohamin.fshs.v2.domain.user.entity.User;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -51,7 +48,11 @@ public class Folder {
 
     // 상위 폴더
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_folder_id")
+    @JoinColumn(name = "parent_folder_id", nullable = false)
+    @NotNull
+    //시스템 루트 폴더가 자기 자신을 참조하기 때문에 어노테이션 2개 제거
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Folder parentFolder;
 
     // 폴더 만든 유저 (비정규화)
@@ -96,6 +97,12 @@ public class Folder {
     @NotNull
     private Boolean isNfd;
 
+    @Column(nullable = false)
+    private Boolean isRoot;
+
+    @Column(nullable = false, updatable = false)
+    private Boolean isSystemRoot;
+
     @Builder
     public Folder(
             final Folder parentFolder,
@@ -104,7 +111,8 @@ public class Folder {
             final String name,
             final Instant originCreatedAt,
             final Instant originUpdatedAt,
-            final Boolean isNfd
+            final Boolean isNfd,
+            final Boolean isRoot
     ) {
         this.parentFolder = parentFolder;
         this.ownerId = ownerId;
@@ -113,6 +121,8 @@ public class Folder {
         this.originCreatedAt = originCreatedAt;
         this.originUpdatedAt = originUpdatedAt;
         this.isNfd = isNfd;
+        this.isRoot = isRoot;
+        this.isSystemRoot = false;
     }
 
     // 상위 폴더 상대 경로 변경 메서드
@@ -148,5 +158,10 @@ public class Folder {
     // NFD 여부 변경 메서드
     public void updateIsNfd(final Boolean isNfd) {
         this.isNfd = isNfd;
+    }
+
+    // 루트 폴더 여부 변경 메서드
+    public void updateIsRoot(final Boolean isRoot) {
+        this.isRoot = isRoot;
     }
 }

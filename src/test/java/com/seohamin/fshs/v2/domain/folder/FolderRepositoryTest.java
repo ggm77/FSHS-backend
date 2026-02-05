@@ -5,11 +5,12 @@ import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
-import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.global.config.JpaAuditingConfig;
+import com.seohamin.fshs.v2.global.init.SystemFolderInitializer;
 import jakarta.validation.ConstraintViolationException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assertions.within;
 
 @DataJpaTest
-@Import(JpaAuditingConfig.class)
+@Import({JpaAuditingConfig.class, SystemFolderInitializer.class})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class FolderRepositoryTest {
 
@@ -43,11 +44,22 @@ public class FolderRepositoryTest {
     @Autowired
     private TestEntityManager testEntityManager;
 
+    private Folder systemRootFolder;
+
+    @BeforeEach
+    void setUp() {
+        if (folderRepository.findById(1L).isEmpty()) {
+            folderRepository.insertSystemRoot();
+        }
+
+        systemRootFolder = folderRepository.findById(1L).get();
+    }
+
     @Test
     @DisplayName("폴더 저장 : 필수 정보 포함된 폴더가 성공적으로 저장됨")
     void saveFolder_Success() {
         // Given
-        final Folder folder = createTestFolder("folderName");
+        final Folder folder = createTestFolder("folderName", systemRootFolder);
 
         // When
         final Folder savedFolder = folderRepository.save(folder);
@@ -69,7 +81,7 @@ public class FolderRepositoryTest {
                 .build();
         final User savedUser = userRepository.save(user);
 
-        final Folder rootFolder = createTestFolder("rootFolder");
+        final Folder rootFolder = createTestFolder("rootFolder", systemRootFolder);
         final Folder savedRootFolder = folderRepository.save(rootFolder);
 
         // When
@@ -89,11 +101,11 @@ public class FolderRepositoryTest {
     @DisplayName("폴더 저장 : 상위 폴더에 폴더가 성공적으로 저장됨")
     void saveFolderWithParentFolder_Success() {
         // Given
-        final Folder parentFolder = createTestFolder("parentFolder");
+        final Folder parentFolder = createTestFolder("parentFolder", systemRootFolder);
         folderRepository.save(parentFolder);
         testEntityManager.flush();
-        final Folder folder = createTestFolder("folderName");
-        folder.updateParentFolder(parentFolder);
+        final Folder folder = createTestFolder("folderName", parentFolder);
+        folder.updateIsRoot(false);
 
         // When
         final Folder savedFolder = folderRepository.save(folder);
@@ -108,15 +120,15 @@ public class FolderRepositoryTest {
     @DisplayName("폴더 저장 : 중복 폴더가 있을 때 저장 실패함")
     void duplicateFolder_Failed() {
         // Given
-        final Folder parentFolder = createTestFolder("parentFolder");
+        final Folder parentFolder = createTestFolder("parentFolder", systemRootFolder);
         folderRepository.save(parentFolder);
         testEntityManager.flush();
-        final Folder folder = createTestFolder("folderName");
-        folder.updateParentFolder(parentFolder);
+        final Folder folder = createTestFolder("folderName", parentFolder);
+        folder.updateIsRoot(false);
         folderRepository.save(folder);
         testEntityManager.flush();
-        final Folder duplicateFolder = createTestFolder("folderName");
-        duplicateFolder.updateParentFolder(parentFolder);
+        final Folder duplicateFolder = createTestFolder("folderName", parentFolder);
+        duplicateFolder.updateIsRoot(false);
 
         // When & Then
         assertThatThrownBy(() -> {
@@ -126,10 +138,34 @@ public class FolderRepositoryTest {
     }
 
     @Test
+    @DisplayName("폴더 저장 : 다른 폴더에 같은 이름의 폴더가 존재해도 저장됨")
+    void saveFolder_WhenNameExistsInOtherDir() {
+        // Given
+        final Folder parentFolder1 = createTestFolder("parentFolder1", systemRootFolder);
+        final Folder parentFolder2 = createTestFolder("parentFolder2", systemRootFolder);
+        folderRepository.save(parentFolder1);
+        folderRepository.save(parentFolder2);
+        testEntityManager.flush();
+        final Folder folder = createTestFolder("folderName", parentFolder1);
+        folder.updateIsRoot(false);
+        folderRepository.save(folder);
+        testEntityManager.flush();
+        final Folder duplicateFolder = createTestFolder("folderName", parentFolder2);
+        duplicateFolder.updateIsRoot(false);
+
+        // When
+        final Long savedFolderId = folderRepository.save(duplicateFolder).getId();
+        testEntityManager.flush();
+
+        // Then
+        assertThat(folderRepository.findById(savedFolderId).get().getName()).isEqualTo("folderName");
+    }
+
+    @Test
     @DisplayName("폴더 저장 : DB에 들어갈 수 있는 길이 이상의 문자열은 실패함")
     void tooLongString_Fail() {
         // Given
-        final Folder tooLongFolder = createTestFolder("/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput");
+        final Folder tooLongFolder = createTestFolder("/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput/home/user/documents/university/2026/spring/comput", systemRootFolder);
 
         // When & Then
         assertThatThrownBy(() -> {
@@ -142,7 +178,7 @@ public class FolderRepositoryTest {
     @DisplayName("폴더 저장 : 폴더명이 null인 폴더는 실패함")
     void noFolderName_Fail() {
         // Given
-        final Folder noNameFolder = createTestFolder("folderName");
+        final Folder noNameFolder = createTestFolder("folderName", systemRootFolder);
         noNameFolder.updateName(null);
 
         // When & Then
@@ -156,7 +192,7 @@ public class FolderRepositoryTest {
     @DisplayName("폴더 조회 : ID로 폴더 조회가 가능함")
     void findById_Success() {
         // Given
-        final Folder folder = createTestFolder("folderName");
+        final Folder folder = createTestFolder("folderName", systemRootFolder);
         final Long folderId = folderRepository.save(folder).getId();
         testEntityManager.flush();
         testEntityManager.clear();
@@ -173,8 +209,8 @@ public class FolderRepositoryTest {
     @DisplayName("폴더 수정 : 더티 체킹을 통한 정보 수정")
     void updateFolder_Success() {
         // Given
-        final Folder folder = createTestFolder("folderName");
-        final Folder newParentFolder = createTestFolder("newParentFolder");
+        final Folder folder = createTestFolder("folderName", systemRootFolder);
+        final Folder newParentFolder = createTestFolder("newParentFolder", systemRootFolder);
         testEntityManager.persist(newParentFolder);
         final Long folderId = folderRepository.save(folder).getId();
         testEntityManager.flush();
@@ -189,6 +225,7 @@ public class FolderRepositoryTest {
         foundFolder.updateOriginCreatedAt(now);
         foundFolder.updateOriginUpdatedAt(now);
         foundFolder.updateIsNfd(true);
+        foundFolder.updateIsRoot(true);
         testEntityManager.flush();
         testEntityManager.clear();
 
@@ -201,13 +238,14 @@ public class FolderRepositoryTest {
         assertThat(updatedFolder.getOriginCreatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFolder.getOriginUpdatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFolder.getIsNfd()).isEqualTo(true);
+        assertThat(updatedFolder.getIsRoot()).isEqualTo(true);
     }
 
     @Test
     @DisplayName("폴더 수정 : DB 정보 수정 시간이 잘 반영 됨")
     void updateFolderUpdatedAt_Success() {
         // Given
-        final Folder folder = createTestFolder("folderName");
+        final Folder folder = createTestFolder("folderName", systemRootFolder);
         final Long folderId = folderRepository.save(folder).getId();
         testEntityManager.flush();
 
@@ -225,7 +263,7 @@ public class FolderRepositoryTest {
     @DisplayName("폴더 삭제 : 폴더 ID로 삭제 후 해당 ID로 조회시 결과 없음")
     void deleteById_Success() {
         // Given
-        final Folder folder = createTestFolder("folderName");
+        final Folder folder = createTestFolder("folderName", systemRootFolder);
         final Long folderId = folderRepository.save(folder).getId();
         testEntityManager.flush();
 
@@ -242,7 +280,7 @@ public class FolderRepositoryTest {
     @DisplayName("폴더 삭제 : 폴더 삭제시 하위 파일이 삭제됨")
     void deleteFolder_thenFileDeleted() {
         // Given
-        final Folder folder = createTestFolder("folderName");
+        final Folder folder = createTestFolder("folderName", systemRootFolder);
         final Long folderId = folderRepository.save(folder).getId();
         final File file = createTestFile(folder, "fileName", "jpg");
         final Long fileId = fileRepository.save(file).getId();
@@ -261,10 +299,10 @@ public class FolderRepositoryTest {
     @DisplayName("폴더 삭제 : 폴더 삭제시 하위 폴더가 삭제됨")
     void deleteFolder_thenSubFolderDeleted() {
         // Given
-        final Folder parentFolder = createTestFolder("parentFolder");
+        final Folder parentFolder = createTestFolder("parentFolder", systemRootFolder);
         final Long parentFolderId = folderRepository.save(parentFolder).getId();
-        final Folder childFolder = createTestFolder("childFolder");
-        childFolder.updateParentFolder(parentFolder);
+        final Folder childFolder = createTestFolder("childFolder", parentFolder);
+        childFolder.updateIsRoot(false);
         final Long childFolderId = folderRepository.save(childFolder).getId();
         testEntityManager.flush();
         testEntityManager.clear();
@@ -277,15 +315,19 @@ public class FolderRepositoryTest {
         assertThat(folderRepository.findById(childFolderId)).isEmpty();
     }
 
-    private Folder createTestFolder(final String name) {
+    private Folder createTestFolder(
+            final String name,
+            final Folder parentFolder
+    ) {
         return Folder.builder()
-                .parentFolder(null)
+                .parentFolder(parentFolder)
                 .ownerId(null)
                 .relativePath("/"+name+"/")
                 .name(name)
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .isNfd(false)
+                .isRoot(true)
                 .build();
     }
 
