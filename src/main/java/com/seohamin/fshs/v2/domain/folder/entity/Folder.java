@@ -23,7 +23,7 @@ import java.util.List;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_folder_path",
-                        columnNames = {"parent_folder_id", "name", "is_nfd"}
+                        columnNames = {"parent_folder_id", "name"}
                 )
         }
 )
@@ -94,10 +94,6 @@ public class Folder {
     private Instant updatedAt;
 
     @Column(nullable = false)
-    @NotNull
-    private Boolean isNfd;
-
-    @Column(nullable = false)
     private Boolean isRoot;
 
     @Column(nullable = false, updatable = false)
@@ -111,7 +107,6 @@ public class Folder {
             final String name,
             final Instant originCreatedAt,
             final Instant originUpdatedAt,
-            final Boolean isNfd,
             final Boolean isRoot
     ) {
         this.parentFolder = parentFolder;
@@ -120,7 +115,6 @@ public class Folder {
         this.name = name;
         this.originCreatedAt = originCreatedAt;
         this.originUpdatedAt = originUpdatedAt;
-        this.isNfd = isNfd;
         this.isRoot = isRoot;
         this.isSystemRoot = false;
     }
@@ -153,11 +147,6 @@ public class Folder {
     // 폴더 수정 시점 변경 메서드
     public void updateOriginUpdatedAt(final Instant originUpdatedAt) {
         this.originUpdatedAt = originUpdatedAt;
-    }
-
-    // NFD 여부 변경 메서드
-    public void updateIsNfd(final Boolean isNfd) {
-        this.isNfd = isNfd;
     }
 
     // 루트 폴더 여부 변경 메서드

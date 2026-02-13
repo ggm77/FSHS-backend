@@ -224,7 +224,7 @@ public class FolderRepositoryTest {
         foundFolder.updateName("newName");
         foundFolder.updateOriginCreatedAt(now);
         foundFolder.updateOriginUpdatedAt(now);
-        foundFolder.updateIsNfd(true);
+
         foundFolder.updateIsRoot(true);
         testEntityManager.flush();
         testEntityManager.clear();
@@ -237,7 +237,7 @@ public class FolderRepositoryTest {
         assertThat(updatedFolder.getName()).isEqualTo("newName");
         assertThat(updatedFolder.getOriginCreatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFolder.getOriginUpdatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
-        assertThat(updatedFolder.getIsNfd()).isEqualTo(true);
+
         assertThat(updatedFolder.getIsRoot()).isEqualTo(true);
     }
 
@@ -326,7 +326,6 @@ public class FolderRepositoryTest {
                 .name(name)
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
-                .isNfd(false)
                 .isRoot(true)
                 .build();
     }
@@ -355,7 +354,6 @@ public class FolderRepositoryTest {
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .category(Category.IMAGE)
-                .isNfd(false)
                 .build();
     }
 }

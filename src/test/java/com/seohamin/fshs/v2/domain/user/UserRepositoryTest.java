@@ -247,7 +247,6 @@ public class UserRepositoryTest {
                 .name(name)
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
-                .isNfd(false)
                 .build();
     }
 
@@ -275,7 +274,6 @@ public class UserRepositoryTest {
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .category(Category.IMAGE)
-                .isNfd(false)
                 .build();
     }
 }

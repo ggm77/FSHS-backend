@@ -16,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
@@ -31,9 +33,6 @@ public class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
-
-    @MockitoBean
-    private SessionUtil sessionUtil;
 
     @Test
     @WithMockUser
@@ -84,13 +83,15 @@ public class UserControllerTest {
         given(userService.updateUser(eq(userId), any(UserRequestDto.class))).willReturn(responseDto);
 
         // When & Then
-        mockMvc.perform(patch("/api/v2/users/" + userId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody)
-                )
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.username").value("tester"));
-        then(sessionUtil).should(times(1)).forceLogout(any(HttpServletRequest.class));
+        try (MockedStatic<SessionUtil> mockedStatic = Mockito.mockStatic(SessionUtil.class)) {
+            mockMvc.perform(patch("/api/v2/users/" + userId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody)
+                    )
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.username").value("tester"));
+            mockedStatic.verify(() -> SessionUtil.forceLogout(any(HttpServletRequest.class)), times(1));
+        }
     }
 
     @Test
@@ -101,8 +102,10 @@ public class UserControllerTest {
         final Long userId = 1L;
 
         // When & Then
-        mockMvc.perform(delete("/api/v2/users/" + userId))
-                .andExpect(status().isNoContent());
-        then(sessionUtil).should(times(1)).forceLogout(any(HttpServletRequest.class));
+        try (MockedStatic<SessionUtil> mockedStatic = Mockito.mockStatic(SessionUtil.class)) {
+            mockMvc.perform(delete("/api/v2/users/" + userId))
+                    .andExpect(status().isNoContent());
+            mockedStatic.verify(() -> SessionUtil.forceLogout(any(HttpServletRequest.class)), times(1));
+        }
     }
 }

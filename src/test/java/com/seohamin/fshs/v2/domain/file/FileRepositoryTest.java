@@ -159,7 +159,7 @@ public class FileRepositoryTest {
         foundFile.updateOriginCreatedAt(now);
         foundFile.updateOriginUpdatedAt(now);
         foundFile.updateCategory(Category.VIDEO);
-        foundFile.updateIsNfd(true);
+
 
         fileRepository.flush();
         testEntityManager.clear();
@@ -183,7 +183,7 @@ public class FileRepositoryTest {
         assertThat(updatedFile.getOriginCreatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFile.getOriginUpdatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFile.getCategory()).isEqualTo(Category.VIDEO);
-        assertThat(updatedFile.getIsNfd()).isEqualTo(true);
+
     }
 
     @Test
@@ -263,7 +263,6 @@ public class FileRepositoryTest {
                 .name(name)
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
-                .isNfd(false)
                 .build();
     }
 
@@ -293,7 +292,6 @@ public class FileRepositoryTest {
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .category(Category.IMAGE)
-                .isNfd(false)
                 .build();
     }
 }

@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
 
-public record FileRequestDto (
+public record FileUpdateRequestDto(
 
     @NotNull(groups = Create.class)
     Long folderId,

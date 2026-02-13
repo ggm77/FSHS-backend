@@ -15,11 +15,11 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
     @Query(value = """
 
             INSERT INTO folder (
-            id, parent_folder_id, name, relative_path, is_nfd, 
+            id, parent_folder_id, name, relative_path,
             is_root, is_system_root, owner_id, 
             origin_created_at, origin_updated_at, created_at, updated_at
         ) VALUES (
-            1, 1, '</SYSTEM/ROOT/>', '</SYSTEM/ROOT/>', false, 
+            1, 1, '</SYSTEM/ROOT/>', '</SYSTEM/ROOT/>', 
             false, true, 0, 
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         );

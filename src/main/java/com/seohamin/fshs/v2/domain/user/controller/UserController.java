@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
-    private final SessionUtil sessionUtil;
 
     // 추가 유저 등록하는 API
     @PostMapping("/users")
@@ -49,7 +48,7 @@ public class UserController {
         final UserResponseDto userResponseDto = userService.updateUser(userId, userRequestDto);
 
         if(isSecuritySensitiveChange(userRequestDto)) {
-            sessionUtil.forceLogout(request);
+            SessionUtil.forceLogout(request);
         }
 
         return ResponseEntity.ok().body(userResponseDto);
@@ -63,7 +62,7 @@ public class UserController {
 
         userService.deleteUser(userId);
 
-        sessionUtil.forceLogout(request);
+        SessionUtil.forceLogout(request);
 
         return ResponseEntity.noContent().build();
     }

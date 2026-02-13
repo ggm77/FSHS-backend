@@ -228,7 +228,6 @@ public class SharedFileRepositoryTest {
                 .name(name)
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
-                .isNfd(false)
                 .build();
     }
 
@@ -250,7 +249,6 @@ public class SharedFileRepositoryTest {
                 .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .category(Category.DOCUMENT)
-                .isNfd(false)
                 .build();
     }
 }

@@ -1,11 +1,11 @@
 package com.seohamin.fshs.v2.global.util;
 
-import org.springframework.stereotype.Component;
-
 import java.util.Optional;
 
-@Component
-public class EnumUtil {
+public final class EnumUtil {
+
+    // 인스턴스화 방지
+    private EnumUtil() {}
 
     /**
      * String으로 들어온 Enum 값을 특정 Enum 타입으로 변환하는 메서드
@@ -14,7 +14,7 @@ public class EnumUtil {
      * @return
      * @param <T> Enum타입으로 변환된 값
      */
-    public <T extends Enum<T>> Optional<T> toEnum(final Class<T> enumClass, final String value) {
+    public static <T extends Enum<T>> Optional<T> toEnum(final Class<T> enumClass, final String value) {
         if(enumClass == null || value == null){
             return Optional.empty();
         }

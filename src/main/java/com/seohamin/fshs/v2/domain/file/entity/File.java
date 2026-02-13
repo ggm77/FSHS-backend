@@ -26,7 +26,7 @@ import java.util.List;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_file_path",
-                        columnNames = {"parent_folder_id", "name", "is_nfd"}
+                        columnNames = {"parent_folder_id", "name"}
                 )
         }
 )
@@ -80,33 +80,27 @@ public class File {
     @NotNull
     private String parentPath;
 
-    // MIME 타입
-    @Column(length = 255, nullable = true)
-    @Size(max = 255)
-    private String mimeType;
+    /*
+    [영상, 오디오, 이미지 정보]
+     */
 
-    // 파일 크기
-    @Column(nullable = false)
-    @NotNull
-    private Long size;
-
-    // 비디오 코덱
+    // 비디오 코덱 - 코텍이 여러개인 경우 '|'로 구분하여 저장
     @Column(length = 255, nullable = true)
     @Size(max = 255)
     private String videoCodec;
 
-    // 오디오 코덱
+    // 오디오 코덱 - 코텍이 여러개인 경우 '|'로 구분하여 저장
     @Column(length = 255, nullable = true)
     @Size(max = 255)
     private String audioCodec;
 
-    // 이미지 너비
+    // 영상 프레임 정보
     @Column(nullable = true)
-    private Integer width;
+    private Double fps;
 
-    // 이미지 높이
+    // 영상 포멧 (mp4, mkv 등) 정보
     @Column(nullable = true)
-    private Integer height;
+    private String format;
 
     // 파일 재생 시간
     @Column(nullable = true)
@@ -116,9 +110,43 @@ public class File {
     @Column(nullable = true)
     private Integer bitrate;
 
+    // 사진/영상이 찍힌 시점 (셔터 누른 시점)
+    @Column(nullable = true)
+    private Instant capturedAt;
+
+    // 이미지 너비
+    @Column(nullable = true)
+    private Integer width;
+
+    // 이미지 높이
+    @Column(nullable = true)
+    private Integer height;
+
     // 이미지 회전 정보
     @Column(nullable = true)
     private Integer orientation;
+
+    // 이미지 GPS 위도 정보
+    @Column(nullable = true)
+    private Double lat;
+
+    // 이미지 GPS 경도 정보
+    @Column(nullable = true)
+    private Double lon;
+
+    /*
+    [공통 정보]
+     */
+
+    // MIME 타입
+    @Column(length = 255, nullable = true)
+    @Size(max = 255)
+    private String mimeType;
+
+    // 파일 크기
+    @Column(nullable = false)
+    @NotNull
+    private Long size;
 
     // 파일 생성 시점
     @Column(nullable = false)
@@ -148,11 +176,6 @@ public class File {
     @NotNull
     private Category category;
 
-    // 파일명이 NFD로 되어있는지 여부
-    @Column(nullable = false)
-    @NotNull
-    private Boolean isNfd;
-
     @Builder
     public File(
             final Folder parentFolder,
@@ -171,11 +194,15 @@ public class File {
             final Long duration,
             final Integer bitrate,
             final Integer orientation,
+            final Double lat,
+            final Double lon,
+            final Double fps,
+            final String format,
+            final Instant capturedAt,
             final Instant originCreatedAt,
             final Instant originUpdatedAt,
-            final Category category,
-            final Boolean isNfd
-    ){
+            final Category category
+    ) {
         this.parentFolder = parentFolder;
         this.ownerId = ownerId;
         this.name = name;
@@ -192,10 +219,14 @@ public class File {
         this.duration = duration;
         this.bitrate = bitrate;
         this.orientation = orientation;
+        this.lat = lat;
+        this.lon = lon;
+        this.fps = fps;
+        this.format = format;
+        this.capturedAt = capturedAt;
         this.originCreatedAt = originCreatedAt;
         this.originUpdatedAt = originUpdatedAt;
         this.category = category;
-        this.isNfd = isNfd;
     }
 
     // 상위 폴더 변경 메서드
@@ -268,6 +299,31 @@ public class File {
         this.orientation = orientation;
     }
 
+    // 위도 정보 변경 메서드
+    public void updateLat(final Double lat) {
+        this.lat = lat;
+    }
+
+    // 경도 정보 변경 메서드
+    public void updateLon(final Double lon) {
+        this.lon = lon;
+    }
+
+    // fps 정보 변경 메서드
+    public void updateFps(final Double fps) {
+        this.fps = fps;
+    }
+
+    // 포멧 정보 변경 메서드
+    public void updateFormat(final String format) {
+        this.format = format;
+    }
+
+    // 셔터 누른 시점 정보 변경 메서드
+    public void updateCapturedAt(final Instant capturedAt) {
+        this.capturedAt = capturedAt;
+    }
+
     // 파일 생성일 변경 메서드
     public void updateOriginCreatedAt(final Instant originCreatedAt) {
         this.originCreatedAt = originCreatedAt;
@@ -281,10 +337,5 @@ public class File {
     // 파일 카테고리 변경 메서드
     public void updateCategory(final Category category) {
         this.category = category;
-    }
-
-    // 파일명 NFD인지 여부 변경 메서드
-    public void updateIsNfd(final Boolean isNfd) {
-        this.isNfd = isNfd;
     }
 }
