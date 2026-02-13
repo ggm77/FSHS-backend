@@ -70,6 +70,20 @@ public class StorageIoCore {
     }
 
     /**
+     * 폴더 생성하는 메서드
+     * @param path 생성할 폴더 경로
+     */
+    public void createFolder(final Path path) {
+        try {
+            Files.createDirectory(path);
+        } catch (final FileAlreadyExistsException ex) {
+            throw new CustomException(ExceptionCode.FILE_ALREADY_EXIST);
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FOLDER_WRITE_ERROR);
+        }
+    }
+
+    /**
      * 파일의 MIME Type을 Files.probeContentType를 통해 알아내는 메서드
      * 못찾으면 application/octet-stream 리턴
      * @param path 대상 파일 경로

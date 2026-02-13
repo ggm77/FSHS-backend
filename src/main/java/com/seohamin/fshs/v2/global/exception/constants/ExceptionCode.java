@@ -29,6 +29,7 @@ public enum ExceptionCode {
     FILE_WRITE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 중 오류가 발생했습니다."),
     FILE_READ_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 읽어오는 중 오류가 발생했습니다."),
     STORAGE_FULL(HttpStatus.INTERNAL_SERVER_ERROR, "저장공간이 부족합니다."),
+    FOLDER_WRITE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "폴더 저장 중 오류가 발생했습니다."),
 
     COMMAND_TIMEOUT(HttpStatus.INTERNAL_SERVER_ERROR, "명령어 처리중 타임아웃이 발생했습니다."),
     FFMPEG_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "FFmpeg에서 오류가 발생했습니다."),

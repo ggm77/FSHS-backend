@@ -142,6 +142,29 @@ public class StorageManager {
     }
 
     /**
+     * 폴더 생성하는 메서드
+     * @param rawPath 폴더 생성할 상대 경로
+     * @return 생성된 폴더의 상대 경로
+     */
+    public Path createFolder(final Path rawPath) {
+        // 1) null 검사
+        if (rawPath == null) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 2) 정규화
+        final Path path = PathNameUtil.normalizePath(rawPath);
+
+        // 3) 절대 경로로 변환
+        final Path absolutePath = toAbsolutePath(path);
+
+        // 4) 폴더 생성
+        storageIoCore.createFolder(absolutePath);
+
+        return path;
+    }
+
+    /**
      * 상위 폴더 경로와 파일의 이름을 통해 경로를 생성하는 메서드
      * 동시에 경로 검사도 진행함.
      * @param parentFolderPathStr 상위 폴더의 상대 위치
