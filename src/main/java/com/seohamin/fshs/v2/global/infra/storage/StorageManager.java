@@ -132,12 +132,11 @@ public class StorageManager {
         // 3) 최종 목적지 경로 생성
         final Path targetPath = dest.resolve(name);
 
-        // 4) 경로 검사
-        validatePathWithinRoot(source);
-        validatePathWithinRoot(targetPath);
-
-        // 5) 파일 이동
-        storageIoCore.move(source, targetPath);
+        // 6) 파일 이동
+        storageIoCore.move(
+                toAbsolutePath(source),
+                toAbsolutePath(targetPath)
+        );
 
         return targetPath;
     }
@@ -169,6 +168,29 @@ public class StorageManager {
         }
 
         return targetPath;
+    }
+
+    /**
+     * 상대 경로를 루트 포함한 절대 경로로 바꾸는 메서드
+     * @param path 상대 경로
+     * @return 절대 경로
+     */
+    private Path toAbsolutePath(final Path path) {
+        // 1) null 검사
+        if (path == null) {
+            throw new CustomException(ExceptionCode.PATH_NOT_FOUND);
+        }
+
+        // 2) root랑 합쳐서 절대 경로로
+        final Path root = Path.of(rootPath).toAbsolutePath().normalize();
+        final Path absolutePath = root.resolve(path).normalize();
+
+        // 3) 경로 검사
+        if (!absolutePath.startsWith(root)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        return absolutePath;
     }
 
     /**
