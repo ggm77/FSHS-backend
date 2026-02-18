@@ -17,8 +17,8 @@ public class CustomizedResponseEntityExceptionHandler extends ResponseEntityExce
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ExceptionResponse> handleCustomException(final CustomException ex) {
 
-        if (ex.getExceptionCode().getHttpStatus() == HttpStatus.INTERNAL_SERVER_ERROR) {
-            log.error("ERROR: {}, message: {}", ex.getExceptionCode().name(), ex.getMessage());
+        if (ex.getCause() != null) {
+            log.error("EXCEPTION CODE {}, message: {}", ex.getExceptionCode().name(), ex.getMessage(), ex.getCause());
         }
 
         final ExceptionResponse response = new ExceptionResponse(ex.getExceptionCode());

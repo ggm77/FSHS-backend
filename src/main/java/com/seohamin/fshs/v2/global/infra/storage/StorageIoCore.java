@@ -46,7 +46,7 @@ public class StorageIoCore {
 
             // 알 수 없는 에러
             else {
-                throw new CustomException(ExceptionCode.FILE_WRITE_ERROR);
+                throw new CustomException(ExceptionCode.FILE_WRITE_ERROR, ex);
             }
         }
     }
@@ -65,7 +65,7 @@ public class StorageIoCore {
         } catch (final FileAlreadyExistsException ex) {
             throw new CustomException(ExceptionCode.FILE_ALREADY_EXIST);
         } catch (final IOException ex) {
-            throw new CustomException(ExceptionCode.FILE_WRITE_ERROR);
+            throw new CustomException(ExceptionCode.FILE_WRITE_ERROR, ex);
         }
     }
 
@@ -79,7 +79,7 @@ public class StorageIoCore {
         } catch (final FileAlreadyExistsException ex) {
             throw new CustomException(ExceptionCode.FILE_ALREADY_EXIST);
         } catch (final IOException ex) {
-            throw new CustomException(ExceptionCode.FOLDER_WRITE_ERROR);
+            throw new CustomException(ExceptionCode.FOLDER_WRITE_ERROR, ex);
         }
     }
 
@@ -106,7 +106,7 @@ public class StorageIoCore {
         try {
             return Files.readAttributes(path, BasicFileAttributes.class);
         } catch (final IOException ex) {
-            throw new CustomException(ExceptionCode.FILE_READ_ERROR);
+            throw new CustomException(ExceptionCode.FILE_READ_ERROR, ex);
         }
     }
 }

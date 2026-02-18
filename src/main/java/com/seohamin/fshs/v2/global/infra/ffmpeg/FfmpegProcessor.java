@@ -77,8 +77,8 @@ public class FfmpegProcessor {
             }
             return output.toString();
         } catch (final Exception ex) {
-            log.error("[FFmpeg 에러 발생]", ex);
-            throw new CustomException(ExceptionCode.FFMPEG_ERROR);
+            log.error("[FFmpeg 에러 발생] {}", ex.getMessage());
+            throw new CustomException(ExceptionCode.FFMPEG_ERROR, ex);
         }
     }
 }
