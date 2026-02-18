@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 @Order(2)
 @Slf4j
-public class FfmpegHardwareDetector implements CommandLineRunner {
+public class FfmpegHardwareInitializer implements CommandLineRunner {
 
     private final FfmpegConfig ffmpegConfig;
 
