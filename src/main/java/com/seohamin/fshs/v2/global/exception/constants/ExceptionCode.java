@@ -31,6 +31,7 @@ public enum ExceptionCode {
     STORAGE_FULL(HttpStatus.INTERNAL_SERVER_ERROR, "저장공간이 부족합니다."),
     FOLDER_WRITE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "폴더 저장 중 오류가 발생했습니다."),
 
+    PROCESS_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR, "프로세스 실행이 중단되었습니다."),
     COMMAND_TIMEOUT(HttpStatus.INTERNAL_SERVER_ERROR, "명령어 처리중 타임아웃이 발생했습니다."),
     FFMPEG_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "FFmpeg에서 오류가 발생했습니다."),
     METADATA_EXTRACTOR_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "metadata-extractor에서 에러가 발생 했습니다."),

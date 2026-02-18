@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -61,13 +62,10 @@ public class FfmpegProcessor {
 
         try {
             final Process p = pb.start();
-            final StringBuilder output = new StringBuilder();
 
+            String result;
             try (final BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line);
-                }
+                result = reader.lines().collect(Collectors.joining("\n"));
             }
 
             if (!p.waitFor(timeoutSecond, TimeUnit.SECONDS)) {
@@ -75,7 +73,11 @@ public class FfmpegProcessor {
                 log.error("[FFmpeg 타임아웃] - 명령어: {}", command);
                 throw new CustomException(ExceptionCode.COMMAND_TIMEOUT);
             }
-            return output.toString();
+
+            return result;
+        } catch (final InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new CustomException(ExceptionCode.PROCESS_INTERRUPTED);
         } catch (final Exception ex) {
             log.error("[FFmpeg 에러 발생] {}", ex.getMessage());
             throw new CustomException(ExceptionCode.FFMPEG_ERROR, ex);
