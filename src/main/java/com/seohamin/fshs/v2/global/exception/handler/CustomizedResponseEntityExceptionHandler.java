@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.exception.response.ExceptionResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -15,6 +16,10 @@ public class CustomizedResponseEntityExceptionHandler extends ResponseEntityExce
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ExceptionResponse> handleCustomException(final CustomException ex) {
+
+        if (ex.getExceptionCode().getHttpStatus() == HttpStatus.INTERNAL_SERVER_ERROR) {
+            log.error("ERROR: {}, message: {}", ex.getExceptionCode().name(), ex.getMessage());
+        }
 
         final ExceptionResponse response = new ExceptionResponse(ex.getExceptionCode());
 

@@ -177,7 +177,7 @@ public class StorageManager {
     ) {
         // 1) null 검사
         if (parentFolderPathStr == null || fileNameStr == null) {
-            throw new CustomException(ExceptionCode.PATH_NOT_FOUND);
+            throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
         // 2) Path로 만들기
@@ -201,7 +201,7 @@ public class StorageManager {
     private Path toAbsolutePath(final Path path) {
         // 1) null 검사
         if (path == null) {
-            throw new CustomException(ExceptionCode.PATH_NOT_FOUND);
+            throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
         // 2) root랑 합쳐서 절대 경로로
