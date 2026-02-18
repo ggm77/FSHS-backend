@@ -92,7 +92,7 @@ public class FileService {
         final FileAnalysisResultDto analysisResult = fileAnalyzer.analyzeFile(tempFilePath);
 
         // 4) 파일 원본 위치로 이동
-        final Path savedPath = storageManager.moveFile(tempFilePath, parentFolderPath);
+        final Path savedPath = storageManager.savePermanently(tempFilePath, parentFolderPath);
 
         // 5) 파일 엔티티 생성 - 파일명, 확장자는 소문자로만 저장, 경로는 그대로
         final File file = File.builder()

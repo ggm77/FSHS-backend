@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 
 /**
@@ -24,10 +23,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 @RequiredArgsConstructor
 public class StorageManager {
 
-    @Value("${file.root-path}")
+    @Value("${fshs.storage.data-path}")
     private String rootPath;
 
-    @Value("${file.upload.temp-path}")
+    @Value("${fshs.storage.temp-path}")
     private String tempPath;
 
     private final StorageIoCore storageIoCore;
@@ -35,7 +34,7 @@ public class StorageManager {
     /**
      * 업로드 된 파일을 임시 폴더에 저장하는 메서드
      * @param multipartFile 업로드 된 파일
-     * @return 임시 폴더에 저장된 파일의 경로
+     * @return 임시 폴더에 저장된 파일의 절대 경로
      */
     public Path saveTemporarily(final MultipartFile multipartFile) {
         // 1) null 체크
@@ -55,7 +54,7 @@ public class StorageManager {
         final String name = PathNameUtil.normalize(PathNameUtil.extractFileName(rawFileName));
 
         // 5) 저장할 경로 생성
-        final Path path = createPath(tempPath, name);
+        final Path path = toAbsolutePath(tempPath, Path.of(name));
 
         // 6) 임시 폴더에 저장
         storageIoCore.write(multipartFile, path);
@@ -64,8 +63,21 @@ public class StorageManager {
     }
 
     /**
+     * 임시 폴더에 저장된 파일을 실제 장소로 옮기는 메서드
+     * @param rawTempPath 임시 파일 상대 경로
+     * @param rawSavePath 저장할 폴더 상대 경로
+     * @return 저장된 파일 상대 경로
+     */
+    public Path savePermanently(
+            final Path rawTempPath,
+            final Path rawSavePath
+    ) {
+        return internalMove(rawTempPath, tempPath, rawSavePath, rootPath);
+    }
+
+    /**
      * 파일에서 상세 속성을 가져오는 메서드
-     * @param path 상세 속성 가져올 파일 경로
+     * @param path 상세 속성 가져올 파일 절대 경로
      * @return 상세 속성 담긴 DTO
      */
     public FilePropertiesDto getFileProperties(final Path path) {
@@ -114,31 +126,7 @@ public class StorageManager {
             final Path rawSource,
             final Path rawDest
     ) {
-        // 1) null 검사
-        if (rawSource == null) {
-            throw new CustomException(ExceptionCode.INVALID_FILE);
-        }
-        if (rawDest == null) {
-            throw new CustomException(ExceptionCode.FOLDER_NOT_EXIST);
-        }
-
-        // 2) NFC 변환
-        final Path source = PathNameUtil.normalizePath(rawSource);
-        final Path dest = PathNameUtil.normalizePath(rawDest);
-
-        // 2) 파일명 추출
-        final String name = PathNameUtil.extractFileNameFromPath(source);
-
-        // 3) 최종 목적지 경로 생성
-        final Path targetPath = dest.resolve(name);
-
-        // 6) 파일 이동
-        storageIoCore.move(
-                toAbsolutePath(source),
-                toAbsolutePath(targetPath)
-        );
-
-        return targetPath;
+        return internalMove(rawSource, rootPath, rawDest, rootPath);
     }
 
     /**
@@ -156,7 +144,7 @@ public class StorageManager {
         final Path path = PathNameUtil.normalizePath(rawPath);
 
         // 3) 절대 경로로 변환
-        final Path absolutePath = toAbsolutePath(path);
+        final Path absolutePath = toAbsolutePath(rootPath, path);
 
         // 4) 폴더 생성
         storageIoCore.createFolder(absolutePath);
@@ -165,51 +153,30 @@ public class StorageManager {
     }
 
     /**
-     * 상위 폴더 경로와 파일의 이름을 통해 경로를 생성하는 메서드
-     * 동시에 경로 검사도 진행함.
-     * @param parentFolderPathStr 상위 폴더의 상대 위치
-     * @param fileNameStr 파일의 확장자를 포함한 이름
-     * @return 파일의 전체 상대 경로
-     */
-    private Path createPath(
-            final String parentFolderPathStr,
-            final String fileNameStr
-    ) {
-        // 1) null 검사
-        if (parentFolderPathStr == null || fileNameStr == null) {
-            throw new CustomException(ExceptionCode.INVALID_PATH);
-        }
-
-        // 2) Path로 만들기
-        final Path root = Path.of(rootPath).toAbsolutePath().normalize();
-        final Path parentFolderPath = root.resolve(parentFolderPathStr).normalize();
-        final Path targetPath = parentFolderPath.resolve(fileNameStr).normalize();
-
-        // 3) 경로 검사
-        if (!parentFolderPath.startsWith(root) || !targetPath.startsWith(parentFolderPath)) {
-            throw new CustomException(ExceptionCode.INVALID_PATH);
-        }
-
-        return targetPath;
-    }
-
-    /**
-     * 상대 경로를 루트 포함한 절대 경로로 바꾸는 메서드
-     * @param path 상대 경로
+     * 상대 경로를 루트 경로 또는 임시 폴더 경로를 포함한
+     * 절대 경로로 변환하는 메서드
+     * @param base 루트 또는 임시 폴더 경로
+     * @param rawPath 상대 경로
      * @return 절대 경로
      */
-    private Path toAbsolutePath(final Path path) {
+    private Path toAbsolutePath(
+            final String base,
+            final Path rawPath
+    ) {
         // 1) null 검사
-        if (path == null) {
+        if (rawPath == null) {
             throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
-        // 2) root랑 합쳐서 절대 경로로
-        final Path root = Path.of(rootPath).toAbsolutePath().normalize();
-        final Path absolutePath = root.resolve(path).normalize();
+        // 2) NFC 변환
+        final Path path = PathNameUtil.normalizePath(rawPath);
 
-        // 3) 경로 검사
-        if (!absolutePath.startsWith(root)) {
+        // 3) base랑 합쳐서 절대 경로로
+        final Path basePath = Path.of(base).toAbsolutePath().normalize();
+        final Path absolutePath = basePath.resolve(path).normalize();
+
+        // 4) 경로 검사
+        if (!absolutePath.startsWith(basePath)) {
             throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
@@ -217,17 +184,34 @@ public class StorageManager {
     }
 
     /**
-     * Path가 루트 폴더를 벗어나진 않았는지 확인하는 메서드
-     * @param targetPath 확인할 경로
+     * 실제로 파일 이동을 시키는 메서드
+     * @param rawSource 이동 시킬 파일 상대 경로
+     * @param sourceBase 루트 또는 임시 폴더 절대 경로
+     * @param rawDest 이동할 목적지 폴더 상대 경로
+     * @param destBase 루트 또는 임시 폴더 절대 경로
+     * @return 이동한 파일의 상대 경로
      */
-    private void validatePathWithinRoot(final Path targetPath) {
-        // 1) 절대 경로 만들기
-        final Path root = Path.of(rootPath).toAbsolutePath().normalize();
-        final Path absoluteTarget = targetPath.toAbsolutePath().normalize();
+    private Path internalMove(
+            final Path rawSource,
+            final String sourceBase,
+            final Path rawDest,
+            final String destBase
+    ) {
+        // 1) null 검사 및 절대 경로로 변환
+        final Path source = toAbsolutePath(sourceBase, rawSource);
+        final Path dest = toAbsolutePath(destBase, rawDest);
 
-        // 2) 경로 검사
-        if (!absoluteTarget.startsWith(root)) {
-            throw new CustomException(ExceptionCode.INVALID_PATH);
-        }
+        // 2) 이름 추출
+        final String name = PathNameUtil.extractFileNameFromPath(source);
+
+        // 3) 최종 저장 경로 생성
+        final Path targetPath = dest.resolve(name);
+
+        // 4) 이동
+        storageIoCore.move(source, targetPath);
+
+        // 5) root 경로를 통해 상대 경로로 변환
+        final Path root = Path.of(rootPath).toAbsolutePath().normalize();
+        return root.relativize(targetPath);
     }
 }
