@@ -12,6 +12,29 @@
         input:focus { outline: none; border-color: #0071e3; }
         button { padding: 12px; cursor: pointer; background-color: #0071e3; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 8px; }
         button:hover { background-color: #0077ed; }
+        .secondary-btn { background-color: #86868b; margin-top: 8px; }
+        .secondary-btn:hover { background-color: #6e6e73; }
+        .message-container {
+            min-height: 20px;
+            font-size: 14px;
+            text-align: center;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 8px;
+            display: none; /* 기본적으로 숨김 */
+        }
+
+        .message-container.success {
+            display: block;
+            background-color: #e3f2fd;
+            color: #0071e3;
+        }
+
+        .message-container.error {
+            display: block;
+            background-color: #fff1f0;
+            color: #ff3b30;
+        }
     </style>
 </head>
 <body>
@@ -24,7 +47,10 @@
 
             <input type="password" id="password" name="password" placeholder="비밀번호" required>
 
+            <div id="loginMessage" class="message-container"></div>
+
             <button type="button" id="loginBtn">로그인</button>
+            <button type="button" id="adminQuickBtn" class="secondary-btn">어드민 자동 로그인</button>
         </div>
     </form>
 </div>
@@ -33,6 +59,12 @@
     const loginForm = document.getElementById('loginForm');
     const loginBtn = document.getElementById('loginBtn');
     const passwordInput = document.getElementById('password');
+    const loginMessage = document.getElementById('loginMessage');
+
+    function showMessage(text, type) {
+        loginMessage.textContent = text;
+        loginMessage.className = 'message-container ' + type; // success 또는 error 클래스 부여
+    }
 
     // 로그인 통신 함수
     async function handleLogin() {
@@ -48,16 +80,15 @@
 
             // SecurityConfig: 성공 시 204 No Content
             if (response.status === 204) {
-                alert('로그인 성공!');
-                window.location.href = '/';
+                showMessage('로그인 성공!', 'success');
             } else if (response.status === 401) {
-                alert('아이디 또는 비밀번호가 틀렸습니다.');
+                showMessage('아이디 또는 비밀번호가 틀렸습니다.', 'error');
             } else {
-                alert('로그인 중 오류 발생 (상태 코드: ' + response.status + ')');
+                showMessage('로그인 중 오류 발생 (' + response.status + ')', 'error');
             }
         } catch (error) {
             console.error('Login Error:', error);
-            alert('서버와 통신할 수 없습니다.');
+            showMessage('서버와 통신할 수 없습니다.', 'error');
         }
     }
 
@@ -70,6 +101,18 @@
             e.preventDefault(); // 브라우저 기본 제출 동작 방지
             handleLogin();
         }
+    });
+
+    const adminQuickBtn = document.getElementById('adminQuickBtn');
+    const usernameInput = document.getElementById('username');
+
+    adminQuickBtn.addEventListener('click', () => {
+        // 1. 값 채우기
+        usernameInput.value = 'admin';
+        passwordInput.value = 'admin';
+
+        // 2. 즉시 로그인 시도
+        handleLogin();
     });
 </script>
 
