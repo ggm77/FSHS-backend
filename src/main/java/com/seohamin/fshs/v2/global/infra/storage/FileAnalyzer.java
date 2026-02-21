@@ -48,22 +48,22 @@ public class FileAnalyzer {
         // 2) 카테고리에 따라 적절한 메서드 호출
         if(category.equals(Category.VIDEO)){
             // 영상 파일 정보 추출
-            return FileAnalysisResultDto.from(
-                    analyzeVideoFile(tempFilePath),
+            return analyzeVideoFile(
+                    tempFilePath,
                     fileProperties
             );
         }
         else if (category.equals(Category.AUDIO)){
             // 오디오 파일 정보 추출
-            return FileAnalysisResultDto.from(
-                    analyzeAudioFile(tempFilePath),
+            return analyzeAudioFile(
+                    tempFilePath,
                     fileProperties
             );
         }
         else if (category.equals(Category.IMAGE)){
             // 이미지 파일 정보 추출
-            return FileAnalysisResultDto.from(
-                    analyzeImageFile(tempFilePath),
+            return analyzeImageFile(
+                    tempFilePath,
                     fileProperties
             );
         }
@@ -74,23 +74,36 @@ public class FileAnalyzer {
     }
 
     // 영상 파일 정보 추출
-    private FfmpegAnalysisResultDto analyzeVideoFile(final Path tempFilePath) {
+    private FileAnalysisResultDto analyzeVideoFile(
+            final Path tempFilePath,
+            final FilePropertiesDto fileProperties
+    ) {
         // 1) FFprobe 호출해서 정보 추출
-        final FfmpegAnalysisResultDto analysisResult = ffmpegProcessor.analyze(tempFilePath);
+        final FfmpegAnalysisResultDto ffmpegAnalysisResult = ffmpegProcessor.analyze(tempFilePath);
 
         // 2) 영상 파일 맞는지 검사
         if (
-                analysisResult.streams()
+                ffmpegAnalysisResult.streams()
                         .stream().noneMatch(FfmpegAnalysisResultDto.FfprobeStream::isVideo)
         ) {
             throw new CustomException(ExceptionCode.INVALID_FILE);
         }
 
-        return analysisResult;
+        // 2) metadata-extractor 호출해서 정보 추출
+        final MetadataAnalysisResultDto metadataAnalysisResult = metadataAnalyzer.analyze(tempFilePath);
+
+        return FileAnalysisResultDto.from(
+                ffmpegAnalysisResult,
+                metadataAnalysisResult,
+                fileProperties
+        );
     }
 
     // 오디오 파일 정보 추출
-    private FfmpegAnalysisResultDto analyzeAudioFile(final Path tempFilePath) {
+    private FileAnalysisResultDto analyzeAudioFile(
+            final Path tempFilePath,
+            final FilePropertiesDto fileProperties
+    ) {
         // 1) FFprobe 호출해서 정보 추출
         final FfmpegAnalysisResultDto analysisResult = ffmpegProcessor.analyze(tempFilePath);
 
@@ -102,12 +115,21 @@ public class FileAnalyzer {
             throw new CustomException(ExceptionCode.INVALID_FILE);
         }
 
-        return analysisResult;
+        return FileAnalysisResultDto.from(
+                analysisResult,
+                fileProperties
+        );
     }
 
     // 이미지 파일 정보 추출
-    private MetadataAnalysisResultDto analyzeImageFile(final Path tempFilePath) {
+    private FileAnalysisResultDto analyzeImageFile(
+            final Path tempFilePath,
+            final FilePropertiesDto filePropertiesDto
+    ) {
 
-        return metadataAnalyzer.analyze(tempFilePath);
+        return FileAnalysisResultDto.from(
+                metadataAnalyzer.analyze(tempFilePath),
+                filePropertiesDto
+        );
     }
 }

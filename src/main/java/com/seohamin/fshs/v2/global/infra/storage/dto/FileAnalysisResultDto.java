@@ -28,6 +28,46 @@ public record FileAnalysisResultDto(
         String extension
 ) {
 
+    // FFprobe와 metadata-extractor 결과로부터 정보 추출
+    public static FileAnalysisResultDto from(
+            final FfmpegAnalysisResultDto ffmpegDto,
+            final MetadataAnalysisResultDto metadataExtractorDto,
+            final FilePropertiesDto metadataDto
+    ) {
+        var videoStream = ffmpegDto.streams().stream()
+                .filter(FfmpegAnalysisResultDto.FfprobeStream::isVideo)
+                .findFirst();
+
+        var format = ffmpegDto.format();
+
+        return new FileAnalysisResultDto(
+                ffmpegDto.getVideoCodecs(),
+                ffmpegDto.getAudioCodecs(),
+                videoStream.map(s -> parseFps(s.avg_frame_rate())).orElse(0.0),
+                format.format_name(),
+                parseDuration(format.duration()),
+                parseSafeInt(format.bit_rate()),
+                metadataExtractorDto.capturedAt() != null
+                        ? metadataExtractorDto.capturedAt()
+                        : parseInstant(format.tags().creation_time()),
+                videoStream.map(FfmpegAnalysisResultDto.FfprobeStream::width).orElse(0),
+                videoStream.map(FfmpegAnalysisResultDto.FfprobeStream::height).orElse(0),
+                metadataExtractorDto.orientation(),
+                metadataExtractorDto.latLon() != null
+                        ? parseLocation(metadataExtractorDto.latLon(), true)
+                        : parseLocation(ffmpegDto.getLocation(), true),
+                metadataExtractorDto.latLon() != null
+                        ? parseLocation(metadataExtractorDto.latLon(), false)
+                        : parseLocation(ffmpegDto.getLocation(), false),
+                metadataDto.mimeType(),
+                metadataDto.size(),
+                metadataDto.category(),
+                metadataDto.name(),
+                metadataDto.baseName(),
+                metadataDto.extension()
+        );
+    }
+
     // FFprobe 결과로부터 정보 추출
     public static FileAnalysisResultDto from(
             final FfmpegAnalysisResultDto dto,
@@ -50,8 +90,8 @@ public record FileAnalysisResultDto(
                 videoStream.map(FfmpegAnalysisResultDto.FfprobeStream::width).orElse(0),
                 videoStream.map(FfmpegAnalysisResultDto.FfprobeStream::height).orElse(0),
                 videoStream.map(s -> parseSafeInt(s.tags() != null ? s.tags().rotate() : "0")).orElse(0),
-                parseLocation(format.tags().location(), true),
-                parseLocation(format.tags().location(), false),
+                parseLocation(dto.getLocation(), true),
+                parseLocation(dto.getLocation(), false),
                 metadataDto.mimeType(),
                 metadataDto.size(),
                 metadataDto.category(),
@@ -77,8 +117,8 @@ public record FileAnalysisResultDto(
                 dto.width(),
                 dto.height(),
                 dto.orientation(),
-                dto.lat(),
-                dto.lon(),
+                parseLocation(dto.latLon(), true),
+                parseLocation(dto.latLon(), false),
                 metadataDto.mimeType(),
                 metadataDto.size(),
                 metadataDto.category(),
@@ -155,14 +195,21 @@ public record FileAnalysisResultDto(
     }
 
     private static Double parseLocation(String location, boolean isLat) {
-        if (location == null || location.isEmpty()) return null;
-        try {
-            // 정규식 등을 사용하여 좌표 추출 (+35.1234+129.5678/ 구조)
-            String cleaned = location.replace("/", "");
-            int secondSignIndex = cleaned.lastIndexOf('+') > 0 ? cleaned.lastIndexOf('+') : cleaned.lastIndexOf('-');
+        if (location == null || location.isBlank()) return null;
 
-            if (isLat) return Double.parseDouble(cleaned.substring(0, secondSignIndex));
-            else return Double.parseDouble(cleaned.substring(secondSignIndex));
+        try {
+            // 부호(+/-)로 시작하고 숫자와 소수점을 포함하는 패턴 추출
+            var matcher = java.util.regex.Pattern.compile("[+-]\\d+\\.?\\d*").matcher(location);
+            var coordinates = new java.util.ArrayList<Double>();
+
+            while (matcher.find()) {
+                coordinates.add(Double.parseDouble(matcher.group()));
+            }
+
+            // 결과 리스트: [위도, 경도, (선택적)고도]
+            if (coordinates.size() < 2) return null;
+
+            return isLat ? coordinates.get(0) : coordinates.get(1);
         } catch (Exception e) {
             return null;
         }

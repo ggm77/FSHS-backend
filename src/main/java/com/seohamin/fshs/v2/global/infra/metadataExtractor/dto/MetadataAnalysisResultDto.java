@@ -5,8 +5,7 @@ import java.time.Instant;
 public record MetadataAnalysisResultDto(
         Instant capturedAt,
         Integer orientation,
-        Double lat,
-        Double lon,
+        String latLon,
         Integer width,
         Integer height
 ) { }

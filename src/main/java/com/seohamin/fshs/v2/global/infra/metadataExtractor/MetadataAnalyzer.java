@@ -5,6 +5,7 @@ import com.drew.metadata.Metadata;
 import com.drew.metadata.exif.ExifIFD0Directory;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.GpsDirectory;
+import com.drew.metadata.mov.metadata.QuickTimeMetadataDirectory;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.metadataExtractor.dto.MetadataAnalysisResultDto;
@@ -44,12 +45,14 @@ public class MetadataAnalyzer {
             // 이미지 전반 요약 정보
             final ExifIFD0Directory ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
 
+            // 애플 GPS 정보
+            final QuickTimeMetadataDirectory qmd = metadata.getFirstDirectoryOfType(QuickTimeMetadataDirectory.class);
+
             // 결과 담는 DTO에 넣기
             return new MetadataAnalysisResultDto(
                     extractShotDate(subIFD),
                     extractOrientation(ifd0),
-                    extractLatitude(gps),
-                    extractLongitude(gps),
+                    extractGps(gps, qmd),
                     extractWidth(subIFD, ifd0),
                     extractHeight(subIFD, ifd0)
             );
@@ -74,22 +77,24 @@ public class MetadataAnalyzer {
         }
     }
 
-    // Lat 추출
-    private Double extractLatitude(final GpsDirectory gps) {
+    // lat lon 추출
+    private String extractGps(
+            final GpsDirectory gps,
+            final QuickTimeMetadataDirectory qmd
+    ) {
         if (gps != null && gps.getGeoLocation() != null) {
-            return gps.getGeoLocation().getLatitude();
-        } else {
-            return null;
+            var loc = gps.getGeoLocation();
+            return String.format("%+f%+f/", loc.getLatitude(), loc.getLongitude());
         }
-    }
 
-    // Lon 추출
-    private Double extractLongitude(final GpsDirectory gps) {
-        if (gps != null && gps.getGeoLocation() != null) {
-            return gps.getGeoLocation().getLongitude();
-        } else {
-            return null;
+        if (qmd != null) {
+            final String location = qmd.getString(QuickTimeMetadataDirectory.TAG_LOCATION_ISO6709);
+            if (location != null) {
+                return location;
+            }
         }
+
+        return null;
     }
 
     // 이미지 너비 추출

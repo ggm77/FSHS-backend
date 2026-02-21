@@ -1,9 +1,11 @@
 package com.seohamin.fshs.v2.global.infra.ffmpeg.dto;
 
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -49,6 +51,25 @@ public record FfmpegAnalysisResultDto(
         } else  {
             return result;
         }
+    }
+
+    public String getLocation() {
+
+        if (format == null || format.tags() == null) {
+            return null;
+        }
+
+        if (format.tags.location() != null) {
+            return format.tags.location();
+        }
+
+        final Map<String, String> dynamic = format.tags.dynamicTags();
+        if (dynamic == null ) {
+            return null;
+        }
+
+        return dynamic.getOrDefault("com.apple.quicktime.location.ISO6709",
+                dynamic.get("location-eng"));
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -118,6 +139,8 @@ public record FfmpegAnalysisResultDto(
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record FormatTags(
             String creation_time,
-            String location
+            String location,
+            @JsonAnySetter
+            Map<String, String> dynamicTags
     ) {}
 }

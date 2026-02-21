@@ -87,7 +87,7 @@ public class StorageManager {
         }
 
         // 2) 파일명과 확장자 추출
-        final String name = PathNameUtil.normalize(PathNameUtil.extractFileNameFromPath(path));
+        final String name = PathNameUtil.normalize(PathNameUtil.extractFileNameFromPath(path)).toLowerCase();
         final String baseName = PathNameUtil.extractBaseName(name);
         final String extension = PathNameUtil.extractExtension(name);
 
