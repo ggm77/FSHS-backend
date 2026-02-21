@@ -46,11 +46,16 @@ public class FileService {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        // 2) 상위 폴더 조회
+        // 2) 시스템 루트 검사
+        if (folderId == 1L) {
+            throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
+        }
+
+        // 3) 상위 폴더 조회
         final Folder parentFolder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
-        // 3) 업로드 메서드 호출
+        // 4) 업로드 메서드 호출
         return processUpload(multipartFile, lastModified, parentFolder);
     }
 
