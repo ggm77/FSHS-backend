@@ -26,4 +26,13 @@ public class FileController {
 
         return ResponseEntity.ok().body(fileService.uploadFile(multipartFiles, folderId));
     }
+
+    // 특정 파일 정보 조회 API
+    @GetMapping("/files/{fileId}")
+    public ResponseEntity<FileResponseDto> getFile(
+            @PathVariable final Long fileId
+    ) {
+
+        return ResponseEntity.ok().body(fileService.getFileDetails(fileId));
+    }
 }

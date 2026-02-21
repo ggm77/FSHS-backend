@@ -72,6 +72,25 @@ public class FileService {
     }
 
     /**
+     * 파일의 정보를 조회하는 메서드
+     * @param fileId 조회할 파일 ID
+     * @return 파일 정보 담긴 DTO
+     */
+    public FileResponseDto getFileDetails(final Long fileId) {
+        // 1) null 검사
+        if(fileId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 정보 조회
+        final File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+
+        // 3) DTO에 담기
+        return FileResponseDto.of(file);
+    }
+
+    /**
      * 실제로 파일을 검증하고 저장하는 메서드
      * DB에 정보를 저장하는 부분 외에는 전부 유틸 메서드를 통해 진행
      * @param multipartFile 저장할 단일 파일
