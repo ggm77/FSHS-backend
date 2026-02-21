@@ -8,7 +8,7 @@ import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.global.config.JpaAuditingConfig;
-import com.seohamin.fshs.v2.global.init.SystemFolderInitializer;
+import com.seohamin.fshs.v2.global.init.SystemRootInitializer;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assertions.within;
 
 @DataJpaTest
-@Import({JpaAuditingConfig.class, SystemFolderInitializer.class})
+@Import({JpaAuditingConfig.class, SystemRootInitializer.class})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 public class FolderRepositoryTest {
 

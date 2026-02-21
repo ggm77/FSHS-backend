@@ -15,7 +15,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Order(1)
 @Slf4j
-public class SystemFolderInitializer implements CommandLineRunner {
+public class SystemRootInitializer implements CommandLineRunner {
 
     public static final String SYSTEM_ROOT_NAME = "</SYSTEM/ROOT/>";
 
