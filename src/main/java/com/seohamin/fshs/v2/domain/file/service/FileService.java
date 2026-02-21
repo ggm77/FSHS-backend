@@ -11,21 +11,16 @@ import com.seohamin.fshs.v2.global.infra.storage.FileAnalyzer;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
 public class FileService {
-
-    @Value("${file.upload.max-count}")
-    private int MAX_FILE_UPLOAD_COUNT;
 
     private final FileRepository fileRepository;
     private final FolderRepository folderRepository;
@@ -33,42 +28,30 @@ public class FileService {
     private final FileAnalyzer fileAnalyzer;
 
     /**
-     * 여러 파일들을 업로드처리하는 메서드
+     * 파일 하나 업로드처리하는 메서드
      *
-     * @param multipartFiles 업로드할 파일 리스트
-     * @return 업로드된 파일들의 정보 리스트
+     * @param multipartFile 업로드할 파일
+     * @param lastModified 업로드할 파일의 마지막 수정 시점
+     * @return 업로드된 파일의 정보
      */
     @Transactional
-    public List<FileResponseDto> uploadFile(
-            final List<MultipartFile> multipartFiles,
+    public FileResponseDto uploadFile(
+            final MultipartFile multipartFile,
+            final Instant lastModified,
             final Long folderId
     ) {
 
-        // 1) 업로드 된 파일 개수 확인
-        final int fileCount = multipartFiles.size();
-        if (fileCount > MAX_FILE_UPLOAD_COUNT) {
-            throw new CustomException(ExceptionCode.TOO_MANY_FILES);
+        // 1) null 검사
+        if (multipartFile == null || lastModified == null || folderId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
         // 2) 상위 폴더 조회
         final Folder parentFolder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
-        // 3) 최종 리턴할 리스트 생성
-        final List<FileResponseDto> responses = new ArrayList<>();
-
-        // 4) 파일 개수만큼 반복문 실행해서 파일 저장 후 정보 가져옴
-        for (final MultipartFile multipartFile : multipartFiles) {
-
-            // 4-1) 파일 처리 및 리스트에 추가
-            final FileResponseDto savedFile = processUpload(multipartFile, parentFolder);
-            if(savedFile != null) {
-                responses.add(savedFile);
-            }
-        }
-
-        // 5) 최종 응답
-        return responses;
+        // 3) 업로드 메서드 호출
+        return processUpload(multipartFile, lastModified, parentFolder);
     }
 
     /**
@@ -93,12 +76,14 @@ public class FileService {
     /**
      * 실제로 파일을 검증하고 저장하는 메서드
      * DB에 정보를 저장하는 부분 외에는 전부 유틸 메서드를 통해 진행
-     * @param multipartFile 저장할 단일 파일
+     * @param multipartFile 저장할 파일
+     * @param lastModified 저장할 파일의 마지막 수정 시점 정보
      * @param parentFolder 상위 폴더
      * @return 저장된 파일의 정보가 담긴 DTO
      */
     private FileResponseDto processUpload(
             final MultipartFile multipartFile,
+            final Instant lastModified,
             final Folder parentFolder
     ) {
         // 1) 변수에 값 저장
@@ -135,8 +120,7 @@ public class FileService {
                 .fps(analysisResult.fps())
                 .format(analysisResult.format())
                 .capturedAt(analysisResult.capturedAt())
-                .originCreatedAt(analysisResult.originCreatedAt())
-                .originUpdatedAt(analysisResult.originUpdatedAt())
+                .originUpdatedAt(lastModified)
                 .category(analysisResult.category())
                 .build();
 

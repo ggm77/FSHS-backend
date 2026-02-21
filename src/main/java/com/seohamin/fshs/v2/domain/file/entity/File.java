@@ -148,11 +148,6 @@ public class File {
     @NotNull
     private Long size;
 
-    // 파일 생성 시점
-    @Column(nullable = false)
-    @NotNull
-    private Instant originCreatedAt;
-
     // 파일 수정 시점
     @Column(nullable = false)
     @NotNull
@@ -199,7 +194,6 @@ public class File {
             final Double fps,
             final String format,
             final Instant capturedAt,
-            final Instant originCreatedAt,
             final Instant originUpdatedAt,
             final Category category
     ) {
@@ -224,7 +218,6 @@ public class File {
         this.fps = fps;
         this.format = format;
         this.capturedAt = capturedAt;
-        this.originCreatedAt = originCreatedAt;
         this.originUpdatedAt = originUpdatedAt;
         this.category = category;
     }
@@ -322,11 +315,6 @@ public class File {
     // 셔터 누른 시점 정보 변경 메서드
     public void updateCapturedAt(final Instant capturedAt) {
         this.capturedAt = capturedAt;
-    }
-
-    // 파일 생성일 변경 메서드
-    public void updateOriginCreatedAt(final Instant originCreatedAt) {
-        this.originCreatedAt = originCreatedAt;
     }
 
     // 파일 수정일 변경 메서드

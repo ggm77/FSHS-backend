@@ -7,8 +7,6 @@ import java.time.Instant;
 public record FilePropertiesDto(
         String mimeType,
         Long size,
-        Instant originCreatedAt,
-        Instant originUpdatedAt,
         Category category,
         String name,
         String baseName,

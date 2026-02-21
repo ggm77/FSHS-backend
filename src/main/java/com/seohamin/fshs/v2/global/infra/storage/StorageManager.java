@@ -107,8 +107,6 @@ public class StorageManager {
         return new FilePropertiesDto(
                 mimeType,
                 attrs.size(),
-                attrs.creationTime().toInstant(),
-                attrs.lastModifiedTime().toInstant(),
                 category,
                 name,
                 baseName,
