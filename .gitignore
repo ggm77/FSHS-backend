@@ -16,6 +16,9 @@ application-prod.yml
 
 GEMINI.md
 
+/db/
+*.mv.db
+
 test.db
 
 ### STS ###
