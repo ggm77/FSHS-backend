@@ -9,6 +9,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 
 /**
  * 파일과 폴더의 입출력을 담당하는 클래스
@@ -107,6 +109,26 @@ public class StorageIoCore {
             return Files.readAttributes(path, BasicFileAttributes.class);
         } catch (final IOException ex) {
             throw new CustomException(ExceptionCode.FILE_READ_ERROR, ex);
+        }
+    }
+
+    /**
+     * 저장한 파일의 마지막 수정 시점 정보를 변경하는 메서드
+     * @param path 수정할 파일 경료
+     * @param lastModified 수정할 시점
+     */
+    public void updateLastModified(
+            final Path path,
+            final Instant lastModified
+    ) {
+        try {
+            final FileTime fileTime = FileTime.from(lastModified);
+
+            Files.setLastModifiedTime(path, fileTime);
+        } catch (final NoSuchFileException ex) {
+            throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FILE_WRITE_ERROR, ex);
         }
     }
 }

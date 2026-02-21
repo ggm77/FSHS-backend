@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Instant;
 
 /**
  * 파일이나 폴더의 저장, 조회, 이동, 삭제 등을 제공하는 클래스
@@ -70,9 +71,22 @@ public class StorageManager {
      */
     public Path savePermanently(
             final Path rawTempPath,
-            final Path rawSavePath
+            final Path rawSavePath,
+            final Instant lastModified
     ) {
-        return internalMove(rawTempPath, tempPath, rawSavePath, rootPath);
+        // 1) null 체크
+        if (rawTempPath == null || rawSavePath == null || lastModified == null) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        // 2) 실제 위치로 이동
+        final Path path = internalMove(rawTempPath, tempPath, rawSavePath, rootPath);
+
+        // 3) 마지막 수정 시점 수정
+        final Path absPath = toAbsolutePath(rootPath, path);
+        storageIoCore.updateLastModified(absPath, lastModified);
+
+        return path;
     }
 
     /**
