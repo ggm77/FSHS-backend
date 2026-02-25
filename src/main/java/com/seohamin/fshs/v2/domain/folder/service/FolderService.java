@@ -78,7 +78,6 @@ public class FolderService {
                 .ownerId(user.getId())
                 .relativePath(createdFolderPath.toString())
                 .name(name.toLowerCase())
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .isRoot(isRoot)
                 .build();

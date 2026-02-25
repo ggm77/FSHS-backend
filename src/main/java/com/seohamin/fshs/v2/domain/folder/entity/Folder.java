@@ -71,10 +71,11 @@ public class Folder {
     @NotNull
     private String name;
 
-    // 파일 생성 시점
-    @Column(nullable = false)
+    // 소문자로 된 폴더 이름
+    @Column(length = 255, nullable = false)
+    @Size(max = 255)
     @NotNull
-    private Instant originCreatedAt;
+    private String lowerName;
 
     // 파일 수정 시점
     @Column(nullable = false)
@@ -105,7 +106,6 @@ public class Folder {
             final Long ownerId,
             final String relativePath,
             final String name,
-            final Instant originCreatedAt,
             final Instant originUpdatedAt,
             final Boolean isRoot
     ) {
@@ -113,7 +113,7 @@ public class Folder {
         this.ownerId = ownerId;
         this.relativePath = relativePath;
         this.name = name;
-        this.originCreatedAt = originCreatedAt;
+        this.lowerName = name.toLowerCase();
         this.originUpdatedAt = originUpdatedAt;
         this.isRoot = isRoot;
         this.isSystemRoot = false;
@@ -137,11 +137,7 @@ public class Folder {
     // 폴더명 변경 메서드
     public void updateName(final String name) {
         this.name = name;
-    }
-
-    // 폴더 생성 시점 변경 메서드
-    public void updateOriginCreatedAt(final Instant originCreatedAt) {
-        this.originCreatedAt = originCreatedAt;
+        this.lowerName = name.toLowerCase();
     }
 
     // 폴더 수정 시점 변경 메서드

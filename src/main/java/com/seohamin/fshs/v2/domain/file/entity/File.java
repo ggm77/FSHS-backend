@@ -56,6 +56,12 @@ public class File {
     @NotNull
     private String name;
 
+    // 소문자로 된 확장자 포함 파일명
+    @Column(length = 255, nullable = false)
+    @Size(max = 255)
+    @NotNull
+    private String lowerName;
+
     // 확장자 제외 파일명
     @Column(length = 255, nullable = false)
     @Size(max = 255)
@@ -200,8 +206,9 @@ public class File {
         this.parentFolder = parentFolder;
         this.ownerId = ownerId;
         this.name = name;
-        this.baseName = baseName;
-        this.extension = extension;
+        this.lowerName = name.toLowerCase();
+        this.baseName = baseName.toLowerCase();
+        this.extension = extension.toLowerCase();
         this.relativePath = relativePath;
         this.parentPath = parentPath;
         this.mimeType = mimeType;
@@ -235,16 +242,17 @@ public class File {
     // 확장자 포함한 파일명 변경 메서드
     public void updateName(final String name) {
         this.name = name;
+        this.lowerName = name.toLowerCase();
     }
 
     // 확장자 없는 파일명 변경 메서드
     public void updateBaseName(final String baseName) {
-        this.baseName = baseName;
+        this.baseName = baseName.toLowerCase();
     }
 
     // 확장자 변경 메서드
     public void updateExtension(final String extension) {
-        this.extension = extension;
+        this.extension = extension.toLowerCase();
     }
 
     // 파일 상대 경로 변경 메서드

@@ -103,12 +103,12 @@ public class FileService {
         // 4) 파일 원본 위치로 이동
         final Path savedPath = storageManager.savePermanently(tempFilePath, parentFolderPath, lastModified);
 
-        // 5) 파일 엔티티 생성 - 파일명, 확장자는 소문자로만 저장, 경로는 그대로
+        // 5) 파일 엔티티 생성 - 파일명, 경로는 원본 그대로
         final File file = File.builder()
                 .parentFolder(parentFolder)
-                .name(analysisResult.name().toLowerCase())
-                .baseName(analysisResult.baseName().toLowerCase())
-                .extension(analysisResult.extension().toLowerCase())
+                .name(analysisResult.name())
+                .baseName(analysisResult.baseName())
+                .extension(analysisResult.extension())
                 .relativePath(savedPath.toString())
                 .parentPath(parentFolderPath.toString())
                 .mimeType(analysisResult.mimeType())
