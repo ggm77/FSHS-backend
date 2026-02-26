@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>FSHS Streaming Test</title>
+</head>
+<body>
+<h1>Streaming Test</h1>
+
+<input type="number" id="fileId" placeholder="파일 ID 입력" value="1">
+<button onclick="loadMedia()">스트리밍 시작</button>
+
+<hr>
+
+<h3>Video 영역</h3>
+<video id="videoPlayer" controls width="640" height="360">
+    <p>브라우저가 비디오 태그를 지원하지 않습니다.</p>
+</video>
+
+<h3>Audio 영역</h3>
+<audio id="audioPlayer" controls></audio>
+
+<script>
+    function loadMedia() {
+        const fileId = document.getElementById('fileId').value;
+        // download=false를 쿼리 파라미터로 전달하여 inline 응답 유도
+        const streamUrl = `/api/v2/files/${fileId}/content?download=false`;
+
+        // 비디오와 오디오 태그의 src에 URL 설정
+        const videoPlayer = document.getElementById('videoPlayer');
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        videoPlayer.src = streamUrl;
+        audioPlayer.src = streamUrl;
+
+        console.log("요청 URL:", streamUrl);
+    }
+</script>
+</body>
+</html>
