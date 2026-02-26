@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.file.service;
 
+import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
@@ -11,6 +12,7 @@ import com.seohamin.fshs.v2.global.infra.storage.FileAnalyzer;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -76,6 +78,40 @@ public class FileService {
 
         // 3) DTO에 담기
         return FileResponseDto.of(file);
+    }
+
+
+    /**
+     * 파일을 다운로드 하거나 직접 스트리밍을 해주는 메서드
+     * @param fileId 프론트로 전송할 파일의 ID
+     * @return 파일의 정보가 담긴 DTO
+     */
+    public FileDownloadResponseDto getFile(final Long fileId) {
+        // 1) null 검사
+        if (fileId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 파일 정보 조회
+        final File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+
+        // 3) 단순 정보 추출
+        final String name = file.getName();
+        final String mimeType = file.getMimeType();
+        final Long size = file.getSize();
+        final String relativePath = file.getRelativePath();
+
+        // 4) 파일 읽어오기
+        final Resource resource = storageManager.getFile(Path.of(relativePath));
+
+        // 5) DTO 조립
+        return new FileDownloadResponseDto(
+                name,
+                mimeType,
+                size,
+                resource
+        );
     }
 
     /**

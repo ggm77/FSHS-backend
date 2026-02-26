@@ -9,6 +9,7 @@ import com.seohamin.fshs.v2.global.util.storage.FileCategoryUtil;
 import com.seohamin.fshs.v2.global.util.storage.PathNameUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -126,6 +127,24 @@ public class StorageManager {
                 baseName,
                 extension
         );
+    }
+
+    /**
+     * 파일을 조회해서 Resource로 가져오는 메서드
+     * @param path 파일의 상대경로
+     * @return Resource 객체
+     */
+    public Resource getFile(final Path path) {
+        // 1) null 검사
+        if (path == null) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        // 2) 절대 경로로 변환
+        final Path absPath = toAbsolutePath(rootPath, path);
+
+        // 3) 파일 읽어와서 리턴
+        return storageIoCore.readFileAsResource(absPath);
     }
 
     /**

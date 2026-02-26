@@ -3,6 +3,8 @@ package com.seohamin.fshs.v2.global.infra.storage;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.util.MimeTypeUtil;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -110,6 +112,22 @@ public class StorageIoCore {
         } catch (final IOException ex) {
             throw new CustomException(ExceptionCode.FILE_READ_ERROR, ex);
         }
+    }
+
+    /**
+     * 파일을 Resource의 형태로 읽어오는 메서드
+     * @param path 파일의 절대 경로
+     * @return Resource
+     */
+    public Resource readFileAsResource(final Path path) {
+
+        // 1) 파일 존재하는지 확인
+        if (Files.notExists(path)) {
+            throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
+        }
+
+        // 2) 파일 Resource로
+        return new FileSystemResource(path);
     }
 
     /**
