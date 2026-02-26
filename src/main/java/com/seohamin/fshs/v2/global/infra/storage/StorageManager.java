@@ -199,12 +199,9 @@ public class StorageManager {
             throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
-        // 2) NFC 변환
-        final Path path = PathNameUtil.normalizePath(rawPath);
-
-        // 3) base랑 합쳐서 절대 경로로
+        // 2) base랑 합쳐서 절대 경로로
         final Path basePath = Path.of(base).toAbsolutePath().normalize();
-        final Path absolutePath = basePath.resolve(path).normalize();
+        final Path absolutePath = basePath.resolve(rawPath).normalize();
 
         // 4) 경로 검사
         if (!absolutePath.startsWith(basePath)) {
