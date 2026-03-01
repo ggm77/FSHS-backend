@@ -2,38 +2,90 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>FSHS Streaming Test</title>
+    <title>FSHS Streaming Test (Fixed Layout)</title>
+    <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+    <style>
+        .test-box { border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; background: #f9f9f9; }
+        .control-group { margin-bottom: 10px; }
+
+        /* 1. 플레이어 외부 컨테이너 고정 */
+        .video-wrapper {
+            width: 800px; /* 원하는 가로 크기 */
+            height: 450px; /* 16:9 비율 유지 */
+            margin: 0 auto;
+            background-color: #000;
+            border: 2px solid #333;
+            position: relative;
+        }
+
+        /* 2. 비디오 요소가 컨테이너를 벗어나지 않게 설정 */
+        #vjsPlayer {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* 3. 세로 영상일 경우 검은 여백을 남기고 중앙에 위치하게 함 */
+        .video-js vjs-tech {
+            object-fit: contain !important;
+        }
+    </style>
 </head>
 <body>
-<h1>Streaming Test</h1>
+<h1>FSHS Streaming Test</h1>
 
-<input type="number" id="fileId" placeholder="파일 ID 입력" value="1">
-<button onclick="loadMedia()">스트리밍 시작</button>
+<div class="test-box">
+    <h3>설정</h3>
+    <div class="control-group">
+        <label>파일 ID: </label>
+        <input type="number" id="fileId" value="1">
+    </div>
+    <div class="control-group">
+        <label>트랜스코딩 시작 지점(초): </label>
+        <input type="number" id="startTime" value="0" step="0.5">
+    </div>
+
+    <button onclick="loadDirectMedia()">1. 직접 스트리밍 시작</button>
+    <button onclick="loadTranscodedMedia()">2. 트랜스코딩 스트리밍 시작</button>
+</div>
 
 <hr>
 
-<h3>Video 영역</h3>
-<video id="videoPlayer" controls width="640" height="360">
-    <p>브라우저가 비디오 태그를 지원하지 않습니다.</p>
-</video>
+<div class="video-wrapper">
+    <video id="vjsPlayer" class="video-js vjs-default-skin vjs-big-play-centered" controls preload="auto">
+        <p class="vjs-no-js">JavaScript를 활성화해주세요.</p>
+    </video>
+</div>
 
-<h3>Audio 영역</h3>
-<audio id="audioPlayer" controls></audio>
+<script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
 
 <script>
-    function loadMedia() {
+    // 4. Video.js 설정 변경
+    const player = videojs('vjsPlayer', {
+        autoplay: true,
+        liveui: true,
+        fluid: false, // ★ 중요: 자동 크기 조절 해제 (세로 영상 폭주 방지)
+        fill: true,   // ★ 중요: 컨테이너를 가득 채움
+        playbackRates: [0.5, 1, 1.5, 2],
+        html5: {
+            vhs: { overrideNative: true }
+        }
+    });
+
+    function loadDirectMedia() {
         const fileId = document.getElementById('fileId').value;
-        // download=false를 쿼리 파라미터로 전달하여 inline 응답 유도
         const streamUrl = `/api/v2/files/${fileId}/content?download=false`;
+        player.src({ src: streamUrl, type: 'video/mp4' });
+        player.load();
+    }
 
-        // 비디오와 오디오 태그의 src에 URL 설정
-        const videoPlayer = document.getElementById('videoPlayer');
-        const audioPlayer = document.getElementById('audioPlayer');
+    function loadTranscodedMedia() {
+        const fileId = document.getElementById('fileId').value;
+        const start = document.getElementById('startTime').value;
+        const streamUrl = `/api/v2/files/${fileId}/stream?start=${start}`;
 
-        videoPlayer.src = streamUrl;
-        audioPlayer.src = streamUrl;
-
-        console.log("요청 URL:", streamUrl);
+        player.src({ src: streamUrl, type: 'video/mp4' });
+        player.load();
+        player.play();
     }
 </script>
 </body>

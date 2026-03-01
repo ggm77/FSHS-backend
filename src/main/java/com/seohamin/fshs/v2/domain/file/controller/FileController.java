@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -65,5 +66,17 @@ public class FileController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                 .body(dto.resource());
+    }
+
+    // 실시간 트랜스코딩을 통해 스트리밍하는 API
+    @GetMapping("/files/{fileId}/stream")
+    public ResponseEntity<StreamingResponseBody> streamFile(
+            @PathVariable final Long fileId,
+            @RequestParam(defaultValue = "0") final double start
+    ) {
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("video/mp4"))
+                .body(fileService.streamFile(fileId, start));
     }
 }

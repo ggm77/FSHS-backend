@@ -184,6 +184,27 @@ public class StorageManager {
     }
 
     /**
+     * 상대 경로를 절대 경로로 바꿔주는 메서드이다.
+     * 임시 파일의 경로가 아닌 경우, 일반 루트 폴더 경로를 붙여줌
+     * @param rawRelativePath 상대 경로
+     * @param isTempFilePath 임시 파일인지 여부
+     * @return Path로 된 절대 경로
+     */
+    public Path resolvePath(
+            final String rawRelativePath,
+            final boolean isTempFilePath
+    ) {
+        final Path relativePath = Path.of(rawRelativePath);
+
+        if (isTempFilePath) {
+            return toAbsolutePath(tempPath, relativePath);
+        } else {
+            return toAbsolutePath(rootPath, relativePath);
+        }
+
+    }
+
+    /**
      * 상대 경로를 루트 경로 또는 임시 폴더 경로를 포함한
      * 절대 경로로 변환하는 메서드
      * @param base 루트 또는 임시 폴더 경로

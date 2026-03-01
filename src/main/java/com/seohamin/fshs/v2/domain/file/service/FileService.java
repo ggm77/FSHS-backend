@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.file.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
 import com.seohamin.fshs.v2.domain.file.entity.File;
@@ -8,6 +9,7 @@ import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
+import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.FileAnalyzer;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
@@ -16,6 +18,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.file.Path;
 import java.time.Instant;
@@ -28,6 +31,8 @@ public class FileService {
     private final FolderRepository folderRepository;
     private final StorageManager storageManager;
     private final FileAnalyzer fileAnalyzer;
+    private final Cache<Long, String> filePathCache;
+    private final FfmpegProcessor ffmpegProcessor;
 
     /**
      * 파일 하나 업로드처리하는 메서드
@@ -112,6 +117,36 @@ public class FileService {
                 size,
                 resource
         );
+    }
+
+    /**
+     * 실시간 트랜스코딩으로 파일을 스트리밍하는 메서드
+     * @param fileId 스트리밍할 파일 ID
+     * @param start 영상 스트리밍 시작 지점
+     * @return 트랜스코딩된 파일 정보
+     */
+    public StreamingResponseBody streamFile(
+            final Long fileId,
+            final double start
+    ) {
+        // 1) null 검사
+        if (fileId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 파일 위치 조회 - 캐시에 먼저 조회하고 없으면 DB 조회
+        final String path = filePathCache.get(
+                fileId, id -> fileRepository.findById(fileId)
+                    .map(File::getRelativePath)
+                    .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST))
+        );
+
+        // 3) 절대 경로로 변환
+        final Path absPath = storageManager.resolvePath(path, false);
+
+        // 4) 실시간 트랜스코딩
+        return ffmpegProcessor.getVideoStream(absPath.toString(), start);
+
     }
 
     /**
