@@ -64,7 +64,7 @@ public class FfmpegProcessor {
                 "-loglevel", "quiet", // 출력에 영상 내용만 나오도록
                 "-ss", String.valueOf(start), // 시작 지점
                 "-i", filePath, // 파일 위치
-                "-vcodec", "h264_videotoolbox", // h264로 변환
+                "-vcodec", ffmpegConfig.getSelectedH264Encoder(), // h264로 변환
                 "-preset", "ultrafast", // 인코딩 속도
                 "-tune", "zerolatency", // 최적화 옵션
                 "-pix_fmt", "yuv420p", // 픽셀 포멧
