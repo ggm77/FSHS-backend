@@ -156,7 +156,6 @@ public class FileRepositoryTest {
         foundFile.updateDuration(67L);
         foundFile.updateBitrate(999);
         foundFile.updateOrientation(-90);
-        foundFile.updateOriginCreatedAt(now);
         foundFile.updateOriginUpdatedAt(now);
         foundFile.updateCategory(Category.VIDEO);
 
@@ -180,7 +179,6 @@ public class FileRepositoryTest {
         assertThat(updatedFile.getDuration()).isEqualTo(67L);
         assertThat(updatedFile.getBitrate()).isEqualTo(999);
         assertThat(updatedFile.getOrientation()).isEqualTo(-90);
-        assertThat(updatedFile.getOriginCreatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFile.getOriginUpdatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFile.getCategory()).isEqualTo(Category.VIDEO);
 
@@ -261,7 +259,6 @@ public class FileRepositoryTest {
                 .ownerId(null)
                 .relativePath("/"+name+"/")
                 .name(name)
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .build();
     }
@@ -289,7 +286,6 @@ public class FileRepositoryTest {
                 .duration(4L)
                 .bitrate(bitrate)
                 .orientation(0)
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .category(Category.IMAGE)
                 .build();

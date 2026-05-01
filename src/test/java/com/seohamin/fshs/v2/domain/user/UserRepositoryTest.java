@@ -245,7 +245,6 @@ public class UserRepositoryTest {
                 .ownerId(null)
                 .relativePath("/"+name+"/")
                 .name(name)
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .build();
     }
@@ -271,7 +270,6 @@ public class UserRepositoryTest {
                 .height(3)
                 .duration(4L)
                 .orientation(0)
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .category(Category.IMAGE)
                 .build();

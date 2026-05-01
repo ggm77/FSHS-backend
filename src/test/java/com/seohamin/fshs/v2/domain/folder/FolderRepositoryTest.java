@@ -222,7 +222,6 @@ public class FolderRepositoryTest {
         foundFolder.updateOwnerId(5L);
         foundFolder.updateRelativePath("/newParentFolder/newName/");
         foundFolder.updateName("newName");
-        foundFolder.updateOriginCreatedAt(now);
         foundFolder.updateOriginUpdatedAt(now);
 
         foundFolder.updateIsRoot(true);
@@ -235,7 +234,6 @@ public class FolderRepositoryTest {
         assertThat(updatedFolder.getOwnerId()).isEqualTo(5L);
         assertThat(updatedFolder.getRelativePath()).isEqualTo("/newParentFolder/newName/");
         assertThat(updatedFolder.getName()).isEqualTo("newName");
-        assertThat(updatedFolder.getOriginCreatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
         assertThat(updatedFolder.getOriginUpdatedAt()).isCloseTo(now, within(1, ChronoUnit.SECONDS));
 
         assertThat(updatedFolder.getIsRoot()).isEqualTo(true);
@@ -324,7 +322,6 @@ public class FolderRepositoryTest {
                 .ownerId(null)
                 .relativePath("/"+name+"/")
                 .name(name)
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .isRoot(true)
                 .build();
@@ -351,7 +348,6 @@ public class FolderRepositoryTest {
                 .height(3)
                 .duration(4L)
                 .orientation(0)
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .category(Category.IMAGE)
                 .build();

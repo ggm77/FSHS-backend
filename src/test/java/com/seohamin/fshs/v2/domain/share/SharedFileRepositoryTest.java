@@ -226,7 +226,6 @@ public class SharedFileRepositoryTest {
                 .ownerId(ownerId)
                 .relativePath("/"+name+"/")
                 .name(name)
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .build();
     }
@@ -246,7 +245,6 @@ public class SharedFileRepositoryTest {
                 .parentPath(folder.getRelativePath())
                 .mimeType("text/plain")
                 .size(1L)
-                .originCreatedAt(Instant.now())
                 .originUpdatedAt(Instant.now())
                 .category(Category.DOCUMENT)
                 .build();
