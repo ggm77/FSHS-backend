@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
-@Order(3)
+@Order(2)
 @Slf4j
 public class AdminUserInitializer implements CommandLineRunner {
 

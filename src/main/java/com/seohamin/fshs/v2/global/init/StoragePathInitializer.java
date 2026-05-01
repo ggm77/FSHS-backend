@@ -11,7 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 @Component
-@Order(4)
+@Order(3)
 @Slf4j
 public class StoragePathInitializer implements CommandLineRunner {
 
