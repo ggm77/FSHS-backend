@@ -15,6 +15,7 @@ application-dev.yml
 application-prod.yml
 
 GEMINI.md
+CLAUDE.md
 
 /db/
 *.mv.db
