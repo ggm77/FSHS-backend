@@ -8,20 +8,15 @@ import com.seohamin.fshs.v2.domain.file.dto.FileUploadResponseDto;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.entity.Status;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
-import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
-import com.seohamin.fshs.v2.global.infra.storage.FileAnalyzer;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
-import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -37,7 +32,7 @@ public class FileService {
     private final FileRepository fileRepository;
     private final FolderRepository folderRepository;
     private final StorageManager storageManager;
-    private final FileAnalyzer fileAnalyzer;
+    private final FileUploadProcessor fileUploadProcessor;
     private final Cache<Long, String> filePathCache;
     private final Cache<String, Status> fileStatusCache;
     private final FfmpegProcessor ffmpegProcessor;
@@ -65,18 +60,20 @@ public class FileService {
             throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
         }
 
-        // 3) 상위 폴더 조회
-        final Folder parentFolder = folderRepository.findById(folderId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+        // 3) 상위 폴더 존재 확인 - 잘못된 folderId는 동기 단계에서 즉시 거절
+        if (!folderRepository.existsById(folderId)) {
+            throw new CustomException(ExceptionCode.FOLDER_NOT_EXIST);
+        }
 
-        // 4) 파일 UUID 발급
+        // 4) 임시 폴더에 파일 저장 - MultipartFile 수명 문제 때문에 요청 스레드에서 동기로 처리
+        final Path tempFilePath = storageManager.saveTemporarily(multipartFile);
+
+        // 5) 파일 UUID 발급 및 처리 중 상태 등록
         final String fileUuid = UUID.randomUUID().toString();
-
-        // 5) 파일 상태 변경
         fileStatusCache.put(fileUuid, Status.PROCESSING);
 
-        // 6) 업로드 메서드 호출
-        processUpload(multipartFile, lastModified, parentFolder, fileUuid);
+        // 6) 비동기 처리 위임
+        fileUploadProcessor.process(fileUuid, tempFilePath, folderId, lastModified);
 
         return new FileUploadResponseDto(fileUuid);
     }
@@ -196,82 +193,4 @@ public class FileService {
 
     }
 
-    /**
-     * 실제로 파일을 검증하고 저장하는 메서드
-     * DB에 정보를 저장하는 부분 외에는 전부 유틸 메서드를 통해 진행
-     * @param multipartFile 저장할 파일
-     * @param lastModified 저장할 파일의 마지막 수정 시점 정보
-     * @param parentFolder 상위 폴더
-     * @param fileUuid 해당 파일의 임시 UUID (상태 관리용)
-     * @return 저장된 파일의 정보가 담긴 DTO
-     */
-    @Async("asyncExecutor")
-    protected void processUpload(
-            final MultipartFile multipartFile,
-            final Instant lastModified,
-            final Folder parentFolder,
-            final String fileUuid
-    ) {
-        try {
-            // 1) 변수에 값 저장
-            final Path parentFolderPath = Path.of(parentFolder.getRelativePath());
-
-            // 2) 파일 임시 폴더에 저장
-            final Path tempFilePath = storageManager.saveTemporarily(multipartFile);
-            log.info("[파일 임시 저장 완료]: {}", fileUuid);
-
-            // 3) 카테고리에 맞춰서 파일 검증 및 정보 추출
-            final FileAnalysisResultDto analysisResult = fileAnalyzer.analyzeFile(tempFilePath);
-            log.info("[파일 검증 및 정보 추출 완료]: {}", fileUuid);
-
-            // 4) 파일 원본 위치로 이동
-            final Path savedPath = storageManager.savePermanently(tempFilePath, parentFolderPath, lastModified);
-            log.info("[파일 저장 완료]: {}", fileUuid);
-
-            // 5) 파일 엔티티 생성 - 파일명, 경로는 원본 그대로
-            final File file = File.builder()
-                    .parentFolder(parentFolder)
-                    .uuid(fileUuid)
-                    .name(analysisResult.name())
-                    .baseName(analysisResult.baseName())
-                    .extension(analysisResult.extension())
-                    .relativePath(savedPath.toString())
-                    .parentPath(parentFolderPath.toString())
-                    .mimeType(analysisResult.mimeType())
-                    .size(analysisResult.size())
-                    .videoCodec(analysisResult.videoCodec())
-                    .audioCodec(analysisResult.audioCodec())
-                    .width(analysisResult.width())
-                    .height(analysisResult.height())
-                    .duration(analysisResult.duration())
-                    .bitrate(analysisResult.bitrate())
-                    .orientation(analysisResult.orientation())
-                    .lat(analysisResult.lat())
-                    .lon(analysisResult.lon())
-                    .fps(analysisResult.fps())
-                    .format(analysisResult.format())
-                    .capturedAt(analysisResult.capturedAt())
-                    .originUpdatedAt(lastModified)
-                    .category(analysisResult.category())
-                    .build();
-
-            // 6) DB에 저장
-            saveFile(file);
-            log.info("[파일 정보 DB에 저장 완료]: {}", fileUuid);
-
-            // 7) 파일 상태 완료로 변경
-            fileStatusCache.put(fileUuid, Status.COMPLETE);
-        } catch (final CustomException ex) {
-            fileStatusCache.put(fileUuid, Status.ERROR);
-            log.error("[파일 처리 중 에러 발생]: {}, {}", ex.getExceptionCode(), ex.getExceptionCode().getMessage());
-        } catch (final Exception ex) {
-            fileStatusCache.put(fileUuid, Status.ERROR);
-            log.error("[파일 처리 중 에러 발생]: {}", ex.getMessage(), ex);
-        }
-    }
-
-    @Transactional
-    protected void saveFile(final File file) {
-        fileRepository.save(file);
-    }
 }
