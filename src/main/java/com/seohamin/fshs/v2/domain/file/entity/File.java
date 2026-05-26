@@ -50,6 +50,12 @@ public class File {
     @Column(nullable = true)
     private Long ownerId;
 
+    // 파일 업로드시 사용한 UUID
+    @Column(length = 40, nullable = false)
+    @Size(max = 40)
+    @NotNull
+    private String uuid;
+
     // 확장자 포함 파일명
     @Column(length = 255, nullable = false)
     @Size(max = 255)
@@ -181,6 +187,7 @@ public class File {
     public File(
             final Folder parentFolder,
             final Long ownerId,
+            final String uuid,
             final String name,
             final String baseName,
             final String extension,
@@ -205,6 +212,7 @@ public class File {
     ) {
         this.parentFolder = parentFolder;
         this.ownerId = ownerId;
+        this.uuid = uuid;
         this.name = name;
         this.lowerName = name.toLowerCase();
         this.baseName = baseName.toLowerCase();
@@ -237,6 +245,11 @@ public class File {
     // 파일 주인 변경 메서드
     public void updateOwnerId(final Long ownerId) {
         this.ownerId = ownerId;
+    }
+
+    // uuid 변경 메서드
+    public void updateUuid(final String uuid) {
+        this.uuid = uuid;
     }
 
     // 확장자 포함한 파일명 변경 메서드

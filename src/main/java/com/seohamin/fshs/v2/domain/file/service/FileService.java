@@ -3,7 +3,10 @@ package com.seohamin.fshs.v2.domain.file.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
+import com.seohamin.fshs.v2.domain.file.dto.FileStatusResponseDto;
+import com.seohamin.fshs.v2.domain.file.dto.FileUploadResponseDto;
 import com.seohamin.fshs.v2.domain.file.entity.File;
+import com.seohamin.fshs.v2.domain.file.entity.Status;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
@@ -14,7 +17,9 @@ import com.seohamin.fshs.v2.global.infra.storage.FileAnalyzer;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,9 +27,11 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FileService {
 
     private final FileRepository fileRepository;
@@ -32,6 +39,7 @@ public class FileService {
     private final StorageManager storageManager;
     private final FileAnalyzer fileAnalyzer;
     private final Cache<Long, String> filePathCache;
+    private final Cache<String, Status> fileStatusCache;
     private final FfmpegProcessor ffmpegProcessor;
 
     /**
@@ -41,7 +49,7 @@ public class FileService {
      * @param lastModified 업로드할 파일의 마지막 수정 시점
      * @return 업로드된 파일의 정보
      */
-    public FileResponseDto uploadFile(
+    public FileUploadResponseDto uploadFile(
             final MultipartFile multipartFile,
             final Instant lastModified,
             final Long folderId
@@ -61,8 +69,48 @@ public class FileService {
         final Folder parentFolder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
-        // 4) 업로드 메서드 호출
-        return processUpload(multipartFile, lastModified, parentFolder);
+        // 4) 파일 UUID 발급
+        final String fileUuid = UUID.randomUUID().toString();
+
+        // 5) 파일 상태 변경
+        fileStatusCache.put(fileUuid, Status.PROCESSING);
+
+        // 6) 업로드 메서드 호출
+        processUpload(multipartFile, lastModified, parentFolder, fileUuid);
+
+        return new FileUploadResponseDto(fileUuid);
+    }
+
+    /**
+     * 파일의 처리 상태를 조회하는 API
+     * 캐시에 없으면 DB 조회
+     * @param fileUuid 파일의 UUID
+     * @return 파일 처리 상태 담긴 DTO
+     */
+    public FileStatusResponseDto getFileStatus(final String fileUuid) {
+        // 1) null 검사
+        if (fileUuid == null || fileUuid.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 캐시 조회
+        final Status status = fileStatusCache.get(
+                fileUuid,
+                f -> fileRepository.existsByUuid(fileUuid) ? Status.COMPLETE : Status.ERROR
+        );
+
+        // 3) 파일 완료 되었으면 파일 아이디 조회
+        final File file = fileRepository.findByUuid(fileUuid)
+                .orElse(null);
+
+        final Long id;
+        if (file == null) {
+            id = null;
+        } else {
+            id = file.getId();
+        }
+
+        return new FileStatusResponseDto(status, id);
     }
 
     /**
@@ -154,59 +202,76 @@ public class FileService {
      * @param multipartFile 저장할 파일
      * @param lastModified 저장할 파일의 마지막 수정 시점 정보
      * @param parentFolder 상위 폴더
+     * @param fileUuid 해당 파일의 임시 UUID (상태 관리용)
      * @return 저장된 파일의 정보가 담긴 DTO
      */
-    private FileResponseDto processUpload(
+    @Async("asyncExecutor")
+    protected void processUpload(
             final MultipartFile multipartFile,
             final Instant lastModified,
-            final Folder parentFolder
+            final Folder parentFolder,
+            final String fileUuid
     ) {
-        // 1) 변수에 값 저장
-        final Path parentFolderPath = Path.of(parentFolder.getRelativePath());
+        try {
+            // 1) 변수에 값 저장
+            final Path parentFolderPath = Path.of(parentFolder.getRelativePath());
 
-        // 2) 파일 임시 폴더에 저장
-        final Path tempFilePath = storageManager.saveTemporarily(multipartFile);
+            // 2) 파일 임시 폴더에 저장
+            final Path tempFilePath = storageManager.saveTemporarily(multipartFile);
+            log.info("[파일 임시 저장 완료]: {}", fileUuid);
 
-        // 3) 카테고리에 맞춰서 파일 검증 및 정보 추출
-        final FileAnalysisResultDto analysisResult = fileAnalyzer.analyzeFile(tempFilePath);
+            // 3) 카테고리에 맞춰서 파일 검증 및 정보 추출
+            final FileAnalysisResultDto analysisResult = fileAnalyzer.analyzeFile(tempFilePath);
+            log.info("[파일 검증 및 정보 추출 완료]: {}", fileUuid);
 
-        // 4) 파일 원본 위치로 이동
-        final Path savedPath = storageManager.savePermanently(tempFilePath, parentFolderPath, lastModified);
+            // 4) 파일 원본 위치로 이동
+            final Path savedPath = storageManager.savePermanently(tempFilePath, parentFolderPath, lastModified);
+            log.info("[파일 저장 완료]: {}", fileUuid);
 
-        // 5) 파일 엔티티 생성 - 파일명, 경로는 원본 그대로
-        final File file = File.builder()
-                .parentFolder(parentFolder)
-                .name(analysisResult.name())
-                .baseName(analysisResult.baseName())
-                .extension(analysisResult.extension())
-                .relativePath(savedPath.toString())
-                .parentPath(parentFolderPath.toString())
-                .mimeType(analysisResult.mimeType())
-                .size(analysisResult.size())
-                .videoCodec(analysisResult.videoCodec())
-                .audioCodec(analysisResult.audioCodec())
-                .width(analysisResult.width())
-                .height(analysisResult.height())
-                .duration(analysisResult.duration())
-                .bitrate(analysisResult.bitrate())
-                .orientation(analysisResult.orientation())
-                .lat(analysisResult.lat())
-                .lon(analysisResult.lon())
-                .fps(analysisResult.fps())
-                .format(analysisResult.format())
-                .capturedAt(analysisResult.capturedAt())
-                .originUpdatedAt(lastModified)
-                .category(analysisResult.category())
-                .build();
+            // 5) 파일 엔티티 생성 - 파일명, 경로는 원본 그대로
+            final File file = File.builder()
+                    .parentFolder(parentFolder)
+                    .uuid(fileUuid)
+                    .name(analysisResult.name())
+                    .baseName(analysisResult.baseName())
+                    .extension(analysisResult.extension())
+                    .relativePath(savedPath.toString())
+                    .parentPath(parentFolderPath.toString())
+                    .mimeType(analysisResult.mimeType())
+                    .size(analysisResult.size())
+                    .videoCodec(analysisResult.videoCodec())
+                    .audioCodec(analysisResult.audioCodec())
+                    .width(analysisResult.width())
+                    .height(analysisResult.height())
+                    .duration(analysisResult.duration())
+                    .bitrate(analysisResult.bitrate())
+                    .orientation(analysisResult.orientation())
+                    .lat(analysisResult.lat())
+                    .lon(analysisResult.lon())
+                    .fps(analysisResult.fps())
+                    .format(analysisResult.format())
+                    .capturedAt(analysisResult.capturedAt())
+                    .originUpdatedAt(lastModified)
+                    .category(analysisResult.category())
+                    .build();
 
-        // 6) DB에 저장
-        final File savedFile = saveFile(file);
+            // 6) DB에 저장
+            saveFile(file);
+            log.info("[파일 정보 DB에 저장 완료]: {}", fileUuid);
 
-        return FileResponseDto.of(savedFile);
+            // 7) 파일 상태 완료로 변경
+            fileStatusCache.put(fileUuid, Status.COMPLETE);
+        } catch (final CustomException ex) {
+            fileStatusCache.put(fileUuid, Status.ERROR);
+            log.error("[파일 처리 중 에러 발생]: {}, {}", ex.getExceptionCode(), ex.getExceptionCode().getMessage());
+        } catch (final Exception ex) {
+            fileStatusCache.put(fileUuid, Status.ERROR);
+            log.error("[파일 처리 중 에러 발생]: {}", ex.getMessage(), ex);
+        }
     }
 
     @Transactional
-    protected File saveFile(final File file) {
-        return fileRepository.save(file);
+    protected void saveFile(final File file) {
+        fileRepository.save(file);
     }
 }

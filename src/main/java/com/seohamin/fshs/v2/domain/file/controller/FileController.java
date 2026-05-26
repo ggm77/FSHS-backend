@@ -2,10 +2,11 @@ package com.seohamin.fshs.v2.domain.file.controller;
 
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
+import com.seohamin.fshs.v2.domain.file.dto.FileStatusResponseDto;
+import com.seohamin.fshs.v2.domain.file.dto.FileUploadResponseDto;
 import com.seohamin.fshs.v2.domain.file.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,6 @@ import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v2")
@@ -27,13 +27,21 @@ public class FileController {
 
     // 파일 단건 업로드 API
     @PostMapping(value = "/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<FileResponseDto> uploadFile(
+    public ResponseEntity<FileUploadResponseDto> uploadFile(
             @RequestPart(value = "file") final MultipartFile multipartFile,
             @RequestParam(value = "lastModified") final Instant lastModified,
             @RequestParam(value = "folderId") final Long folderId
     ) {
 
-        return ResponseEntity.ok().body(fileService.uploadFile(multipartFile, lastModified, folderId));
+        return ResponseEntity.ok(fileService.uploadFile(multipartFile, lastModified, folderId));
+    }
+
+    @GetMapping("/files/{fileUuid}/status")
+    public ResponseEntity<FileStatusResponseDto> getFileStatus(
+            @PathVariable final String fileUuid
+    ) {
+
+        return ResponseEntity.ok(fileService.getFileStatus(fileUuid));
     }
 
     // 특정 파일 정보 조회 API
