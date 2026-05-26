@@ -20,7 +20,7 @@ public class StoragePathInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        log.info("[임시 폴더와 DB 폴더 확인 중...");
+        log.info("[임시 폴더와 DB 폴더 확인 중...]");
 
         final Path tempPath = Path.of(tempPathStr);
 
