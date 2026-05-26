@@ -41,7 +41,6 @@ public class FileService {
      * @param lastModified 업로드할 파일의 마지막 수정 시점
      * @return 업로드된 파일의 정보
      */
-    @Transactional
     public FileResponseDto uploadFile(
             final MultipartFile multipartFile,
             final Instant lastModified,
@@ -201,8 +200,13 @@ public class FileService {
                 .build();
 
         // 6) DB에 저장
-        final File savedFile = fileRepository.save(file);
+        final File savedFile = saveFile(file);
 
         return FileResponseDto.of(savedFile);
+    }
+
+    @Transactional
+    protected File saveFile(final File file) {
+        return fileRepository.save(file);
     }
 }
