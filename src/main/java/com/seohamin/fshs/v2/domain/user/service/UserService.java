@@ -30,35 +30,34 @@ public class UserService implements UserDetailsService {
     @Transactional
     public UserResponseDto createUser(final UserRequestDto userRequestDto) {
 
-        // 1) 비밀번호 길이 검증
-        if(userRequestDto.password().length() < 4 ) {
+        // 1) null 및 유효성 검사
+        final String username = userRequestDto.username();
+        final String rawPassword = userRequestDto.password();
+
+        if (username == null || username.isEmpty()) {
+            throw new CustomException(ExceptionCode.INVALID_USERNAME);
+        }
+        if (rawPassword == null || rawPassword.length() < 4) {
             throw new CustomException(ExceptionCode.TOO_SHORT_PASSWORD);
         }
 
-        // 2) 변수에 저장 및 비밀번호 해싱
-        final String username = userRequestDto.username();
-        final String password = passwordEncoder.encode(userRequestDto.password());
-
-        // 3) 유저명 길이 체크
-        if(username == null || username.isEmpty()){
-            throw new CustomException(ExceptionCode.INVALID_USERNAME);
-        }
-
-        // 4) 유저명 겹치는지 확인
-        if(userRepository.existsByUsername(username)) {
+        // 2) 유저명 겹치는지 확인
+        if (userRepository.existsByUsername(username)) {
             throw new CustomException(ExceptionCode.USERNAME_DUPLICATE);
         }
 
-        // 5) 엔티티 만들기
+        // 3) 비밀번호 해싱
+        final String password = passwordEncoder.encode(rawPassword);
+
+        // 4) 엔티티 만들기
         final User user = User.builder()
                 .username(username)
                 .password(password)
                 .build();
 
-        // 6) DB에 저장
+        // 5) DB에 저장
         final User savedUser = userRepository.save(user);
 
-        // 7) DTO에 담아 리턴
         return UserResponseDto.of(savedUser, null);
     }
 

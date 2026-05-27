@@ -194,12 +194,15 @@ public record FileAnalysisResultDto(
         }
     }
 
+    private static final java.util.regex.Pattern LOCATION_PATTERN =
+            java.util.regex.Pattern.compile("[+-]\\d+\\.?\\d*");
+
     private static Double parseLocation(String location, boolean isLat) {
         if (location == null || location.isBlank()) return null;
 
         try {
             // 부호(+/-)로 시작하고 숫자와 소수점을 포함하는 패턴 추출
-            var matcher = java.util.regex.Pattern.compile("[+-]\\d+\\.?\\d*").matcher(location);
+            var matcher = LOCATION_PATTERN.matcher(location);
             var coordinates = new java.util.ArrayList<Double>();
 
             while (matcher.find()) {

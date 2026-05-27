@@ -149,4 +149,23 @@ public class StorageIoCore {
             throw new CustomException(ExceptionCode.FILE_WRITE_ERROR, ex);
         }
     }
+
+    /**
+     * 파일 삭제하는 메서드.
+     * 폴더는 삭제 X
+     * @param path 삭제할 파일 path
+     */
+    public void deleteFile(final Path path) {
+        if (Files.isDirectory(path)) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        try {
+            Files.delete(path);
+        } catch (final NoSuchFileException ex) {
+            throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FILE_DELETE_ERROR, ex);
+        }
+    }
 }

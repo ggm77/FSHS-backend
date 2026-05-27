@@ -1,7 +1,9 @@
 package com.seohamin.fshs.v2.domain.folder.service;
 
+import com.seohamin.fshs.v2.domain.folder.dto.FolderDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
+import com.seohamin.fshs.v2.domain.folder.dto.SimpleFolderResponseDto;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.domain.user.entity.User;
@@ -9,13 +11,21 @@ import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
+import com.seohamin.fshs.v2.global.init.SystemRootInitializer;
 import com.seohamin.fshs.v2.global.util.storage.PathNameUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -49,18 +59,23 @@ public class FolderService {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        // 3) 폴더명 정규화
+        // 3) 루트 폴더 검증
+        if (isRoot && folderRepository.existsByIsRoot(true)) {
+            throw new CustomException(ExceptionCode.ROOT_ALREADY_EXIST);
+        }
+
+        // 4) 폴더명 정규화
         final String name = PathNameUtil.normalize(rawName);
 
-        // 4) 상위 폴더 정보 가져오기
+        // 5) 상위 폴더 정보 가져오기
         final Folder parentFolder = folderRepository.findById(parentFolderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
-        // 5) 유저 정보 조회
+        // 6) 유저 정보 조회
         final User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
 
-        // 5) 상대 경로 생성
+        // 7) 상대 경로 생성
         final Path targetPath;
         // 시스템 루트가 상위 폴더인 경우
         if (parentFolder.getIsSystemRoot()) {
@@ -69,10 +84,10 @@ public class FolderService {
             targetPath = Path.of(parentFolder.getRelativePath()).resolve(name);
         }
 
-        // 6) 폴더 생성
+        // 8) 폴더 생성
         final Path createdFolderPath = storageManager.createFolder(targetPath);
 
-        // 7) 폴더 엔티티 생성
+        // 9) 폴더 엔티티 생성
         final Folder folder = Folder.builder()
                 .parentFolder(parentFolder)
                 .ownerId(user.getId())
@@ -82,9 +97,91 @@ public class FolderService {
                 .isRoot(isRoot)
                 .build();
 
-        // 8) DB에 저장
+        // 10) DB에 저장
         final Folder savedFolder = folderRepository.save(folder);
 
         return FolderResponseDto.of(savedFolder);
+    }
+
+    /**
+     * 폴더 정보 조회하는 메서드
+     * @param folderId 조회할 폴더 아이디
+     * @return 폴더 정보 담긴 DTO
+     */
+    public FolderResponseDto getFolder(final Long folderId) {
+        // 1) null 검사
+        if (folderId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 폴더 조회
+        final Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+
+        // 3) 시스템 루트 차단
+        if (folder.getIsSystemRoot()) {
+            throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
+        }
+
+        return FolderResponseDto.of(folder);
+    }
+
+    /**
+     * 폴더 전체를 ZIP으로 압축해서 스트리밍하는 메서드
+     * @param folderId 다운로드할 폴더 아이디
+     * @return ZIP 스트리밍 바디
+     */
+    public FolderDownloadResponseDto downloadFolder(final Long folderId) {
+        // 1) null 검사
+        if (folderId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 폴더 조회
+        final Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+
+        // 3) 시스템 루트 방지
+        if (folder.getIsSystemRoot()) {
+            throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
+        }
+
+        // 4) 폴더 절대경로로 변환 및 폴더명 추출
+        final Path folderAbsPath = storageManager.resolvePath(folder.getRelativePath(), false);
+        final String folderName = folder.getName();
+
+        // 5) 총 비압축 크기 계산 (프론트 다운로드 진행률용)
+        final long totalSize;
+        try (Stream<Path> sizeWalk = Files.walk(folderAbsPath)) {
+            totalSize = sizeWalk
+                    .filter(p -> !Files.isDirectory(p))
+                    .mapToLong(p -> {
+                        try { return Files.size(p); } catch (IOException e) { return 0L; }
+                    })
+                    .sum();
+        } catch (IOException e) {
+            throw new CustomException(ExceptionCode.FILE_READ_ERROR, e);
+        }
+
+        // 6) ZIP 스트리밍 바디 생성
+        final StreamingResponseBody stream = outputStream -> {
+            try (ZipOutputStream zos = new ZipOutputStream(outputStream);
+                 Stream<Path> paths = Files.walk(folderAbsPath)) {
+                for (final Path p : (Iterable<Path>) paths::iterator) {
+                    if (p.equals(folderAbsPath)) continue;
+                    final String entryName = folderName + "/" + folderAbsPath.relativize(p);
+                    if (Files.isDirectory(p)) {
+                        zos.putNextEntry(new ZipEntry(entryName + "/"));
+                        zos.closeEntry();
+                        continue;
+                    }
+                    zos.putNextEntry(new ZipEntry(entryName));
+                    Files.copy(p, zos);
+                    zos.closeEntry();
+                }
+            }
+        };
+
+        return new FolderDownloadResponseDto(folderName, totalSize, stream);
     }
 }

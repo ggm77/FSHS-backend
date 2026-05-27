@@ -3,17 +3,18 @@ package com.seohamin.fshs.v2.domain.file.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
+import com.seohamin.fshs.v2.domain.file.dto.FileStatusResponseDto;
+import com.seohamin.fshs.v2.domain.file.dto.FileUploadResponseDto;
 import com.seohamin.fshs.v2.domain.file.entity.File;
+import com.seohamin.fshs.v2.domain.file.entity.Status;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
-import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
-import com.seohamin.fshs.v2.global.infra.storage.FileAnalyzer;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
-import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,16 +23,19 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FileService {
 
     private final FileRepository fileRepository;
     private final FolderRepository folderRepository;
     private final StorageManager storageManager;
-    private final FileAnalyzer fileAnalyzer;
+    private final FileUploadProcessor fileUploadProcessor;
     private final Cache<Long, String> filePathCache;
+    private final Cache<String, Status> fileStatusCache;
     private final FfmpegProcessor ffmpegProcessor;
 
     /**
@@ -41,8 +45,7 @@ public class FileService {
      * @param lastModified 업로드할 파일의 마지막 수정 시점
      * @return 업로드된 파일의 정보
      */
-    @Transactional
-    public FileResponseDto uploadFile(
+    public FileUploadResponseDto uploadFile(
             final MultipartFile multipartFile,
             final Instant lastModified,
             final Long folderId
@@ -58,12 +61,54 @@ public class FileService {
             throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
         }
 
-        // 3) 상위 폴더 조회
-        final Folder parentFolder = folderRepository.findById(folderId)
-                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+        // 3) 상위 폴더 존재 확인 - 잘못된 folderId는 동기 단계에서 즉시 거절
+        if (!folderRepository.existsById(folderId)) {
+            throw new CustomException(ExceptionCode.FOLDER_NOT_EXIST);
+        }
 
-        // 4) 업로드 메서드 호출
-        return processUpload(multipartFile, lastModified, parentFolder);
+        // 4) 임시 폴더에 파일 저장 - MultipartFile 수명 문제 때문에 요청 스레드에서 동기로 처리
+        final Path tempFilePath = storageManager.saveTemporarily(multipartFile);
+
+        // 5) 파일 UUID 발급 및 처리 중 상태 등록
+        final String fileUuid = UUID.randomUUID().toString();
+        fileStatusCache.put(fileUuid, Status.PROCESSING);
+
+        // 6) 비동기 처리 위임
+        fileUploadProcessor.process(fileUuid, tempFilePath, folderId, lastModified);
+
+        return new FileUploadResponseDto(fileUuid);
+    }
+
+    /**
+     * 파일의 처리 상태를 조회하는 API
+     * 캐시에 없으면 DB 조회
+     * @param fileUuid 파일의 UUID
+     * @return 파일 처리 상태 담긴 DTO
+     */
+    public FileStatusResponseDto getFileStatus(final String fileUuid) {
+        // 1) null 검사
+        if (fileUuid == null || fileUuid.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 캐시 조회
+        final Status status = fileStatusCache.get(
+                fileUuid,
+                f -> fileRepository.existsByUuid(fileUuid) ? Status.COMPLETE : Status.ERROR
+        );
+
+        // 3) 파일 완료 되었으면 파일 아이디 조회
+        final File file = fileRepository.findByUuid(fileUuid)
+                .orElse(null);
+
+        final Long id;
+        if (file == null) {
+            id = null;
+        } else {
+            id = file.getId();
+        }
+
+        return new FileStatusResponseDto(status, id);
     }
 
     /**
@@ -150,59 +195,25 @@ public class FileService {
     }
 
     /**
-     * 실제로 파일을 검증하고 저장하는 메서드
-     * DB에 정보를 저장하는 부분 외에는 전부 유틸 메서드를 통해 진행
-     * @param multipartFile 저장할 파일
-     * @param lastModified 저장할 파일의 마지막 수정 시점 정보
-     * @param parentFolder 상위 폴더
-     * @return 저장된 파일의 정보가 담긴 DTO
+     * 요청 받은 파일을 휴지통으로 보내는 메서드
+     * @param fileId 휴지통으로 보낼 메서드
      */
-    private FileResponseDto processUpload(
-            final MultipartFile multipartFile,
-            final Instant lastModified,
-            final Folder parentFolder
-    ) {
-        // 1) 변수에 값 저장
-        final Path parentFolderPath = Path.of(parentFolder.getRelativePath());
+    @Transactional
+    public void deleteFile(final Long fileId) {
+        // 1) null 검사
+        if (fileId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
 
-        // 2) 파일 임시 폴더에 저장
-        final Path tempFilePath = storageManager.saveTemporarily(multipartFile);
+        // 2) 파일 조회
+        final File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
 
-        // 3) 카테고리에 맞춰서 파일 검증 및 정보 추출
-        final FileAnalysisResultDto analysisResult = fileAnalyzer.analyzeFile(tempFilePath);
+        // 3) DB에서 파일 삭제
+        fileRepository.delete(file);
 
-        // 4) 파일 원본 위치로 이동
-        final Path savedPath = storageManager.savePermanently(tempFilePath, parentFolderPath, lastModified);
-
-        // 5) 파일 엔티티 생성 - 파일명, 경로는 원본 그대로
-        final File file = File.builder()
-                .parentFolder(parentFolder)
-                .name(analysisResult.name())
-                .baseName(analysisResult.baseName())
-                .extension(analysisResult.extension())
-                .relativePath(savedPath.toString())
-                .parentPath(parentFolderPath.toString())
-                .mimeType(analysisResult.mimeType())
-                .size(analysisResult.size())
-                .videoCodec(analysisResult.videoCodec())
-                .audioCodec(analysisResult.audioCodec())
-                .width(analysisResult.width())
-                .height(analysisResult.height())
-                .duration(analysisResult.duration())
-                .bitrate(analysisResult.bitrate())
-                .orientation(analysisResult.orientation())
-                .lat(analysisResult.lat())
-                .lon(analysisResult.lon())
-                .fps(analysisResult.fps())
-                .format(analysisResult.format())
-                .capturedAt(analysisResult.capturedAt())
-                .originUpdatedAt(lastModified)
-                .category(analysisResult.category())
-                .build();
-
-        // 6) DB에 저장
-        final File savedFile = fileRepository.save(file);
-
-        return FileResponseDto.of(savedFile);
+        // 4) 실제 파일 삭제
+        storageManager.removeFile(file.getRelativePath());
     }
+
 }
