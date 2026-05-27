@@ -2,13 +2,18 @@ package com.seohamin.fshs.v2.domain.folder.controller;
 
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
-import com.seohamin.fshs.v2.domain.folder.dto.SimpleFolderResponseDto;
 import com.seohamin.fshs.v2.domain.folder.service.FolderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.util.UriUtils;
+
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequiredArgsConstructor
@@ -34,5 +39,21 @@ public class FolderController {
     ) {
 
         return ResponseEntity.ok().body(folderService.getFolder(folderId));
+    }
+
+    // 폴더 다운로드 API
+    @GetMapping("/folders/{folderId}/content")
+    public ResponseEntity<StreamingResponseBody> downloadFolder(
+            @PathVariable final Long folderId
+    ) {
+        final FolderResponseDto folder = folderService.getFolder(folderId);
+        final StreamingResponseBody stream = folderService.downloadFolder(folderId);
+        final String encodedName = UriUtils.encode(folder.name() + ".zip", StandardCharsets.UTF_8);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName)
+                .body(stream);
     }
 }

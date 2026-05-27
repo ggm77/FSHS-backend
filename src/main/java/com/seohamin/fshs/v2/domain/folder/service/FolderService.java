@@ -16,8 +16,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @RequiredArgsConstructor
@@ -116,5 +122,38 @@ public class FolderService {
         }
 
         return FolderResponseDto.of(folder);
+    }
+
+    /**
+     * 폴더 전체를 ZIP으로 압축해서 스트리밍하는 메서드
+     * @param folderId 다운로드할 폴더 아이디
+     * @return ZIP 스트리밍 바디
+     */
+    public StreamingResponseBody downloadFolder(final Long folderId) {
+        if (folderId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        final Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+
+        if (folder.getIsSystemRoot()) {
+            throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
+        }
+
+        final Path folderAbsPath = storageManager.resolvePath(folder.getRelativePath(), false);
+        final String folderName = folder.getName();
+
+        return outputStream -> {
+            try (ZipOutputStream zos = new ZipOutputStream(outputStream);
+                 Stream<Path> paths = Files.walk(folderAbsPath)) {
+                for (final Path p : (Iterable<Path>) paths::iterator) {
+                    if (Files.isDirectory(p)) continue;
+                    zos.putNextEntry(new ZipEntry(folderName + "/" + folderAbsPath.relativize(p)));
+                    Files.copy(p, zos);
+                    zos.closeEntry();
+                }
+            }
+        };
     }
 }
