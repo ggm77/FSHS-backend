@@ -54,6 +54,7 @@ public class FolderController {
                 .contentType(MediaType.parseMediaType("application/zip"))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName)
+                .header("X-Total-Size", String.valueOf(dto.totalSize()))
                 .body(dto.stream());
     }
 }

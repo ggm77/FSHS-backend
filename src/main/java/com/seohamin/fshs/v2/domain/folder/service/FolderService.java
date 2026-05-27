@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -131,20 +132,38 @@ public class FolderService {
      * @return ZIP 스트리밍 바디
      */
     public FolderDownloadResponseDto downloadFolder(final Long folderId) {
+        // 1) null 검사
         if (folderId == null) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
+        // 2) 폴더 조회
         final Folder folder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
+        // 3) 시스템 루트 방지
         if (folder.getIsSystemRoot()) {
             throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
         }
 
+        // 4) 폴더 절대경로로 변환 및 폴더명 추출
         final Path folderAbsPath = storageManager.resolvePath(folder.getRelativePath(), false);
         final String folderName = folder.getName();
 
+        // 5) 총 비압축 크기 계산 (프론트 다운로드 진행률용)
+        final long totalSize;
+        try (Stream<Path> sizeWalk = Files.walk(folderAbsPath)) {
+            totalSize = sizeWalk
+                    .filter(p -> !Files.isDirectory(p))
+                    .mapToLong(p -> {
+                        try { return Files.size(p); } catch (IOException e) { return 0L; }
+                    })
+                    .sum();
+        } catch (IOException e) {
+            throw new CustomException(ExceptionCode.FILE_READ_ERROR, e);
+        }
+
+        // 6) ZIP 스트리밍 바디 생성
         final StreamingResponseBody stream = outputStream -> {
             try (ZipOutputStream zos = new ZipOutputStream(outputStream);
                  Stream<Path> paths = Files.walk(folderAbsPath)) {
@@ -163,6 +182,6 @@ public class FolderService {
             }
         };
 
-        return new FolderDownloadResponseDto(folderName, stream);
+        return new FolderDownloadResponseDto(folderName, totalSize, stream);
     }
 }
