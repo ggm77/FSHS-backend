@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.folder.controller;
 
+import com.seohamin.fshs.v2.domain.folder.dto.FolderDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
 import com.seohamin.fshs.v2.domain.folder.service.FolderService;
@@ -46,14 +47,13 @@ public class FolderController {
     public ResponseEntity<StreamingResponseBody> downloadFolder(
             @PathVariable final Long folderId
     ) {
-        final FolderResponseDto folder = folderService.getFolder(folderId);
-        final StreamingResponseBody stream = folderService.downloadFolder(folderId);
-        final String encodedName = UriUtils.encode(folder.name() + ".zip", StandardCharsets.UTF_8);
+        final FolderDownloadResponseDto dto = folderService.downloadFolder(folderId);
+        final String encodedName = UriUtils.encode(dto.name() + ".zip", StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName)
-                .body(stream);
+                .body(dto.stream());
     }
 }

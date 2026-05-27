@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.folder.service;
 
+import com.seohamin.fshs.v2.domain.folder.dto.FolderDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.SimpleFolderResponseDto;
@@ -129,7 +130,7 @@ public class FolderService {
      * @param folderId 다운로드할 폴더 아이디
      * @return ZIP 스트리밍 바디
      */
-    public StreamingResponseBody downloadFolder(final Long folderId) {
+    public FolderDownloadResponseDto downloadFolder(final Long folderId) {
         if (folderId == null) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
@@ -144,7 +145,7 @@ public class FolderService {
         final Path folderAbsPath = storageManager.resolvePath(folder.getRelativePath(), false);
         final String folderName = folder.getName();
 
-        return outputStream -> {
+        final StreamingResponseBody stream = outputStream -> {
             try (ZipOutputStream zos = new ZipOutputStream(outputStream);
                  Stream<Path> paths = Files.walk(folderAbsPath)) {
                 for (final Path p : (Iterable<Path>) paths::iterator) {
@@ -155,5 +156,7 @@ public class FolderService {
                 }
             }
         };
+
+        return new FolderDownloadResponseDto(folderName, stream);
     }
 }
