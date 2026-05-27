@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -197,6 +198,7 @@ public class FileService {
      * 요청 받은 파일을 휴지통으로 보내는 메서드
      * @param fileId 휴지통으로 보낼 메서드
      */
+    @Transactional
     public void deleteFile(final Long fileId) {
         // 1) null 검사
         if (fileId == null) {
@@ -207,7 +209,10 @@ public class FileService {
         final File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
 
-        // 3) 파일 삭제
+        // 3) DB에서 파일 삭제
+        fileRepository.delete(file);
+
+        // 4) 실제 파일 삭제
         storageManager.removeFile(file.getRelativePath());
     }
 
