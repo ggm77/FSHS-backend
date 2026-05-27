@@ -17,7 +17,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -116,10 +115,14 @@ public class FfmpegProcessor {
         try {
             final Process p = pb.start();
 
-            String result;
-            try (final BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-                result = reader.lines().collect(Collectors.joining("\n"));
-            }
+            // 별도 스레드에서 stdout 소비 — waitFor 전에 읽기 블로킹 방지
+            final StringBuilder output = new StringBuilder();
+            final Thread readerThread = Thread.ofPlatform().start(() -> {
+                try (final BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+                    reader.lines().forEach(line -> output.append(line).append("\n"));
+                } catch (final java.io.IOException ignored) {}
+            });
 
             if (!p.waitFor(timeoutSecond, TimeUnit.SECONDS)) {
                 p.destroyForcibly();
@@ -127,7 +130,10 @@ public class FfmpegProcessor {
                 throw new CustomException(ExceptionCode.COMMAND_TIMEOUT);
             }
 
-            return result;
+            readerThread.join(1000);
+            return output.toString();
+        } catch (final CustomException ex) {
+            throw ex;
         } catch (final InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new CustomException(ExceptionCode.PROCESS_INTERRUPTED);

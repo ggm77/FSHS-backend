@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * 파일이나 폴더의 저장, 조회, 이동, 삭제 등을 제공하는 클래스
@@ -55,10 +56,12 @@ public class StorageManager {
         // 4) 프론트가 준 파일명 NFC 변환 및 실제 파일명만 추출 (오래된 브라우저 대비)
         final String name = PathNameUtil.normalize(PathNameUtil.extractFileName(rawFileName));
 
-        // 5) 저장할 경로 생성
-        final Path path = toAbsolutePath(tempPath, Path.of(name));
+        // 5) UUID 서브디렉토리 생성 — 동일 파일명 동시 업로드 시 충돌 방지
+        final Path tempSubDir = toAbsolutePath(tempPath, Path.of(UUID.randomUUID().toString()));
+        storageIoCore.createFolder(tempSubDir);
 
         // 6) 임시 폴더에 저장
+        final Path path = tempSubDir.resolve(name);
         storageIoCore.write(multipartFile, path);
 
         return path;

@@ -67,6 +67,9 @@ public class FileUploadProcessor {
             final Path savedPath = storageManager.savePermanently(tempFilePath, parentFolderPath, lastModified);
             log.info("[파일 저장 완료]: {}", fileUuid);
 
+            // 파일 이동 완료 후 빈 UUID 서브디렉토리 정리
+            cleanupTempParent(tempFilePath);
+
             // 4) 파일 엔티티 생성
             final File file = File.builder()
                     .parentFolder(parentFolder)
@@ -117,6 +120,17 @@ public class FileUploadProcessor {
             Files.deleteIfExists(tempFilePath);
         } catch (final IOException ex) {
             log.warn("[임시 파일 정리 실패]: {}", tempFilePath, ex);
+        }
+        cleanupTempParent(tempFilePath);
+    }
+
+    private void cleanupTempParent(final Path tempFilePath) {
+        final Path parent = tempFilePath.getParent();
+        if (parent == null) return;
+        try {
+            Files.deleteIfExists(parent);
+        } catch (final IOException ex) {
+            log.warn("[임시 디렉토리 정리 실패]: {}", parent, ex);
         }
     }
 }

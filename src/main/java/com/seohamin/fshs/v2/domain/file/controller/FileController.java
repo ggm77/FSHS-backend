@@ -7,9 +7,8 @@ import com.seohamin.fshs.v2.domain.file.dto.FileUploadResponseDto;
 import com.seohamin.fshs.v2.domain.file.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -17,6 +16,7 @@ import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v2")
@@ -55,21 +55,43 @@ public class FileController {
 
     // 파일 다운로드 및 직접 스트리밍 API
     @GetMapping("/files/{fileId}/content")
-    public ResponseEntity<Resource> getFile(
+    public ResponseEntity<?> getFile(
             @PathVariable final Long fileId,
-            @RequestParam final boolean download
+            @RequestParam final boolean download,
+            @RequestHeader(value = HttpHeaders.RANGE, required = false) final String rangeHeader
     ) {
 
         // 1) 파일 다운로드 로직 수행
         final FileDownloadResponseDto dto = fileService.getFile(fileId);
 
-        // 2) 헤더 정보 제작
+        // 2) 공통 헤더 준비
         final String encodedName = UriUtils.encode(dto.name(), StandardCharsets.UTF_8);
         final String disposition = (download ? "attachment; " : "inline; ")
                 + "filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName;
+        final MediaType mediaType = MediaType.parseMediaType(dto.mimeType());
 
+        // 3) Range 요청 처리 (부분 다운로드)
+        if (rangeHeader != null) {
+            final List<HttpRange> ranges = HttpRange.parseRanges(rangeHeader);
+            if (!ranges.isEmpty()) {
+                final long fileSize = dto.size();
+                final HttpRange range = ranges.get(0);
+                final long start = range.getRangeStart(fileSize);
+                final long end = range.getRangeEnd(fileSize);
+
+                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                        .contentType(mediaType)
+                        .contentLength(end - start + 1)
+                        .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                        .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                        .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize)
+                        .body(new ResourceRegion(dto.resource(), start, end - start + 1));
+            }
+        }
+
+        // 4) 전체 파일 응답
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(dto.mimeType()))
+                .contentType(mediaType)
                 .contentLength(dto.size())
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
