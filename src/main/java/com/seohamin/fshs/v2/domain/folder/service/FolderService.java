@@ -2,6 +2,7 @@ package com.seohamin.fshs.v2.domain.folder.service;
 
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
+import com.seohamin.fshs.v2.domain.folder.dto.SimpleFolderResponseDto;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.domain.user.entity.User;
@@ -9,6 +10,7 @@ import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
+import com.seohamin.fshs.v2.global.init.SystemRootInitializer;
 import com.seohamin.fshs.v2.global.util.storage.PathNameUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -86,5 +88,28 @@ public class FolderService {
         final Folder savedFolder = folderRepository.save(folder);
 
         return FolderResponseDto.of(savedFolder);
+    }
+
+    /**
+     * 폴더 정보 조회하는 메서드
+     * @param folderId 조회할 폴더 아이디
+     * @return 폴더 정보 담긴 DTO
+     */
+    public FolderResponseDto getFolder(final Long folderId) {
+        // 1) null 검사
+        if (folderId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 폴더 조회
+        final Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+
+        // 3) 시스템 루트 차단
+        if (folder.getName().equals(SystemRootInitializer.SYSTEM_ROOT_NAME)) {
+            throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
+        }
+
+        return FolderResponseDto.of(folder);
     }
 }
