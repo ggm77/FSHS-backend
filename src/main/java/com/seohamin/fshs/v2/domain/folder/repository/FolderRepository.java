@@ -27,4 +27,6 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
         ALTER TABLE folder ALTER COLUMN id RESTART WITH 2;
         """, nativeQuery = true)
     void insertSystemRoot();
+
+    boolean existsByIsRoot(boolean isRoot);
 }

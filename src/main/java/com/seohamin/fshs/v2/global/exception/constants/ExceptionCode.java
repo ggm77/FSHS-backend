@@ -25,6 +25,7 @@ public enum ExceptionCode {
     STORAGE_ACCESS_DENIED(HttpStatus.BAD_REQUEST, "저장소에 대한 접근 권한이 없습니다."),
     PATH_NOT_FOUND(HttpStatus.BAD_REQUEST, "경로를 찾을 수 없습니다."),
     FILE_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "동일한 이름의 파일이 존재합니다."),
+    ROOT_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "루트 폴더가 이미 존재합니다."),
 
     SYSTEM_ROOT_FORBIDDEN(HttpStatus.FORBIDDEN, "시스템 루트에는 접근 할 수 없습니다."),
 
