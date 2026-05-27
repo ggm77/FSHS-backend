@@ -149,8 +149,14 @@ public class FolderService {
             try (ZipOutputStream zos = new ZipOutputStream(outputStream);
                  Stream<Path> paths = Files.walk(folderAbsPath)) {
                 for (final Path p : (Iterable<Path>) paths::iterator) {
-                    if (Files.isDirectory(p)) continue;
-                    zos.putNextEntry(new ZipEntry(folderName + "/" + folderAbsPath.relativize(p)));
+                    if (p.equals(folderAbsPath)) continue;
+                    final String entryName = folderName + "/" + folderAbsPath.relativize(p);
+                    if (Files.isDirectory(p)) {
+                        zos.putNextEntry(new ZipEntry(entryName + "/"));
+                        zos.closeEntry();
+                        continue;
+                    }
+                    zos.putNextEntry(new ZipEntry(entryName));
                     Files.copy(p, zos);
                     zos.closeEntry();
                 }
