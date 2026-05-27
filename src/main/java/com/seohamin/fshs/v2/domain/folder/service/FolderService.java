@@ -106,7 +106,7 @@ public class FolderService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
         // 3) 시스템 루트 차단
-        if (folder.getName().equals(SystemRootInitializer.SYSTEM_ROOT_NAME)) {
+        if (folder.getIsSystemRoot()) {
             throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
         }
 
