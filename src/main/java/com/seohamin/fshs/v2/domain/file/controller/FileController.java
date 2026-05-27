@@ -6,10 +6,8 @@ import com.seohamin.fshs.v2.domain.file.dto.FileStatusResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileUploadResponseDto;
 import com.seohamin.fshs.v2.domain.file.service.FileService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -55,24 +53,49 @@ public class FileController {
 
     // 파일 다운로드 및 직접 스트리밍 API
     @GetMapping("/files/{fileId}/content")
-    public ResponseEntity<Resource> getFile(
+    public ResponseEntity<ResourceRegion> getFile(
             @PathVariable final Long fileId,
-            @RequestParam final boolean download
+            @RequestParam final boolean download,
+            @RequestHeader(value = HttpHeaders.RANGE, required = false) final String rangeHeader
     ) {
 
         // 1) 파일 다운로드 로직 수행
         final FileDownloadResponseDto dto = fileService.getFile(fileId);
 
-        // 2) 헤더 정보 제작
+        // 2) 공통 헤더 준비
         final String encodedName = UriUtils.encode(dto.name(), StandardCharsets.UTF_8);
         final String disposition = (download ? "attachment; " : "inline; ")
                 + "filename=\"" + encodedName + "\"; filename*=UTF-8''" + encodedName;
+        final MediaType mediaType = MediaType.parseMediaType(dto.mimeType());
+        final long fileSize = dto.size();
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(dto.mimeType()))
-                .contentLength(dto.size())
+        // 3) Range 파싱 (없으면 전체 파일)
+        final long start;
+        final long end;
+        if (rangeHeader != null && !HttpRange.parseRanges(rangeHeader).isEmpty()) {
+            final HttpRange range = HttpRange.parseRanges(rangeHeader).getFirst();
+            start = range.getRangeStart(fileSize);
+            end = range.getRangeEnd(fileSize);
+        } else {
+            start = 0;
+            end = fileSize - 1;
+        }
+
+        final boolean isPartial = rangeHeader != null;
+        final long contentLength = end - start + 1;
+
+        final ResponseEntity.BodyBuilder builder = ResponseEntity
+                .status(isPartial ? HttpStatus.PARTIAL_CONTENT : HttpStatus.OK)
+                .contentType(mediaType)
+                .contentLength(contentLength)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
-                .body(dto.resource());
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes");
+
+        if (isPartial) {
+            builder.header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize);
+        }
+
+        return builder.body(new ResourceRegion(dto.resource(), start, contentLength));
     }
 
     // 실시간 트랜스코딩을 통해 스트리밍하는 API
