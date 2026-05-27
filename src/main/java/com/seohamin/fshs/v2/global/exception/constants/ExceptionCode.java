@@ -30,6 +30,7 @@ public enum ExceptionCode {
 
     FILE_WRITE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 중 오류가 발생했습니다."),
     FILE_READ_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 읽어오는 중 오류가 발생했습니다."),
+    FILE_DELETE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 삭제하는 중 오류가 발생했습니다."),
     STORAGE_FULL(HttpStatus.INTERNAL_SERVER_ERROR, "저장공간이 부족합니다."),
     FOLDER_WRITE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "폴더 저장 중 오류가 발생했습니다."),
     PROCESS_INTERRUPTED(HttpStatus.INTERNAL_SERVER_ERROR, "프로세스 실행이 중단되었습니다."),

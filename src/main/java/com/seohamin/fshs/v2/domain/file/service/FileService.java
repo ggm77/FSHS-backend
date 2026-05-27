@@ -193,4 +193,22 @@ public class FileService {
 
     }
 
+    /**
+     * 요청 받은 파일을 휴지통으로 보내는 메서드
+     * @param fileId 휴지통으로 보낼 메서드
+     */
+    public void deleteFile(final Long fileId) {
+        // 1) null 검사
+        if (fileId == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 파일 조회
+        final File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+
+        // 3) 파일 삭제
+        storageManager.removeFile(file.getRelativePath());
+    }
+
 }

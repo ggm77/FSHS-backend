@@ -13,6 +13,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.awt.*;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
@@ -208,6 +209,23 @@ public class StorageManager {
     }
 
     /**
+     * 파일 삭제하는 메서드
+     * @param pathStr 삭제할 파일의 경로
+     */
+    public void removeFile(final String pathStr) {
+        // 1) null 검사
+        if (pathStr == null || pathStr.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        // 2) 절대 경로로 변환
+        final Path path = toAbsolutePath(rootPath, Path.of(pathStr));
+
+        // 2) 추후 휴지통 기능 구현하기 위해 메서드로 분리
+        deleteFile(path);
+    }
+
+    /**
      * 상대 경로를 루트 경로 또는 임시 폴더 경로를 포함한
      * 절대 경로로 변환하는 메서드
      * @param base 루트 또는 임시 폴더 경로
@@ -265,5 +283,19 @@ public class StorageManager {
         // 5) root 경로를 통해 상대 경로로 변환
         final Path root = Path.of(rootPath).toAbsolutePath().normalize();
         return root.relativize(targetPath);
+    }
+
+    /**
+     * 파일 삭제하는 메서드
+     * @param path 삭제할 파일 path
+     */
+    private void deleteFile(final Path path) {
+        // 1) null 검사
+        if (path == null) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        // 2) 파일 삭제
+        storageIoCore.deleteFile(path);
     }
 }

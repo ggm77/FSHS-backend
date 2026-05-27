@@ -109,4 +109,15 @@ public class FileController {
                 .contentType(MediaType.parseMediaType("video/mp4"))
                 .body(fileService.streamFile(fileId, start));
     }
+
+    // 파일 휴지통으로 보내는 API
+    @DeleteMapping("/files/{fileId}")
+    public ResponseEntity<Void> deleteFile(
+            @PathVariable final Long fileId
+    ) {
+
+        fileService.deleteFile(fileId);
+
+        return ResponseEntity.noContent().build();
+    }
 }
