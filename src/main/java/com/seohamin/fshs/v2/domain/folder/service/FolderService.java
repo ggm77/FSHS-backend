@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.folder.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
@@ -33,6 +34,8 @@ public class FolderService {
     private final FolderRepository folderRepository;
     private final UserRepository userRepository;
     private final StorageManager storageManager;
+    private final Cache<Long, String> filePathCache;
+    private final Cache<String, Boolean> fileAccessCache;
 
     /**
      * 폴더 생성하는 메서드
@@ -207,6 +210,7 @@ public class FolderService {
      * @param folderId 삭제할 폴더 id
      * @param username 유저 정보
      */
+    @Transactional
     public void deleteFolder(
             final Long folderId,
             final String username
@@ -239,6 +243,10 @@ public class FolderService {
 
         // 7) 디스크에서 삭제
         storageManager.removeFolder(folder.getRelativePath());
+
+        // 8) 하위 파일 관련 캐시 무효화 (폴더 삭제는 드물어 전체 무효화로 단순 처리)
+        filePathCache.invalidateAll();
+        fileAccessCache.invalidateAll();
     }
 
     /**

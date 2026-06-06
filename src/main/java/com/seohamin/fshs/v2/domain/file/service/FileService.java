@@ -280,6 +280,11 @@ public class FileService {
 
         // 6) 실제 파일 삭제
         storageManager.removeFile(file.getRelativePath());
+
+        // 7) 삭제된 파일 관련 캐시 무효화
+        filePathCache.invalidate(fileId);
+        fileStatusCache.invalidate(file.getUuid());
+        fileAccessCache.asMap().keySet().removeIf(key -> key.startsWith(fileId + ":"));
     }
 
     /**
