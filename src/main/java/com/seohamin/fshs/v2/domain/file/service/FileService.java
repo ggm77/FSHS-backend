@@ -40,6 +40,7 @@ public class FileService {
     private final FileUploadProcessor fileUploadProcessor;
     private final Cache<Long, String> filePathCache;
     private final Cache<String, Status> fileStatusCache;
+    private final Cache<String, Boolean> fileAccessCache;
     private final FfmpegProcessor ffmpegProcessor;
 
     /**
@@ -169,29 +170,27 @@ public class FileService {
         final File file = fileRepository.findById(fileId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
 
-        // 3) 유저 조회
-        final User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
-
-        // 4) 접근 권환 조회
-        if (!hasPermission(user, file)) {
+        // 3) 접근 권한 조회 - 캐시 히트 시 유저 DB 조회 생략 (range 요청 반복 최적화)
+        final boolean canAccess = fileAccessCache.get(
+                fileId + ":" + username,
+                k -> {
+                    final User user = userRepository.findByUsername(username)
+                            .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+                    return hasPermission(user, file);
+                }
+        );
+        if (!canAccess) {
             throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
-        // 5) 단순 정보 추출
-        final String name = file.getName();
-        final String mimeType = file.getMimeType();
-        final Long size = file.getSize();
-        final String relativePath = file.getRelativePath();
+        // 4) 파일 읽어오기
+        final Resource resource = storageManager.getFile(Path.of(file.getRelativePath()));
 
-        // 6) 파일 읽어오기
-        final Resource resource = storageManager.getFile(Path.of(relativePath));
-
-        // 7) DTO 조립
+        // 5) DTO 조립
         return new FileDownloadResponseDto(
-                name,
-                mimeType,
-                size,
+                file.getName(),
+                file.getMimeType(),
+                file.getSize(),
                 resource
         );
     }
@@ -204,26 +203,43 @@ public class FileService {
      */
     public StreamingResponseBody streamFile(
             final Long fileId,
-            final double start
+            final double start,
+            final String username
     ) {
         // 1) null 검사
         if (fileId == null) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        // 2) 파일 위치 조회 - 캐시에 먼저 조회하고 없으면 DB 조회
+        // 2) 접근 권한 조회 - 캐시 히트 시 DB 조회 없음 (반복 세그먼트 요청 최적화)
+        //    캐시 미스 시 파일+유저 DB 조회 후 filePathCache도 함께 채움
+        final boolean canAccess = fileAccessCache.get(
+                fileId + ":" + username,
+                k -> {
+                    final File file = fileRepository.findById(fileId)
+                            .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+                    final User user = userRepository.findByUsername(username)
+                            .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+                    filePathCache.put(fileId, file.getRelativePath());
+                    return hasPermission(user, file);
+                }
+        );
+        if (!canAccess) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 3) 파일 경로 조회 - 캐시에 먼저 조회하고 없으면 DB 조회
         final String path = filePathCache.get(
                 fileId, id -> fileRepository.findById(fileId)
                     .map(File::getRelativePath)
                     .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST))
         );
 
-        // 3) 절대 경로로 변환
+        // 4) 절대 경로로 변환
         final Path absPath = storageManager.resolvePath(path, false);
 
-        // 4) 실시간 트랜스코딩
+        // 5) 실시간 트랜스코딩
         return ffmpegProcessor.getVideoStream(absPath.toString(), start);
-
     }
 
     /**

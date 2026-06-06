@@ -106,13 +106,14 @@ public class FileController {
     // 실시간 트랜스코딩을 통해 스트리밍하는 API
     @GetMapping("/files/{fileId}/stream")
     public ResponseEntity<StreamingResponseBody> streamFile(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable final Long fileId,
             @RequestParam(defaultValue = "0") final double start
     ) {
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("video/mp4"))
-                .body(fileService.streamFile(fileId, start));
+                .body(fileService.streamFile(fileId, start, userDetails.getUsername()));
     }
 
     // 파일 휴지통으로 보내는 API
