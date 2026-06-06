@@ -11,7 +11,6 @@ import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
-import com.seohamin.fshs.v2.global.init.SystemRootInitializer;
 import com.seohamin.fshs.v2.global.util.storage.PathNameUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -49,13 +48,9 @@ public class FolderService {
         // 1) 변수에 저장
         final Long parentFolderId = folderRequestDto.parentFolderId();
         final String rawName = folderRequestDto.name();
-        final Boolean isRoot = folderRequestDto.isRoot();
 
         // 2) null 검사
-        if (
-                parentFolderId == null || isRoot == null
-                || rawName == null ||  rawName.isBlank()
-        ) {
+        if (parentFolderId == null || rawName == null || rawName.isBlank()) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
@@ -63,9 +58,10 @@ public class FolderService {
         final User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
 
-        // 4) 루트 폴더 검증
-        if (isRoot && folderRepository.existsByIsRootAndOwner(true, user)) {
-            throw new CustomException(ExceptionCode.ROOT_ALREADY_EXIST);
+        // 4) 유저 루트 폴더 존재 확인
+        final Folder userRootFolder = user.getRootFolder();
+        if (userRootFolder == null) {
+            throw new CustomException(ExceptionCode.ROOT_NOT_EXIST);
         }
 
         // 5) 폴더명 정규화
@@ -75,35 +71,33 @@ public class FolderService {
         final Folder parentFolder = folderRepository.findById(parentFolderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
-        // 7) 상대 경로 생성
-        final Path targetPath;
-        // 시스템 루트가 상위 폴더인 경우
-        if (parentFolder.getIsSystemRoot()) {
-            targetPath = Path.of(name);
-        } else {
-            targetPath = Path.of(parentFolder.getRelativePath()).resolve(name);
+        // 7) 상위 폴더가 유저 루트 폴더 하위인지 검증
+        final String userRootPath = userRootFolder.getRelativePath();
+        final String parentPath = parentFolder.getRelativePath();
+        final boolean isWithinUserRoot = parentPath.equals(userRootPath)
+                || parentPath.startsWith(userRootPath + "/");
+        if (!isWithinUserRoot) {
+            throw new CustomException(ExceptionCode.STORAGE_ACCESS_DENIED);
         }
 
-        // 8) 폴더 생성
+        // 8) 상대 경로 생성
+        final Path targetPath = Path.of(parentFolder.getRelativePath()).resolve(name);
+
+        // 9) 폴더 생성
         final Path createdFolderPath = storageManager.createFolder(targetPath);
 
-        // 9) 폴더 엔티티 생성
+        // 10) 폴더 엔티티 생성
         final Folder folder = Folder.builder()
                 .parentFolder(parentFolder)
                 .ownerId(user.getId())
                 .relativePath(createdFolderPath.toString())
                 .name(name.toLowerCase())
                 .originUpdatedAt(Instant.now())
-                .isRoot(isRoot)
+                .isRoot(false)
                 .build();
 
-        // 10) DB에 저장
+        // 11) DB에 저장
         final Folder savedFolder = folderRepository.save(folder);
-
-        // 11) 루트 폴더라면 유저 정보에 등록
-        if (isRoot) {
-            user.updateRootFolder(savedFolder);
-        }
 
         return FolderResponseDto.of(savedFolder);
     }

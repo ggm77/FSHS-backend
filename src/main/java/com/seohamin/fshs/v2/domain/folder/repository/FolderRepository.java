@@ -1,7 +1,6 @@
 package com.seohamin.fshs.v2.domain.folder.repository;
 
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
-import com.seohamin.fshs.v2.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,17 +16,15 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
 
             INSERT INTO folder (
             id, parent_folder_id, name, lower_name, relative_path,
-            is_root, is_system_root, owner_id, 
+            is_root, is_system_root, owner_id,
             origin_updated_at, created_at, updated_at
         ) VALUES (
-            1, 1, '</SYSTEM/ROOT/>', '</SYSTEM/ROOT/>', '</SYSTEM/ROOT/>', 
-            false, true, 0, 
+            1, 1, '</SYSTEM/ROOT/>', '</SYSTEM/ROOT/>', '</SYSTEM/ROOT/>',
+            false, true, 0,
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         );
-        
+
         ALTER TABLE folder ALTER COLUMN id RESTART WITH 2;
         """, nativeQuery = true)
     void insertSystemRoot();
-
-    boolean existsByIsRootAndOwner(boolean isRoot, User owner);
 }
