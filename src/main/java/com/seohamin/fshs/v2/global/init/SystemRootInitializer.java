@@ -4,6 +4,7 @@ import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -17,7 +18,8 @@ import java.util.Optional;
 @Slf4j
 public class SystemRootInitializer implements CommandLineRunner {
 
-    public static final String SYSTEM_ROOT_NAME = "</SYSTEM/ROOT/>";
+    @Value("${fshs.storage.data-dir-name}")
+    private String SYSTEM_ROOT_NAME;
 
     private final FolderRepository folderRepository;
 
@@ -47,7 +49,7 @@ public class SystemRootInitializer implements CommandLineRunner {
 
             // 3) 1번 폴더 없으면 시스템 루트 폴더 생성
             try {
-                folderRepository.insertSystemRoot();
+                folderRepository.insertSystemRoot(SYSTEM_ROOT_NAME, SYSTEM_ROOT_NAME.toLowerCase());
                 log.info("[시스템 루트 폴더가 생성되었습니다.]");
             } catch (Exception ex) {
                 log.error("[시스템 루트 폴더 생성 중 오류 발생] - {}", ex.getMessage());

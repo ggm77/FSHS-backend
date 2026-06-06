@@ -1,5 +1,7 @@
 package com.seohamin.fshs.v2.global.init;
 
+import com.seohamin.fshs.v2.domain.folder.entity.Folder;
+import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.domain.user.entity.Role;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminUserInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
+    private final FolderRepository folderRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -38,6 +41,14 @@ public class AdminUserInitializer implements CommandLineRunner {
 
             // 4) 어드민 저장
             userRepository.save(admin);
+
+
+            // 5) 시스템 루트 조회
+            final Folder systemRootFolder = folderRepository.findById(1L)
+                    .orElseThrow(() -> new IllegalStateException("시스템 루트가 존재하지 않습니다."));
+
+            // 6) 유저 정보에 루트 폴더 정보 저장
+            admin.updateRootFolder(systemRootFolder);
 
             log.info("[초기 관리자 계정 생성 완료] ID: admin / PW: admin");
         } else {

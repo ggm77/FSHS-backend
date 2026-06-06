@@ -58,7 +58,7 @@ public class UserService implements UserDetailsService {
         // 5) DB에 저장
         final User savedUser = userRepository.save(user);
 
-        return UserResponseDto.of(savedUser, null);
+        return UserResponseDto.of(savedUser);
     }
 
     /**
@@ -72,7 +72,7 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
 
         // 2) DTO에 담아 리턴
-        return UserResponseDto.of(user, null);
+        return UserResponseDto.of(user);
     }
 
     /**
@@ -119,7 +119,7 @@ public class UserService implements UserDetailsService {
         }
 
         // 6) DTO에 담아서 리턴
-        return UserResponseDto.of(user, null);
+        return UserResponseDto.of(user);
     }
 
     /**

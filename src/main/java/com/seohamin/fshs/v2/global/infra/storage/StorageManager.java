@@ -221,8 +221,25 @@ public class StorageManager {
         // 2) 절대 경로로 변환
         final Path path = toAbsolutePath(rootPath, Path.of(pathStr));
 
-        // 2) 추후 휴지통 기능 구현하기 위해 메서드로 분리
+        // 3) 추후 휴지통 기능 구현하기 위해 메서드로 분리
         deleteFile(path);
+    }
+
+    /**
+     * 폴더 삭제하는 메서드
+     * @param pathStr 삭제할 폴더의 경로
+     */
+    public void removeFolder(final String pathStr) {
+        // 1) null 검사
+        if (pathStr == null || pathStr.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 2) 절대 경로로 변환
+        final Path path = toAbsolutePath(rootPath, Path.of(pathStr));
+
+        // 3) 휴지통 기능 구현을 위한 메서드 분리
+        deleteFolder(path);
     }
 
     /**
@@ -297,5 +314,19 @@ public class StorageManager {
 
         // 2) 파일 삭제
         storageIoCore.deleteFile(path);
+    }
+
+    /**
+     * 폴더 삭제하는 메서드
+     * @param path 삭제할 폴더 path
+     */
+    private void deleteFolder(final Path path) {
+        // 1) null 검사
+        if (path == null) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 2) 폴더 삭제
+        storageIoCore.deleteFolder(path);
     }
 }
