@@ -59,21 +59,21 @@ public class FolderService {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        // 3) 루트 폴더 검증
-        if (isRoot && folderRepository.existsByIsRoot(true)) {
+        // 3) 유저 정보 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 4) 루트 폴더 검증
+        if (isRoot && folderRepository.existsByIsRootAndOwner(true, user)) {
             throw new CustomException(ExceptionCode.ROOT_ALREADY_EXIST);
         }
 
-        // 4) 폴더명 정규화
+        // 5) 폴더명 정규화
         final String name = PathNameUtil.normalize(rawName);
 
-        // 5) 상위 폴더 정보 가져오기
+        // 6) 상위 폴더 정보 가져오기
         final Folder parentFolder = folderRepository.findById(parentFolderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
-
-        // 6) 유저 정보 조회
-        final User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
 
         // 7) 상대 경로 생성
         final Path targetPath;

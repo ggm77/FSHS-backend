@@ -1,6 +1,7 @@
 package com.seohamin.fshs.v2.domain.folder.repository;
 
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
+import com.seohamin.fshs.v2.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -28,5 +29,5 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
         """, nativeQuery = true)
     void insertSystemRoot();
 
-    boolean existsByIsRoot(boolean isRoot);
+    boolean existsByIsRootAndOwner(boolean isRoot, User owner);
 }
