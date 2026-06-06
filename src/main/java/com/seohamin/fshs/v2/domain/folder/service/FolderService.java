@@ -248,7 +248,11 @@ public class FolderService {
      * @return 접근 가능 여부
      */
     private boolean hasPermission(final User user, final Folder folder) {
-        final String userRootPath = user.getRootFolder().getRelativePath();
+        final Folder userRootFolder = user.getRootFolder();
+        if (userRootFolder == null) {
+            throw new CustomException(ExceptionCode.ROOT_NOT_EXIST);
+        }
+        final String userRootPath = userRootFolder.getRelativePath();
         if (userRootPath.isEmpty()) return true; // 유저 루트 폴더가 시스템 루트 폴더일 때 예외 처리
         final Path userRootFolderPath = Path.of(userRootPath).normalize();
         final Path folderPath = Path.of(folder.getRelativePath()).normalize();
