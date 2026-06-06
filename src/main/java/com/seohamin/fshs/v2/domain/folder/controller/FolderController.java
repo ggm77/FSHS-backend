@@ -36,18 +36,20 @@ public class FolderController {
     // 폴더 정보 조회 API
     @GetMapping("/folders/{folderId}")
     public ResponseEntity<FolderResponseDto> getFolder(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable final Long folderId
     ) {
 
-        return ResponseEntity.ok().body(folderService.getFolder(folderId));
+        return ResponseEntity.ok().body(folderService.getFolder(folderId, userDetails.getUsername()));
     }
 
     // 폴더 다운로드 API
     @GetMapping("/folders/{folderId}/content")
     public ResponseEntity<StreamingResponseBody> downloadFolder(
+            @AuthenticationPrincipal final UserDetails userDetails,
             @PathVariable final Long folderId
     ) {
-        final FolderDownloadResponseDto dto = folderService.downloadFolder(folderId);
+        final FolderDownloadResponseDto dto = folderService.downloadFolder(folderId, userDetails.getUsername());
         final String encodedName = UriUtils.encode(dto.name() + ".zip", StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()

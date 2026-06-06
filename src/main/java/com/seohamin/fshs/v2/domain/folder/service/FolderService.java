@@ -73,11 +73,12 @@ public class FolderService {
 
         // 7) 상위 폴더가 유저 루트 폴더 하위인지 검증
         final String userRootPath = userRootFolder.getRelativePath();
-        final String parentPath = parentFolder.getRelativePath();
-        final boolean isWithinUserRoot = parentPath.equals(userRootPath)
-                || parentPath.startsWith(userRootPath + "/");
-        if (!isWithinUserRoot) {
-            throw new CustomException(ExceptionCode.STORAGE_ACCESS_DENIED);
+        if (!userRootPath.isEmpty()) { // 유저 루트 폴더가 시스템 루트 폴더일 때 예외 처리
+            final Path userRootFolderPath = Path.of(userRootPath).normalize();
+            final Path parentFolderPath = Path.of(parentFolder.getRelativePath()).normalize();
+            if (!parentFolderPath.startsWith(userRootFolderPath)) {
+                throw new CustomException(ExceptionCode.STORAGE_ACCESS_DENIED);
+            }
         }
 
         // 8) 상대 경로 생성
@@ -107,7 +108,10 @@ public class FolderService {
      * @param folderId 조회할 폴더 아이디
      * @return 폴더 정보 담긴 DTO
      */
-    public FolderResponseDto getFolder(final Long folderId) {
+    public FolderResponseDto getFolder(
+            final Long folderId,
+            final String username
+    ) {
         // 1) null 검사
         if (folderId == null) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
@@ -117,9 +121,13 @@ public class FolderService {
         final Folder folder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
-        // 3) 시스템 루트 차단
-        if (folder.getIsSystemRoot()) {
-            throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
+        // 3) 유저 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 4) 업로드 폴더가 해당 유저의 루트 폴더 하위인지 판단
+        if (!hasPermission(user, folder)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
         return FolderResponseDto.of(folder);
@@ -130,7 +138,10 @@ public class FolderService {
      * @param folderId 다운로드할 폴더 아이디
      * @return ZIP 스트리밍 바디
      */
-    public FolderDownloadResponseDto downloadFolder(final Long folderId) {
+    public FolderDownloadResponseDto downloadFolder(
+            final Long folderId,
+            final String username
+    ) {
         // 1) null 검사
         if (folderId == null) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
@@ -140,16 +151,20 @@ public class FolderService {
         final Folder folder = folderRepository.findById(folderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
 
-        // 3) 시스템 루트 방지
-        if (folder.getIsSystemRoot()) {
-            throw new CustomException(ExceptionCode.SYSTEM_ROOT_FORBIDDEN);
+        // 3) 유저 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 4) 업로드 폴더가 해당 유저의 루트 폴더 하위인지 판단
+        if (!hasPermission(user, folder)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
-        // 4) 폴더 절대경로로 변환 및 폴더명 추출
+        // 5) 폴더 절대경로로 변환 및 폴더명 추출
         final Path folderAbsPath = storageManager.resolvePath(folder.getRelativePath(), false);
         final String folderName = folder.getName();
 
-        // 5) 총 비압축 크기 계산 (프론트 다운로드 진행률용)
+        // 6) 총 비압축 크기 계산 (프론트 다운로드 진행률용)
         final long totalSize;
         try (Stream<Path> sizeWalk = Files.walk(folderAbsPath)) {
             totalSize = sizeWalk
@@ -162,7 +177,7 @@ public class FolderService {
             throw new CustomException(ExceptionCode.FILE_READ_ERROR, e);
         }
 
-        // 6) ZIP 스트리밍 바디 생성
+        // 7) ZIP 스트리밍 바디 생성
         final StreamingResponseBody stream = outputStream -> {
             try (ZipOutputStream zos = new ZipOutputStream(outputStream);
                  Stream<Path> paths = Files.walk(folderAbsPath)) {
@@ -182,5 +197,19 @@ public class FolderService {
         };
 
         return new FolderDownloadResponseDto(folderName, totalSize, stream);
+    }
+
+    /**
+     * 해당 유저가 폴더에 접근 권한을 가졌는지 확인하는 메서드
+     * @param user 접근 권한 확인할 유저
+     * @param folder 접근 권한 확인할 폴더
+     * @return 접근 가능 여부
+     */
+    private boolean hasPermission(final User user, final Folder folder) {
+        final String userRootPath = user.getRootFolder().getRelativePath();
+        if (userRootPath.isEmpty()) return true; // 유저 루트 폴더가 시스템 루트 폴더일 때 예외 처리
+        final Path userRootFolderPath = Path.of(userRootPath).normalize();
+        final Path folderPath = Path.of(folder.getRelativePath()).normalize();
+        return folderPath.startsWith(userRootFolderPath);
     }
 }

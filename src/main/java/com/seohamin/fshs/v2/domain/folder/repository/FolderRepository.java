@@ -4,6 +4,7 @@ import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface FolderRepository extends JpaRepository<Folder, Long> {
@@ -19,12 +20,12 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
             is_root, is_system_root, owner_id,
             origin_updated_at, created_at, updated_at
         ) VALUES (
-            1, 1, '</SYSTEM/ROOT/>', '</SYSTEM/ROOT/>', '</SYSTEM/ROOT/>',
+            1, 1, :name, :lowerName, '',
             false, true, 0,
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         );
 
         ALTER TABLE folder ALTER COLUMN id RESTART WITH 2;
         """, nativeQuery = true)
-    void insertSystemRoot();
+    void insertSystemRoot(@Param("name") String name, @Param("lowerName") String lowerName);
 }

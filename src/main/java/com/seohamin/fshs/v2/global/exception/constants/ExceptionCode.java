@@ -27,8 +27,6 @@ public enum ExceptionCode {
     FILE_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "동일한 이름의 파일이 존재합니다."),
     ROOT_NOT_EXIST(HttpStatus.BAD_REQUEST, "루트 폴더가 존재하지 않습니다."),
 
-    SYSTEM_ROOT_FORBIDDEN(HttpStatus.FORBIDDEN, "시스템 루트에는 접근 할 수 없습니다."),
-
     FILE_WRITE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 중 오류가 발생했습니다."),
     FILE_READ_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 읽어오는 중 오류가 발생했습니다."),
     FILE_DELETE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 삭제하는 중 오류가 발생했습니다."),
