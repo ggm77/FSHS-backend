@@ -38,6 +38,7 @@ public class FolderService {
      * 폴더 생성하는 메서드
      * 폴더 생성 시점과 마지막 수정 시점은 현재 시간으로 함
      * @param folderRequestDto 폴더 정보 담긴 DTO
+     * @param username 요청 유저명
      * @return 생성된 폴더의 정보 DTO
      */
     @Transactional
@@ -106,6 +107,7 @@ public class FolderService {
     /**
      * 폴더 정보 조회하는 메서드
      * @param folderId 조회할 폴더 아이디
+     * @param username 요청 유저명
      * @return 폴더 정보 담긴 DTO
      */
     public FolderResponseDto getFolder(
@@ -136,6 +138,7 @@ public class FolderService {
     /**
      * 폴더 전체를 ZIP으로 압축해서 스트리밍하는 메서드
      * @param folderId 다운로드할 폴더 아이디
+     * @param username 요청 유저명
      * @return ZIP 스트리밍 바디
      */
     public FolderDownloadResponseDto downloadFolder(
