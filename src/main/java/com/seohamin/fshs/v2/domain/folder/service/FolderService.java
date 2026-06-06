@@ -96,7 +96,7 @@ public class FolderService {
                 .parentFolder(parentFolder)
                 .ownerId(user.getId())
                 .relativePath(createdFolderPath.toString())
-                .name(name.toLowerCase())
+                .name(name)
                 .originUpdatedAt(Instant.now())
                 .isRoot(false)
                 .build();

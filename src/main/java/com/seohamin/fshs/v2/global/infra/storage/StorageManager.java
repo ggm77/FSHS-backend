@@ -105,10 +105,11 @@ public class StorageManager {
             throw new CustomException(ExceptionCode.INVALID_FILE);
         }
 
-        // 2) 파일명과 확장자 추출
-        final String name = PathNameUtil.normalize(PathNameUtil.extractFileNameFromPath(path)).toLowerCase();
-        final String baseName = PathNameUtil.extractBaseName(name);
-        final String extension = PathNameUtil.extractExtension(name);
+        // 2) 파일명과 확장자 추출 (name은 원본 케이스 유지, 파생 값은 소문자 기준)
+        final String name = PathNameUtil.normalize(PathNameUtil.extractFileNameFromPath(path));
+        final String lowerName = name.toLowerCase();
+        final String baseName = PathNameUtil.extractBaseName(lowerName);
+        final String extension = PathNameUtil.extractExtension(lowerName);
 
         // 3) 파일 카테고리 분류
         final Category category = FileCategoryUtil.categorize(extension);
