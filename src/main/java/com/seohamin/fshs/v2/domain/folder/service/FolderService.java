@@ -100,6 +100,11 @@ public class FolderService {
         // 10) DB에 저장
         final Folder savedFolder = folderRepository.save(folder);
 
+        // 11) 루트 폴더라면 유저 정보에 등록
+        if (isRoot) {
+            user.updateRootFolder(savedFolder);
+        }
+
         return FolderResponseDto.of(savedFolder);
     }
 
