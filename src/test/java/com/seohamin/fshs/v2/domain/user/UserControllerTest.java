@@ -41,7 +41,7 @@ public class UserControllerTest {
         // Given
         final UserRequestDto requestDto = new UserRequestDto("tester", "password123");
         final String requestBody = new ObjectMapper().writeValueAsString(requestDto);
-        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "hashedPassword123"), null);
+        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "hashedPassword123"));
 
         given(userService.createUser(any(UserRequestDto.class))).willReturn(responseDto);
 
@@ -60,7 +60,7 @@ public class UserControllerTest {
     void getUser_Success() throws Exception {
         // Given
         final Long userId = 1L;
-        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "password123"), null);
+        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "password123"));
 
         given(userService.getUser(userId)).willReturn(responseDto);
 
@@ -78,7 +78,7 @@ public class UserControllerTest {
         final Long userId = 1L;
         final UserRequestDto requestDto = new UserRequestDto("tester", "password123");
         final String requestBody = new ObjectMapper().writeValueAsString(requestDto);
-        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "hashedPassword123"), null);
+        final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "hashedPassword123"));
 
         given(userService.updateUser(eq(userId), any(UserRequestDto.class))).willReturn(responseDto);
 

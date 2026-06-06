@@ -49,7 +49,7 @@ public class FolderRepositoryTest {
     @BeforeEach
     void setUp() {
         if (folderRepository.findById(1L).isEmpty()) {
-            folderRepository.insertSystemRoot();
+            folderRepository.insertSystemRoot("data", "data");
         }
 
         systemRootFolder = folderRepository.findById(1L).get();
