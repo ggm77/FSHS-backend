@@ -59,4 +59,16 @@ public class FolderController {
                 .header("X-Total-Size", String.valueOf(dto.totalSize()))
                 .body(dto.stream());
     }
+
+    // 폴더 삭제 API
+    @DeleteMapping("/folders/{folderId}")
+    public ResponseEntity<Void> deleteFolder(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @PathVariable final Long folderId
+    ) {
+
+        folderService.deleteFolder(folderId, userDetails.getUsername());
+
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -13,6 +13,8 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.stream.Stream;
 
 /**
  * 파일과 폴더의 입출력을 담당하는 클래스
@@ -162,6 +164,32 @@ public class StorageIoCore {
 
         try {
             Files.delete(path);
+        } catch (final NoSuchFileException ex) {
+            throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FILE_DELETE_ERROR, ex);
+        }
+    }
+
+    /**
+     * 폴더 삭제하는 메서드
+     * @param path 삭제할 폴더 path
+     */
+    public void deleteFolder(final Path path) {
+        if (!Files.isDirectory(path)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        try (Stream<Path> walk = Files.walk(path)) {
+            walk.sorted(Comparator.reverseOrder()) // 하위 파일/폴더가 먼저 오도록 역순 정렬 (자식 먼저 삭제)
+                    .forEach(p -> {
+                        try {
+                            Files.delete(p);
+                        } catch (IOException e) {
+                            // 내부 스트림 안에서 발생하는 예외를 래핑하여 밖으로 던집니다.
+                            throw new RuntimeException(e);
+                        }
+                    });
         } catch (final NoSuchFileException ex) {
             throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
         } catch (final IOException ex) {

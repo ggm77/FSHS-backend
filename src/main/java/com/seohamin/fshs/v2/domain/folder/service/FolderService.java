@@ -200,6 +200,45 @@ public class FolderService {
     }
 
     /**
+     * 폴더 삭제하는 메서드
+     * @param folderId 삭제할 폴더 id
+     * @param username 유저 정보
+     */
+    public void deleteFolder(
+            final Long folderId,
+            final String username
+    ) {
+        // 1) null 검사
+        if (folderId == null || username == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 유저 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 3) 폴더 조회
+        final Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+
+        // 4) 시스템 루트 보호
+        if (folder.getIsSystemRoot()) {
+            throw new CustomException(ExceptionCode.RESTRICT_DELETE_SYSTEM_ROOT);
+        }
+
+        // 5) 접근 권한 조회
+        if (!hasPermission(user, folder)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 6) DB에서 삭제
+        folderRepository.delete(folder);
+
+        // 7) 디스크에서 삭제
+        storageManager.removeFolder(folder.getRelativePath());
+    }
+
+    /**
      * 해당 유저가 폴더에 접근 권한을 가졌는지 확인하는 메서드
      * @param user 접근 권한 확인할 유저
      * @param folder 접근 권한 확인할 폴더
