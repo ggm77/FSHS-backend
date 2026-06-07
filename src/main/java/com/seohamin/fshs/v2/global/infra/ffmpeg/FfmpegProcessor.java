@@ -60,7 +60,7 @@ public class FfmpegProcessor {
     ) {
         final List<String> command = List.of(
                 ffmpegConfig.getFfmpeg(),
-                "-loglevel", "quiet", // 출력에 영상 내용만 나오도록
+                "-loglevel", "error", // 에러 로그만 표시하도록 설정
                 "-ss", String.valueOf(start), // 시작 지점
                 "-i", filePath, // 파일 위치
                 "-vcodec", ffmpegConfig.getSelectedH264Encoder(), // h264로 변환
@@ -76,9 +76,18 @@ public class FfmpegProcessor {
 
         return outputStream -> {
             final ProcessBuilder pb = new ProcessBuilder(command);
-
-            pb.redirectError(ProcessBuilder.Redirect.DISCARD);
             final Process process = pb.start();
+
+            // 에러 스트림(stderr)을 비동기적으로 읽어 에러 발생 시 로그에 기록
+            final Thread errorReader = Thread.ofPlatform().start(() -> {
+                try (final BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        log.error("[FFmpeg 프로세스 에러] {}", line);
+                    }
+                } catch (final Exception ignored) {}
+            });
 
             try (final InputStream is = process.getInputStream()) {
                 is.transferTo(outputStream);
@@ -93,6 +102,11 @@ public class FfmpegProcessor {
             } finally {
                 if (process.isAlive()) {
                     process.destroyForcibly();
+                }
+                try {
+                    errorReader.join(1000);
+                } catch (final InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
             }
         };
