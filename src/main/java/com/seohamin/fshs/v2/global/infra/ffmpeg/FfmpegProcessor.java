@@ -75,7 +75,8 @@ public class FfmpegProcessor {
                 "-acodec", "aac",
                 "-b:a", "128k",
                 "-f", "mp4",
-                "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+                "-movflags", "frag_keyframe+empty_moov+default_base_moof+omit_tfhd_offset",
+                "-flush_packets", "1",
                 "pipe:1"
         ));
 
@@ -119,33 +120,51 @@ public class FfmpegProcessor {
 
     private List<String> getEncoderOptions(final String encoder) {
         if (encoder == null || encoder.equals("libx264")) {
-            return List.of("-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency");
+            return List.of(
+                    "-vcodec", "libx264",
+                    "-preset", "ultrafast",
+                    "-tune", "zerolatency",
+                    "-g", "30",
+                    "-bf", "0"
+            );
         }
 
         if (encoder.contains("nvenc")) {
             return List.of(
                     "-vcodec", encoder,
-                    "-preset", "p1"
+                    "-preset", "p1",
+                    "-bf", "0",
+                    "-delay", "0",
+                    "-g", "30",
+                    "-forced-idr", "1"
             );
         } else if (encoder.contains("videotoolbox")) {
             return List.of(
                     "-vcodec", encoder,
-                    "-realtime", "true"
+                    "-realtime", "true",
+                    "-g", "30",
+                    "-bf", "0"
             );
         } else if (encoder.contains("qsv")) {
             return List.of(
                     "-vcodec", encoder,
-                    "-preset", "veryfast"
+                    "-preset", "veryfast",
+                    "-g", "30",
+                    "-bf", "0"
             );
         } else if (encoder.contains("v4l2m2m")) {
             return List.of(
-                    "-vcodec", encoder
+                    "-vcodec", encoder,
+                    "-g", "30",
+                    "-bf", "0"
             );
         } else {
             return List.of(
                     "-vcodec", encoder,
                     "-preset", "ultrafast",
-                    "-tune", "zerolatency"
+                    "-tune", "zerolatency",
+                    "-g", "30",
+                    "-bf", "0"
             );
         }
     }
