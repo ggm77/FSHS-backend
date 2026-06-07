@@ -58,21 +58,26 @@ public class FfmpegProcessor {
             final String filePath,
             final double start
     ) {
-        final List<String> command = List.of(
-                ffmpegConfig.getFfmpeg(),
-                "-loglevel", "error", // 에러 로그만 표시하도록 설정
-                "-ss", String.valueOf(start), // 시작 지점
-                "-i", filePath, // 파일 위치
-                "-vcodec", ffmpegConfig.getSelectedH264Encoder(), // h264로 변환
-                "-preset", "ultrafast", // 인코딩 속도
-                "-tune", "zerolatency", // 최적화 옵션
-                "-pix_fmt", "yuv420p", // 픽셀 포멧
-                "-acodec", "aac", // 오디오 코덱 설정
-                "-b:a", "128k", // 오디오 비트 레이트 설정
-                "-f", "mp4", // mp4로 형식 강제
-                "-movflags", "frag_keyframe+empty_moov+default_base_moof", // 스트리밍을 위한 메타데이터 설정
-                "pipe:1" // 표준 출력으로 출력
-        );
+        final String encoder = ffmpegConfig.getSelectedH264Encoder();
+        final List<String> encoderOpts = getEncoderOptions(encoder);
+
+        final List<String> command = new java.util.ArrayList<>();
+        command.add(ffmpegConfig.getFfmpeg());
+        command.add("-loglevel");
+        command.add("error");
+        command.add("-ss");
+        command.add(String.valueOf(start));
+        command.add("-i");
+        command.add(filePath);
+        command.addAll(encoderOpts);
+        command.addAll(List.of(
+                "-pix_fmt", "yuv420p",
+                "-acodec", "aac",
+                "-b:a", "128k",
+                "-f", "mp4",
+                "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+                "pipe:1"
+        ));
 
         return outputStream -> {
             final ProcessBuilder pb = new ProcessBuilder(command);
@@ -110,6 +115,39 @@ public class FfmpegProcessor {
                 }
             }
         };
+    }
+
+    private List<String> getEncoderOptions(final String encoder) {
+        if (encoder == null || encoder.equals("libx264")) {
+            return List.of("-vcodec", "libx264", "-preset", "ultrafast", "-tune", "zerolatency");
+        }
+
+        if (encoder.contains("nvenc")) {
+            return List.of(
+                    "-vcodec", encoder,
+                    "-preset", "p1"
+            );
+        } else if (encoder.contains("videotoolbox")) {
+            return List.of(
+                    "-vcodec", encoder,
+                    "-realtime", "true"
+            );
+        } else if (encoder.contains("qsv")) {
+            return List.of(
+                    "-vcodec", encoder,
+                    "-preset", "veryfast"
+            );
+        } else if (encoder.contains("v4l2m2m")) {
+            return List.of(
+                    "-vcodec", encoder
+            );
+        } else {
+            return List.of(
+                    "-vcodec", encoder,
+                    "-preset", "ultrafast",
+                    "-tune", "zerolatency"
+            );
+        }
     }
 
     /**
