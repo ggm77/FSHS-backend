@@ -1,9 +1,6 @@
 package com.seohamin.fshs.v2.domain.file.controller;
 
-import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
-import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
-import com.seohamin.fshs.v2.domain.file.dto.FileStatusResponseDto;
-import com.seohamin.fshs.v2.domain.file.dto.FileUploadResponseDto;
+import com.seohamin.fshs.v2.domain.file.dto.*;
 import com.seohamin.fshs.v2.domain.file.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.support.ResourceRegion;
@@ -114,6 +111,17 @@ public class FileController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("video/mp4"))
                 .body(fileService.streamFile(fileId, start, userDetails.getUsername()));
+    }
+
+    // 파일 수정하는 API
+    @PatchMapping("/files/{fileId}")
+    public ResponseEntity<FileResponseDto> updateFile(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @PathVariable final Long fileId,
+            @RequestBody final FileUpdateRequestDto fileUpdateRequestDto
+    ) {
+
+        return ResponseEntity.ok(fileService.updateFile(fileId, fileUpdateRequestDto, userDetails.getUsername()));
     }
 
     // 파일 휴지통으로 보내는 API
