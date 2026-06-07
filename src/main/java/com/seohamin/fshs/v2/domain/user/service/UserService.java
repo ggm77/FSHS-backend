@@ -1,5 +1,8 @@
 package com.seohamin.fshs.v2.domain.user.service;
 
+import com.seohamin.fshs.v2.domain.folder.entity.Folder;
+import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
+import com.seohamin.fshs.v2.domain.user.dto.UserRootFolderRequestDto;
 import lombok.RequiredArgsConstructor;
 import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
@@ -7,6 +10,7 @@ import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,12 +18,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final FolderRepository folderRepository;
 
     /**
      * 유저 생성하는 메서드
@@ -136,6 +143,43 @@ public class UserService implements UserDetailsService {
 
         // 2) 삭제
         userRepository.deleteById(userId);
+    }
+
+    /**
+     * 특정 유저에게 특정 폴더를 루트 폴더로 지정시켜주는 메서드
+     * 어드민만 사용가능하다.
+     * @param userId 루트 폴더로 지정받을 유저
+     * @param userRootFolderRequestDto 루트 폴더 정보 든 dto
+     * @param authorities 요청 넣은 유저의 권한
+     */
+    @Transactional
+    public void setRootFolder(
+            final Long userId,
+            final UserRootFolderRequestDto userRootFolderRequestDto,
+            final Collection<? extends GrantedAuthority> authorities
+    ) {
+        // 1) null 검사
+        if (userId == null || userRootFolderRequestDto == null || authorities == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 어드민 권한 확인
+        boolean isAdmin = authorities.stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            throw new CustomException(ExceptionCode.ACCESS_DENIED);
+        }
+
+        // 3) 유저 조회
+        final User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 4) 폴더 조회
+        final Folder folder = folderRepository.findById(userRootFolderRequestDto.folderId())
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+
+        // 5) 루트 폴더 설정
+        user.updateRootFolder(folder);
     }
 
     /**
