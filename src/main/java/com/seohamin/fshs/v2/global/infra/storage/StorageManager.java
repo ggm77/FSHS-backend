@@ -13,7 +13,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.awt.*;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
@@ -85,7 +84,7 @@ public class StorageManager {
         }
 
         // 2) 실제 위치로 이동
-        final Path path = internalMove(rawTempPath, tempPath, rawSavePath, rootPath);
+        final Path path = internalFileMove(rawTempPath, tempPath, rawSavePath, rootPath);
 
         // 3) 마지막 수정 시점 수정
         final Path absPath = toAbsolutePath(rootPath, path);
@@ -162,7 +161,21 @@ public class StorageManager {
             final Path rawSource,
             final Path rawDest
     ) {
-        return internalMove(rawSource, rootPath, rawDest, rootPath);
+        return internalFileMove(rawSource, rootPath, rawDest, rootPath);
+    }
+
+    /**
+     * 폴더를 이동시키는 메서드 (이동/이름 변경 공용)
+     * 파일 이동과 달리 rawDest는 목적지 부모가 아니라 폴더명까지 포함한 최종 경로다
+     * @param rawSource 이동시킬 폴더 경로
+     * @param rawDest 폴더명을 포함한 최종 목적지 경로
+     * @return 옮겨진 폴더의 상대 경로
+     */
+    public Path moveFolder(
+            final Path rawSource,
+            final Path rawDest
+    ) {
+        return internalFolderMove(rawSource, rootPath, rawDest, rootPath);
     }
 
     /**
@@ -279,7 +292,7 @@ public class StorageManager {
      * @param destBase 루트 또는 임시 폴더 절대 경로
      * @return 이동한 파일의 상대 경로
      */
-    private Path internalMove(
+    private Path internalFileMove(
             final Path rawSource,
             final String sourceBase,
             final Path rawDest,
@@ -301,6 +314,32 @@ public class StorageManager {
         // 5) root 경로를 통해 상대 경로로 변환
         final Path root = Path.of(rootPath).toAbsolutePath().normalize();
         return root.relativize(targetPath);
+    }
+
+    /**
+     * 실제로 폴더 이동을 시키는 메서드
+     * @param rawSource 이동 시킬 폴더 상대 경로
+     * @param sourceBase 루트 또는 임시 폴더 절대 경로
+     * @param rawDest 이동할 목적지 폴더 상대 경로
+     * @param destBase 루트 또는 임시 폴더 절대 경로
+     * @return 이동한 폴더의 상대 경로
+     */
+    private Path internalFolderMove(
+            final Path rawSource,
+            final String sourceBase,
+            final Path rawDest,
+            final String destBase
+    ) {
+        // 1) null 검사 및 절대 경로로 변환
+        final Path source = toAbsolutePath(sourceBase, rawSource);
+        final Path dest = toAbsolutePath(destBase, rawDest);
+
+        // 2) 이동 (rawDest가 폴더명을 포함한 최종 경로이므로 파일과 달리 이름을 다시 붙이지 않음)
+        storageIoCore.move(source, dest);
+
+        // 3) root 경로를 통해 상대 경로로 변환
+        final Path root = Path.of(rootPath).toAbsolutePath().normalize();
+        return root.relativize(dest);
     }
 
     /**

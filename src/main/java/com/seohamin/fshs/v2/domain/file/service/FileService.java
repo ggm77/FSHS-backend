@@ -373,6 +373,10 @@ public class FileService {
         if (!folder.getFiles().contains(file)) {
             folder.getFiles().add(file);
         }
+
+        // 6) DB에서 경로 수정 (파일 경로 + 부모 경로)
+        file.updateRelativePath(folderPath.resolve(file.getName()).toString());
+        file.updateParentPath(folderPath.toString());
     }
 
     /**

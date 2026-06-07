@@ -27,6 +27,8 @@ public enum ExceptionCode {
     FILE_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "동일한 이름의 파일이 존재합니다."),
     ROOT_NOT_EXIST(HttpStatus.BAD_REQUEST, "루트 폴더가 존재하지 않습니다."),
     RESTRICT_DELETE_SYSTEM_ROOT(HttpStatus.BAD_REQUEST, "시스템 루트는 삭제할 수 없습니다."),
+    RESTRICT_MOVE_SYSTEM_ROOT(HttpStatus.BAD_REQUEST, "시스템 루트는 옮길 수 없습니다."),
+    RESTRICT_MOVE_INTO_DESCENDANT(HttpStatus.BAD_REQUEST, "폴더를 자기 자신이나 하위 폴더로 옮길 수 없습니다."),
 
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
 

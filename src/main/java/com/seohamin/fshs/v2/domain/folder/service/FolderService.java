@@ -1,6 +1,7 @@
 package com.seohamin.fshs.v2.domain.folder.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
@@ -206,6 +207,98 @@ public class FolderService {
     }
 
     /**
+     * 폴더를 이동하거나 이름을 변경하는 메서드
+     * 이동과 이름 변경은 디스크 상에선 모두 "최종 경로로 옮기기"라 한 번의 이동으로 처리하고,
+     * 하위 폴더/파일의 상대 경로는 DB에서 일괄 재작성한다
+     * @param folderId 폴더 id
+     * @param folderRequestDto 목적지 부모 폴더 id, 새 이름이 담긴 DTO
+     * @param username 요청한 유저 명
+     * @return 수정된 폴더 정보
+     */
+    @Transactional
+    public FolderResponseDto updateFolder(
+            final Long folderId,
+            final FolderRequestDto folderRequestDto,
+            final String username
+    ) {
+        // 1) null 검사
+        if (folderId == null || folderRequestDto == null || username == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 유저/폴더 조회 및 접근 권한 확인
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+        final Folder folder = folderRepository.findById(folderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+        if (!hasPermission(user, folder)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 3) 시스템 루트는 이동/이름 변경 불가
+        if (folder.getIsSystemRoot()) {
+            throw new CustomException(ExceptionCode.RESTRICT_MOVE_SYSTEM_ROOT);
+        }
+
+        // 4) 목적지 부모 폴더 결정 (parentFolderId 없으면 현재 부모 유지)
+        final Folder oldParent = folder.getParentFolder();
+        final Folder newParent;
+        if (folderRequestDto.parentFolderId() != null) {
+            newParent = folderRepository.findById(folderRequestDto.parentFolderId())
+                    .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+
+            // 목적지 접근 권한 확인
+            if (!hasPermission(user, newParent)) {
+                throw new CustomException(ExceptionCode.INVALID_PATH);
+            }
+
+            // 자기 자신이나 하위 폴더로는 이동 불가 (순환 방지)
+            final Path folderPath = Path.of(folder.getRelativePath()).normalize();
+            final Path newParentPath = Path.of(newParent.getRelativePath()).normalize();
+            if (newParentPath.startsWith(folderPath)) {
+                throw new CustomException(ExceptionCode.RESTRICT_MOVE_INTO_DESCENDANT);
+            }
+        } else {
+            newParent = oldParent;
+        }
+
+        // 5) 새 이름 결정 (name 없으면 현재 이름 유지)
+        final String newName = (folderRequestDto.name() != null && !folderRequestDto.name().isBlank())
+                ? PathNameUtil.normalize(folderRequestDto.name())
+                : folder.getName();
+
+        // 6) 실제 변경 사항 없으면 그대로 반환
+        final boolean parentChanged = !newParent.getId().equals(oldParent.getId());
+        final boolean nameChanged = !newName.equals(folder.getName());
+        if (!parentChanged && !nameChanged) {
+            return FolderResponseDto.of(folder);
+        }
+
+        // 7) 디스크에서 최종 경로로 이동 (하위 항목은 함께 따라감)
+        final Path oldPath = Path.of(folder.getRelativePath());
+        final Path newPath = Path.of(newParent.getRelativePath()).resolve(newName);
+        storageManager.moveFolder(oldPath, newPath);
+
+        // 8) 부모 폴더 재지정
+        //    소유측 FK(parentFolder)만 변경한다. folders 컬렉션은 orphanRemoval=true 이므로
+        //    기존 부모 컬렉션에서 remove 하면 자식 있는 폴더가 통째로 삭제(cascade)되어 절대 건드리지 않는다.
+        if (parentChanged) {
+            folder.updateParentFolder(newParent);
+        }
+
+        // 9) 이름/경로 갱신 (폴더 자신 + 하위 전체)
+        folder.updateName(newName);
+        folder.updateRelativePath(newPath.toString());
+        rewriteSubtreePaths(folder);
+
+        // 10) 경로/접근 캐시 무효화 (하위 파일 경로가 일괄 변경됨)
+        filePathCache.invalidateAll();
+        fileAccessCache.invalidateAll();
+
+        return FolderResponseDto.of(folder);
+    }
+
+    /**
      * 폴더 삭제하는 메서드
      * @param folderId 삭제할 폴더 id
      * @param username 유저 정보
@@ -247,6 +340,27 @@ public class FolderService {
         // 8) 하위 파일 관련 캐시 무효화 (폴더 삭제는 드물어 전체 무효화로 단순 처리)
         filePathCache.invalidateAll();
         fileAccessCache.invalidateAll();
+    }
+
+    /**
+     * 폴더와 그 하위 폴더/파일의 상대 경로를 일괄 재작성하는 메서드
+     * 디스크 이동은 최상위 폴더 한 번으로 끝나므로 DB의 경로 정보만 갱신한다
+     * @param folder 재작성 기준 폴더 (이미 자신의 새 경로가 반영된 상태여야 함)
+     */
+    private void rewriteSubtreePaths(final Folder folder) {
+        final Path basePath = Path.of(folder.getRelativePath());
+
+        // 직속 파일 경로 갱신 (파일 경로 + 부모 경로)
+        for (final File file : folder.getFiles()) {
+            file.updateRelativePath(basePath.resolve(file.getName()).toString());
+            file.updateParentPath(basePath.toString());
+        }
+
+        // 직속 하위 폴더 경로 갱신 후 재귀
+        for (final Folder child : folder.getFolders()) {
+            child.updateRelativePath(basePath.resolve(child.getName()).toString());
+            rewriteSubtreePaths(child);
+        }
     }
 
     /**
