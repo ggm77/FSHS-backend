@@ -1,6 +1,12 @@
 package com.seohamin.fshs.v2.global.config;
 
+import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
+import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
+import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
+import com.seohamin.fshs.v2.global.init.AdminUserInitializer;
+import com.seohamin.fshs.v2.global.init.StoragePathInitializer;
+import com.seohamin.fshs.v2.global.init.SystemRootInitializer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +41,25 @@ public class SecurityConfigTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @MockitoBean
+    private FileRepository fileRepository;
+
+    @MockitoBean
+    private FolderRepository folderRepository;
+
+    @MockitoBean
+    private SharedFileRepository sharedFileRepository;
+
+    // 보안 필터 체인 검증 테스트라 초기화 러너는 Mock으로 무력화
+    @MockitoBean
+    private AdminUserInitializer adminUserInitializer;
+
+    @MockitoBean
+    private SystemRootInitializer systemRootInitializer;
+
+    @MockitoBean
+    private StoragePathInitializer storagePathInitializer;
 
     @Test
     @DisplayName("보안 설정 : 허용된 경로 인증 없이 접근 가능")

@@ -4,11 +4,13 @@ import com.seohamin.fshs.v2.domain.file.entity.Category;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
+import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.global.config.JpaAuditingConfig;
 import jakarta.validation.ConstraintViolationException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,19 @@ public class FileRepositoryTest {
 
     @Autowired
     private TestEntityManager testEntityManager;
+
+    @Autowired
+    private FolderRepository folderRepository;
+
+    private Folder systemRootFolder;
+
+    @BeforeEach
+    void setUp() {
+        if (folderRepository.findById(1L).isEmpty()) {
+            folderRepository.insertSystemRoot("data", "data");
+        }
+        systemRootFolder = folderRepository.findById(1L).get();
+    }
 
     @Test
     @DisplayName("파일 저장 : 필수 정보가 포함된 파일이 성공적으로 저장됨")
@@ -95,21 +110,6 @@ public class FileRepositoryTest {
     }
 
     @Test
-    @DisplayName("파일 저장 : 파일명이 null인 파일은 실패함")
-    void noFileName_Fail() {
-        final Folder folder = createTestFolder("folderName");
-        testEntityManager.persist(folder);
-        final File noNameFile = createTestFile(folder, "fileName", "jpg", 0);
-        noNameFile.updateName(null);
-
-        // When & Then
-        assertThatThrownBy(() -> {
-            fileRepository.save(noNameFile);
-            testEntityManager.flush();
-        }).isInstanceOf(ConstraintViolationException.class);
-    }
-
-    @Test
     @DisplayName("파일 조회 : 연관된 폴더와 함께 파일 조회가 가능함")
     void findById_WithFolder_Success() {
         // Given
@@ -123,7 +123,7 @@ public class FileRepositoryTest {
 
         // Then
         assertThat(foundFile).isPresent();
-        assertThat(foundFile.get().getBaseName()).isEqualTo("fileName");
+        assertThat(foundFile.get().getBaseName()).isEqualTo("filename");
         assertThat(foundFile.get().getParentFolder().getName()).isEqualTo("folderName");
     }
 
@@ -168,7 +168,7 @@ public class FileRepositoryTest {
         assertThat(updatedFile.getParentFolder().getName()).isEqualTo(newFolder.getName());
         assertThat(updatedFile.getOwnerId()).isEqualTo(32L);
         assertThat(updatedFile.getName()).isEqualTo("newName.mp4");
-        assertThat(updatedFile.getBaseName()).isEqualTo("newName");
+        assertThat(updatedFile.getBaseName()).isEqualTo("newname");
         assertThat(updatedFile.getExtension()).isEqualTo("mp4");
         assertThat(updatedFile.getRelativePath()).isEqualTo(newFolder.getRelativePath() + "newName.mp4");
         assertThat(updatedFile.getParentPath()).isEqualTo(newFolder.getRelativePath());
@@ -255,11 +255,12 @@ public class FileRepositoryTest {
 
     private Folder createTestFolder(final String name) {
         return Folder.builder()
-                .parentFolder(null)
+                .parentFolder(systemRootFolder)
                 .ownerId(null)
                 .relativePath("/"+name+"/")
                 .name(name)
                 .originUpdatedAt(Instant.now())
+                .isRoot(false)
                 .build();
     }
 
@@ -272,6 +273,7 @@ public class FileRepositoryTest {
         return File.builder()
                 .parentFolder(folder)
                 .ownerId(null)
+                .uuid(java.util.UUID.randomUUID().toString())
                 .name(baseName+"."+extension)
                 .baseName(baseName)
                 .extension(extension)

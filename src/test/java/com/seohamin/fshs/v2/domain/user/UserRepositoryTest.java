@@ -3,6 +3,7 @@ package com.seohamin.fshs.v2.domain.user;
 import com.seohamin.fshs.v2.domain.file.entity.Category;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
+import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.domain.user.entity.Role;
@@ -32,6 +33,9 @@ public class UserRepositoryTest {
 
     @Autowired
     private SharedFileRepository sharedFileRepository;
+
+    @Autowired
+    private FolderRepository folderRepository;
 
     @Autowired
     private TestEntityManager testEntityManager;
@@ -213,7 +217,11 @@ public class UserRepositoryTest {
     @DisplayName("유저 삭제 : 유저 삭제시 연관된 공유된 파일 정보 삭제됨")
     void deleteUser_ThenSharedFileDeleted() {
         // Given
-        final Folder folder = createTestFolder("folderName");
+        if (folderRepository.findById(1L).isEmpty()) {
+            folderRepository.insertSystemRoot("data", "data");
+        }
+        final Folder systemRootFolder = folderRepository.findById(1L).get();
+        final Folder folder = createTestFolder("folderName", systemRootFolder);
         testEntityManager.persist(folder);
         final File file = createTestFile(folder, "fileName", "jpg");
         testEntityManager.persist(file);
@@ -239,13 +247,14 @@ public class UserRepositoryTest {
         assertThat(sharedFileRepository.findById(sharedFileId)).isEmpty();
     }
 
-    private Folder createTestFolder(final String name) {
+    private Folder createTestFolder(final String name, final Folder parentFolder) {
         return Folder.builder()
-                .parentFolder(null)
+                .parentFolder(parentFolder)
                 .ownerId(null)
                 .relativePath("/"+name+"/")
                 .name(name)
                 .originUpdatedAt(Instant.now())
+                .isRoot(false)
                 .build();
     }
 
@@ -257,6 +266,7 @@ public class UserRepositoryTest {
         return File.builder()
                 .parentFolder(folder)
                 .ownerId(null)
+                .uuid(java.util.UUID.randomUUID().toString())
                 .name(baseName+"."+extension)
                 .baseName(baseName)
                 .extension(extension)

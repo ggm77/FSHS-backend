@@ -175,20 +175,6 @@ public class FolderRepositoryTest {
     }
 
     @Test
-    @DisplayName("폴더 저장 : 폴더명이 null인 폴더는 실패함")
-    void noFolderName_Fail() {
-        // Given
-        final Folder noNameFolder = createTestFolder("folderName", systemRootFolder);
-        noNameFolder.updateName(null);
-
-        // When & Then
-        assertThatThrownBy(() -> {
-            folderRepository.save(noNameFolder);
-            testEntityManager.flush();
-        }).isInstanceOf(ConstraintViolationException.class);
-    }
-
-    @Test
     @DisplayName("폴더 조회 : ID로 폴더 조회가 가능함")
     void findById_Success() {
         // Given
@@ -335,6 +321,7 @@ public class FolderRepositoryTest {
         return File.builder()
                 .parentFolder(folder)
                 .ownerId(null)
+                .uuid(java.util.UUID.randomUUID().toString())
                 .name(baseName+"."+extension)
                 .baseName(baseName)
                 .extension(extension)

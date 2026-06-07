@@ -45,10 +45,15 @@ public class SharedFileRepositoryTest {
 
     private User testUser;
     private File testFile;
+    private Folder systemRootFolder;
 
     @BeforeEach
     void setUp() {
         // Given
+        if (folderRepository.findById(1L).isEmpty()) {
+            folderRepository.insertSystemRoot("data", "data");
+        }
+        systemRootFolder = folderRepository.findById(1L).get();
         testUser = userRepository.save(createTestUser("testUser"));
         Folder testFolder = folderRepository.save(createTestFolder("testFolder", testUser.getId()));
         testFile = fileRepository.save(createTestFile(testFolder, "testFile", "txt"));
@@ -222,11 +227,12 @@ public class SharedFileRepositoryTest {
 
     private Folder createTestFolder(final String name, final Long ownerId) {
         return Folder.builder()
-                .parentFolder(null)
+                .parentFolder(systemRootFolder)
                 .ownerId(ownerId)
                 .relativePath("/"+name+"/")
                 .name(name)
                 .originUpdatedAt(Instant.now())
+                .isRoot(false)
                 .build();
     }
 
@@ -238,6 +244,7 @@ public class SharedFileRepositoryTest {
         return File.builder()
                 .parentFolder(folder)
                 .ownerId(folder.getOwnerId())
+                .uuid(java.util.UUID.randomUUID().toString())
                 .name(baseName+"."+extension)
                 .baseName(baseName)
                 .extension(extension)
