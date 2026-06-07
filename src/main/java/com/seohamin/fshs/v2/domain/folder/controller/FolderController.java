@@ -60,6 +60,17 @@ public class FolderController {
                 .body(dto.stream());
     }
 
+    // 폴더 수정 API
+    @PatchMapping("/folders/{folderId}")
+    public ResponseEntity<FolderResponseDto> updateFolder(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @PathVariable final Long folderId,
+            @RequestBody final FolderRequestDto folderRequestDto
+    ) {
+
+        return ResponseEntity.ok(folderService.updateFolder(folderId, folderRequestDto, userDetails.getUsername()));
+    }
+
     // 폴더 삭제 API
     @DeleteMapping("/folders/{folderId}")
     public ResponseEntity<Void> deleteFolder(

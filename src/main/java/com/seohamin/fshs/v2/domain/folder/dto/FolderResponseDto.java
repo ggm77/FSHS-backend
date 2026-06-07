@@ -35,7 +35,10 @@ public record FolderResponseDto(
                 folder.getCreatedAt(),
                 folder.getUpdatedAt(),
                 folder.getIsRoot(),
-                folder.getFolders().stream().map(SimpleFolderResponseDto::of).toList(),
+                folder.getFolders().stream()
+                        .map(SimpleFolderResponseDto::of)
+                        .filter(dto -> !dto.id().equals(1L))
+                        .toList(),
                 folder.getFiles().stream().map(FileResponseDto::of).toList()
         );
     }

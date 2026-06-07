@@ -1,10 +1,7 @@
 package com.seohamin.fshs.v2.domain.file.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
-import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
-import com.seohamin.fshs.v2.domain.file.dto.FileStatusResponseDto;
-import com.seohamin.fshs.v2.domain.file.dto.FileUploadResponseDto;
+import com.seohamin.fshs.v2.domain.file.dto.*;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.entity.Status;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
@@ -48,6 +45,8 @@ public class FileService {
      *
      * @param multipartFile 업로드할 파일
      * @param lastModified 업로드할 파일의 마지막 수정 시점
+     * @param folderId 저장할 상위 폴더 ID
+     * @param username 업로드 요청 유저명
      * @return 업로드된 파일의 정보
      */
     public FileUploadResponseDto uploadFile(
@@ -123,6 +122,7 @@ public class FileService {
     /**
      * 파일의 정보를 조회하는 메서드
      * @param fileId 조회할 파일 ID
+     * @param username 요청 유저명
      * @return 파일 정보 담긴 DTO
      */
     public FileResponseDto getFileDetails(
@@ -155,6 +155,7 @@ public class FileService {
     /**
      * 파일을 다운로드 하거나 직접 스트리밍을 해주는 메서드
      * @param fileId 프론트로 전송할 파일의 ID
+     * @param username 요청 유저명
      * @return 파일의 정보가 담긴 DTO
      */
     public FileDownloadResponseDto getFile(
@@ -199,7 +200,8 @@ public class FileService {
      * 실시간 트랜스코딩으로 파일을 스트리밍하는 메서드
      * @param fileId 스트리밍할 파일 ID
      * @param start 영상 스트리밍 시작 지점
-     * @return 트랜스코딩된 파일 정보
+     * @param username 요청 유저명
+     * @return 트랜스코딩된 스트리밍 바디
      */
     public StreamingResponseBody streamFile(
             final Long fileId,
@@ -243,8 +245,66 @@ public class FileService {
     }
 
     /**
+     * 파일 정보 수정하는 메서드
+     * 파일 옮기기 포함
+     * @param fileId 수정할 파일 아이디
+     * @param fileUpdateRequestDto 수정할 정보
+     * @param username 요청 유저명
+     * @return 수정된 파일의 정보
+     */
+    @Transactional
+    public FileResponseDto updateFile(
+            final Long fileId,
+            final FileUpdateRequestDto fileUpdateRequestDto,
+            final String username
+    ) {
+
+        // 1) null 검사
+        if (fileId == null || fileUpdateRequestDto == null || username == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 파일 옮기는지 확인
+        boolean moveFile = fileUpdateRequestDto.folderId() != null;
+
+        // 3) 유저 및 파일 조회 및 권한 체크
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+        final File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+
+        // 파일 권한 체크
+        if (!hasPermission(user, file)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 4) 파일 이동 한다면 폴더 조회 및 검증, 이동
+        final Folder folder;
+        if (moveFile) {
+            folder = folderRepository.findById(fileUpdateRequestDto.folderId())
+                    .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+
+            // 폴더 권한 체크
+            if (!hasPermission(user, folder)) {
+                throw new CustomException(ExceptionCode.INVALID_PATH);
+            }
+
+            // 파일 이동
+            moveFile(file, folder);
+        }
+
+        // 5) 마지막 수정시각 정보 수정
+        if (fileUpdateRequestDto.originUpdatedAt() != null) {
+            file.updateOriginUpdatedAt(fileUpdateRequestDto.originUpdatedAt());
+        }
+
+        return FileResponseDto.of(file);
+    }
+
+    /**
      * 요청 받은 파일을 휴지통으로 보내는 메서드
-     * @param fileId 휴지통으로 보낼 메서드
+     * @param fileId 휴지통으로 보낼 파일 ID
+     * @param username 요청 유저명
      */
     @Transactional
     public void deleteFile(
@@ -274,6 +334,49 @@ public class FileService {
 
         // 6) 실제 파일 삭제
         storageManager.removeFile(file.getRelativePath());
+
+        // 7) 삭제된 파일 관련 캐시 무효화
+        filePathCache.invalidate(fileId);
+        fileStatusCache.invalidate(file.getUuid());
+        fileAccessCache.asMap().keySet().removeIf(key -> key.startsWith(fileId + ":"));
+    }
+
+    /**
+     * 특정 폴더로 파일을 이동시키는 메서드
+     * @param file 이동시킬 파일
+     * @param folder 목적지 폴더
+     */
+    private void moveFile(
+            final File file,
+            final Folder folder
+    ) {
+
+        // 1) null 검사
+        if (file == null || folder == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 폴더 경로 추출
+        final Path filePath = Path.of(file.getRelativePath());
+        final Path folderPath = Path.of(folder.getRelativePath());
+
+        // 3) 실제로 옮기기
+        storageManager.moveFile(filePath, folderPath);
+
+        // 4) 원래 폴더에서 연관 정리
+        final Folder presentFolder = file.getParentFolder();
+        presentFolder.getFiles().remove(file);
+
+        // 5) 폴더에 파일 등록
+        file.updateParentFolder(folder);
+
+        if (!folder.getFiles().contains(file)) {
+            folder.getFiles().add(file);
+        }
+
+        // 6) DB에서 경로 수정 (파일 경로 + 부모 경로)
+        file.updateRelativePath(folderPath.resolve(file.getName()).toString());
+        file.updateParentPath(folderPath.toString());
     }
 
     /**
@@ -283,7 +386,11 @@ public class FileService {
      * @return 접근 가능 여부
      */
     private boolean hasPermission(final User user, final Folder folder) {
-        final String userRootPath = user.getRootFolder().getRelativePath();
+        final Folder userRootFolder = user.getRootFolder();
+        if (userRootFolder == null) {
+            throw new CustomException(ExceptionCode.ROOT_NOT_EXIST);
+        }
+        final String userRootPath = userRootFolder.getRelativePath();
         if (userRootPath.isEmpty()) return true; // 유저 루트 폴더가 시스템 루트 폴더일 때 예외 처리
         final Path userRootFolderPath = Path.of(userRootPath).normalize();
         final Path folderPath = Path.of(folder.getRelativePath()).normalize();
@@ -297,7 +404,11 @@ public class FileService {
      * @return 접근 가능 여부
      */
     private boolean hasPermission(final User user, final File file) {
-        final String userRootPath = user.getRootFolder().getRelativePath();
+        final Folder userRootFolder = user.getRootFolder();
+        if (userRootFolder == null) {
+            throw new CustomException(ExceptionCode.ROOT_NOT_EXIST);
+        }
+        final String userRootPath = userRootFolder.getRelativePath();
         if (userRootPath.isEmpty()) return true; // 유저 루트 폴더가 시스템 루트 폴더일 때 예외 처리
         final Path userRootFolderPath = Path.of(userRootPath).normalize();
         final Path folderPath = Path.of(file.getRelativePath()).normalize();

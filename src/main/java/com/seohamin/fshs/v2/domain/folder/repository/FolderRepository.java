@@ -21,7 +21,7 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
             origin_updated_at, created_at, updated_at
         ) VALUES (
             1, 1, :name, :lowerName, '',
-            false, true, 0,
+            true, true, 0,
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         );
 

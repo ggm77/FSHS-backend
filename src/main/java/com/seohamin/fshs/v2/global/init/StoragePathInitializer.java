@@ -15,20 +15,26 @@ import java.nio.file.Path;
 @Slf4j
 public class StoragePathInitializer implements CommandLineRunner {
 
+    @Value("${fshs.storage.data-path}")
+    private String dataPathStr;
+
     @Value("${fshs.storage.temp-path}")
     private String tempPathStr;
 
     @Override
     public void run(String... args) {
-        log.info("[임시 폴더와 DB 폴더 확인 중...]");
+        log.info("[데이터 폴더와 임시 폴더 확인 중...]");
 
-        final Path tempPath = Path.of(tempPathStr);
+        createDirectory(dataPathStr, "데이터");
+        createDirectory(tempPathStr, "임시");
+    }
 
+    private void createDirectory(final String pathStr, final String label) {
         try {
-            Files.createDirectories(tempPath);
-            log.info("[임시 폴더 생성 완료]");
+            Files.createDirectories(Path.of(pathStr));
+            log.info("[{} 폴더 생성 완료]", label);
         } catch (final IOException ex) {
-            throw new RuntimeException("[임시 폴더를 생성할 수 없습니다.] path: "+tempPathStr, ex);
+            throw new RuntimeException("[" + label + " 폴더를 생성할 수 없습니다.] path: " + pathStr, ex);
         }
     }
 }

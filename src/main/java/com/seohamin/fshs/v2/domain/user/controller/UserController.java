@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.user.controller;
 
+import com.seohamin.fshs.v2.domain.user.dto.UserRootFolderRequestDto;
 import com.seohamin.fshs.v2.global.util.SessionUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,8 @@ import com.seohamin.fshs.v2.domain.user.service.UserService;
 import com.seohamin.fshs.v2.global.validation.Create;
 import com.seohamin.fshs.v2.global.validation.Update;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -63,6 +66,19 @@ public class UserController {
         userService.deleteUser(userId);
 
         SessionUtil.forceLogout(request);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    // 특정 유저에게 루트 폴더 지정해주는 API (어드민만 사용 가능)
+    @PostMapping("/users/{userId}/root-folder")
+    public ResponseEntity<Void> setRootFolder(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @PathVariable final Long userId,
+            @RequestBody final UserRootFolderRequestDto userRootFolderRequestDto
+    ) {
+
+        userService.setRootFolder(userId, userRootFolderRequestDto, userDetails.getAuthorities());
 
         return ResponseEntity.noContent().build();
     }
