@@ -185,14 +185,15 @@ public class FfmpegProcessor {
         command.add(String.valueOf(start));
         command.add("-i");
         command.add(filePath.toString());
+        command.add("-copyts");
         command.add("-t");
         command.add(String.valueOf(HLS_SEGMENT_SECONDS));
         command.addAll(encoderOpts);
         command.addAll(List.of(
+                "-force_key_frames", "expr:gte(t," + start + ")",
                 "-pix_fmt", "yuv420p",
                 "-acodec", "aac",
                 "-b:a", "128k",
-                "-output_ts_offset", String.valueOf(start),
                 "-muxdelay", "0",
                 "-muxpreload", "0",
                 "-f", "mpegts",

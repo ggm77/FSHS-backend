@@ -28,4 +28,16 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
         ALTER TABLE folder ALTER COLUMN id RESTART WITH 2;
         """, nativeQuery = true)
     void insertSystemRoot(@Param("name") String name, @Param("lowerName") String lowerName);
+
+    // 폴더 이동/이름 변경 시 하위 폴더들의 상대 경로 접두사를 한 번에 치환한다
+    // pattern 은 '이전경로/%' 형태(ESCAPE '\'), cutFrom 은 '이전경로 길이 + 1'
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE Folder f
+            SET f.relativePath = CONCAT(:newPrefix, SUBSTRING(f.relativePath, :cutFrom))
+            WHERE f.relativePath LIKE :pattern ESCAPE '\\'
+            """)
+    int rewriteDescendantPaths(@Param("newPrefix") String newPrefix,
+                               @Param("cutFrom") int cutFrom,
+                               @Param("pattern") String pattern);
 }

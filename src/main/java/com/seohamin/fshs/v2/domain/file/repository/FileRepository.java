@@ -2,10 +2,26 @@ package com.seohamin.fshs.v2.domain.file.repository;
 
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
 public interface FileRepository extends JpaRepository<File, Long> {
     boolean existsByUuid(final String uuid);
     Optional<File> findByUuid(final String uuid);
+
+    // 폴더 이동/이름 변경 시 하위 파일들의 상대 경로/부모 경로 접두사를 한 번에 치환한다
+    // pattern 은 '이전경로/%' 형태(ESCAPE '\'), cutFrom 은 '이전경로 길이 + 1'
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            UPDATE File f
+            SET f.relativePath = CONCAT(:newPrefix, SUBSTRING(f.relativePath, :cutFrom)),
+                f.parentPath = CONCAT(:newPrefix, SUBSTRING(f.parentPath, :cutFrom))
+            WHERE f.relativePath LIKE :pattern ESCAPE '\\'
+            """)
+    int rewriteDescendantPaths(@Param("newPrefix") String newPrefix,
+                               @Param("cutFrom") int cutFrom,
+                               @Param("pattern") String pattern);
 }

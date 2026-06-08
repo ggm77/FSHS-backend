@@ -1,7 +1,7 @@
 package com.seohamin.fshs.v2.domain.folder.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.seohamin.fshs.v2.domain.file.entity.File;
+import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
@@ -33,6 +33,7 @@ import java.util.zip.ZipOutputStream;
 public class FolderService {
 
     private final FolderRepository folderRepository;
+    private final FileRepository fileRepository;
     private final UserRepository userRepository;
     private final StorageManager storageManager;
     private final Cache<Long, String> filePathCache;
@@ -274,10 +275,11 @@ public class FolderService {
             return FolderResponseDto.of(folder);
         }
 
-        // 7) 디스크에서 최종 경로로 이동 (하위 항목은 함께 따라감)
+        // 7) 옛/새 경로 확보 (하위 치환에 쓸 옛 경로는 변경 전에 확보)
         final Path oldPath = Path.of(folder.getRelativePath());
         final Path newPath = Path.of(newParent.getRelativePath()).resolve(newName);
-        storageManager.moveFolder(oldPath, newPath);
+        final String oldPathStr = folder.getRelativePath();
+        final String newPathStr = newPath.toString();
 
         // 8) 부모 폴더 재지정
         //    소유측 FK(parentFolder)만 변경한다. folders 컬렉션은 orphanRemoval=true 이므로
@@ -286,16 +288,30 @@ public class FolderService {
             folder.updateParentFolder(newParent);
         }
 
-        // 9) 이름/경로 갱신 (폴더 자신 + 하위 전체)
+        // 9) 폴더 자신의 이름/경로 갱신
         folder.updateName(newName);
-        folder.updateRelativePath(newPath.toString());
-        rewriteSubtreePaths(folder);
+        folder.updateRelativePath(newPathStr);
 
-        // 10) 경로/접근 캐시 무효화 (하위 파일 경로가 일괄 변경됨)
+        // 10) 하위 폴더/파일의 경로 접두사를 LIKE 치환으로 일괄 갱신 (재귀 N+1 제거)
+        //     벌크 연산의 flushAutomatically 가 폴더 자신의 변경까지 DB 에 반영하므로
+        //     제약 위반 등 DB 실패는 디스크를 건드리기 전에 드러난다
+        final String pattern = escapeLike(oldPathStr) + "/%";
+        final int cutFrom = oldPathStr.length() + 1;
+        folderRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
+        fileRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
+
+        // 11) DB 작업이 모두 끝난 뒤 마지막으로 디스크 이동.
+        //     디스크 이동이 실패하면 예외로 트랜잭션이 롤백돼 DB 도 원복되므로 정합성이 유지된다.
+        storageManager.moveFolder(oldPath, newPath);
+
+        // 12) 경로/접근 캐시 무효화 (하위 파일 경로가 일괄 변경됨)
         filePathCache.invalidateAll();
         fileAccessCache.invalidateAll();
 
-        return FolderResponseDto.of(folder);
+        // 13) clear 로 detached 된 폴더를 다시 조회해 응답 생성
+        final Folder updated = folderRepository.findById(folderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+        return FolderResponseDto.of(updated);
     }
 
     /**
@@ -343,24 +359,15 @@ public class FolderService {
     }
 
     /**
-     * 폴더와 그 하위 폴더/파일의 상대 경로를 일괄 재작성하는 메서드
-     * 디스크 이동은 최상위 폴더 한 번으로 끝나므로 DB의 경로 정보만 갱신한다
-     * @param folder 재작성 기준 폴더 (이미 자신의 새 경로가 반영된 상태여야 함)
+     * LIKE 패턴에서 와일드카드로 해석되는 문자(\ % _)를 이스케이프한다 (ESCAPE '\' 기준)
+     * 폴더명에 _ 나 % 가 들어가도 형제 경로가 잘못 치환되지 않도록 한다
+     * @param raw 접두사로 쓸 원본 경로 문자열
+     * @return 이스케이프된 문자열
      */
-    private void rewriteSubtreePaths(final Folder folder) {
-        final Path basePath = Path.of(folder.getRelativePath());
-
-        // 직속 파일 경로 갱신 (파일 경로 + 부모 경로)
-        for (final File file : folder.getFiles()) {
-            file.updateRelativePath(basePath.resolve(file.getName()).toString());
-            file.updateParentPath(basePath.toString());
-        }
-
-        // 직속 하위 폴더 경로 갱신 후 재귀
-        for (final Folder child : folder.getFolders()) {
-            child.updateRelativePath(basePath.resolve(child.getName()).toString());
-            rewriteSubtreePaths(child);
-        }
+    private static String escapeLike(final String raw) {
+        return raw.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     /**
