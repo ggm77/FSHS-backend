@@ -189,7 +189,6 @@ public class FfmpegProcessor {
         command.add(String.valueOf(HLS_SEGMENT_SECONDS));
         command.addAll(encoderOpts);
         command.addAll(List.of(
-                "-force_key_frames", "expr:gte(t,0)",
                 "-pix_fmt", "yuv420p",
                 "-acodec", "aac",
                 "-b:a", "128k",
