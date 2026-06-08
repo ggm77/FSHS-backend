@@ -3,6 +3,7 @@ package com.seohamin.fshs.v2.domain.file.controller;
 import com.seohamin.fshs.v2.domain.file.dto.*;
 import com.seohamin.fshs.v2.domain.file.service.FileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -107,6 +108,24 @@ public class FileController {
                 .contentType(MediaType.parseMediaType("video/mp4"))
                 .header(HttpHeaders.ACCEPT_RANGES, "none")
                 .body(fileService.streamFile(fileId, start, userDetails.getUsername()));
+    }
+
+    // 실시간 트랜스코딩을 통해 스트리밍하는 API - HLS 버전
+    @GetMapping("/files/{fileId}/stream/{hlsFile}")
+    public ResponseEntity<InputStreamResource> streamHlsFile(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @PathVariable final Long fileId,
+            @PathVariable final String hlsFile
+    ) {
+
+        // 재생목록(.m3u8)과 세그먼트(.ts)는 Content-Type이 다름
+        final MediaType mediaType = hlsFile.endsWith(".m3u8")
+                ? MediaType.parseMediaType("application/x-mpegURL")
+                : MediaType.parseMediaType("video/mp2t");
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .body(fileService.streamHlsFile(fileId, hlsFile, userDetails.getUsername()));
     }
 
     // 파일 수정하는 API
