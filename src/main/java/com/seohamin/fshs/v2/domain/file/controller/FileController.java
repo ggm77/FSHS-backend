@@ -71,22 +71,22 @@ public class FileController {
         final MediaType mediaType = MediaType.parseMediaType(dto.mimeType());
         final long fileSize = dto.size();
 
-        // 3) Range 헤더 없으면 200, 있으면 206
-        if (rangeHeader == null || HttpRange.parseRanges(rangeHeader).isEmpty()) {
-            return ResponseEntity.ok()
-                    .contentType(mediaType)
-                    .contentLength(fileSize)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
-                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                    .body(new ResourceRegion(dto.resource(), 0, fileSize));
+        // 3) Range 파싱 (없으면 전체 파일)
+        final long start;
+        final long end;
+        if (rangeHeader != null && !HttpRange.parseRanges(rangeHeader).isEmpty()) {
+            final HttpRange range = HttpRange.parseRanges(rangeHeader).getFirst();
+            start = range.getRangeStart(fileSize);
+            end = range.getRangeEnd(fileSize);
+        } else {
+            start = 0;
+            end = fileSize - 1;
         }
 
-        final HttpRange range = HttpRange.parseRanges(rangeHeader).getFirst();
-        final long start = range.getRangeStart(fileSize);
-        final long end = range.getRangeEnd(fileSize);
         final long contentLength = end - start + 1;
 
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+        return ResponseEntity
+                .status(HttpStatus.PARTIAL_CONTENT)
                 .contentType(mediaType)
                 .contentLength(contentLength)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
