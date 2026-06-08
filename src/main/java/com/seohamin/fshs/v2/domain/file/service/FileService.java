@@ -15,6 +15,7 @@ import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,8 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +42,9 @@ public class FileService {
     private final Cache<String, Status> fileStatusCache;
     private final Cache<String, Boolean> fileAccessCache;
     private final FfmpegProcessor ffmpegProcessor;
+
+    // HLS 세그먼트 파일명 패턴 (예: segment12.ts) — 자릿수를 제한해 int 오버플로 방지
+    private static final Pattern HLS_SEGMENT_PATTERN = Pattern.compile("segment(\\d{1,9})\\.ts");
 
     /**
      * 파일 하나 업로드처리하는 메서드
@@ -242,6 +248,58 @@ public class FileService {
 
         // 5) 실시간 트랜스코딩
         return ffmpegProcessor.getVideoStream(absPath.toString(), start);
+    }
+
+    public InputStreamResource streamHlsFile(
+            final Long fileId,
+            final String hlsFile,
+            final String username
+    ) {
+
+        // 1) null 검사
+        if (fileId == null || hlsFile == null || username == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 접근 권한 조회 - 캐시 히트 시 DB 조회 없음 (반복 세그먼트 요청 최적화)
+        //    캐시 미스 시 파일+유저 DB 조회 후 filePathCache도 함께 채움
+        final boolean canAccess = fileAccessCache.get(
+                fileId + ":" + username,
+                k -> {
+                    final File file = fileRepository.findById(fileId)
+                            .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+                    final User user = userRepository.findByUsername(username)
+                            .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+                    filePathCache.put(fileId, file.getRelativePath());
+                    return hasPermission(user, file);
+                }
+        );
+        if (!canAccess) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 3) 파일 경로 조회 - 캐시에 먼저 조회하고 없으면 DB 조회
+        final String path = filePathCache.get(
+                fileId, id -> fileRepository.findById(fileId)
+                    .map(File::getRelativePath)
+                    .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST))
+        );
+
+        // 4) 절대 경로로 변환
+        final Path absPath = storageManager.resolvePath(path, false);
+
+        // 5) 재생목록(.m3u8) 요청이면 즉시 생성해 반환
+        if (hlsFile.endsWith(".m3u8")) {
+            return ffmpegProcessor.getHlsPlaylist(absPath);
+        }
+
+        // 6) 세그먼트(.ts) 요청이면 인덱스를 파싱해 해당 구간만 실시간 트랜스코딩
+        final Matcher matcher = HLS_SEGMENT_PATTERN.matcher(hlsFile);
+        if (!matcher.matches()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        return ffmpegProcessor.getHlsSegment(absPath, Integer.parseInt(matcher.group(1)));
     }
 
     /**
