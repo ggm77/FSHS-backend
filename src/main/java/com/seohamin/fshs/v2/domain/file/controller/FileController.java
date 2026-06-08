@@ -83,21 +83,16 @@ public class FileController {
             end = fileSize - 1;
         }
 
-        final boolean isPartial = rangeHeader != null;
         final long contentLength = end - start + 1;
 
-        final ResponseEntity.BodyBuilder builder = ResponseEntity
-                .status(isPartial ? HttpStatus.PARTIAL_CONTENT : HttpStatus.OK)
+        return ResponseEntity
+                .status(HttpStatus.PARTIAL_CONTENT)
                 .contentType(mediaType)
                 .contentLength(contentLength)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
-                .header(HttpHeaders.ACCEPT_RANGES, "bytes");
-
-        if (isPartial) {
-            builder.header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize);
-        }
-
-        return builder.body(new ResourceRegion(dto.resource(), start, contentLength));
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize)
+                .body(new ResourceRegion(dto.resource(), start, contentLength));
     }
 
     // 실시간 트랜스코딩을 통해 스트리밍하는 API
