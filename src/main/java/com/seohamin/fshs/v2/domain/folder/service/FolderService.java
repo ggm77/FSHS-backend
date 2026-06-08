@@ -1,7 +1,7 @@
 package com.seohamin.fshs.v2.domain.folder.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.seohamin.fshs.v2.domain.file.entity.File;
+import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
@@ -33,6 +33,7 @@ import java.util.zip.ZipOutputStream;
 public class FolderService {
 
     private final FolderRepository folderRepository;
+    private final FileRepository fileRepository;
     private final UserRepository userRepository;
     private final StorageManager storageManager;
     private final Cache<Long, String> filePathCache;
@@ -286,16 +287,27 @@ public class FolderService {
             folder.updateParentFolder(newParent);
         }
 
-        // 9) 이름/경로 갱신 (폴더 자신 + 하위 전체)
+        // 9) 폴더 자신의 이름/경로 갱신 (하위 치환에 쓸 옛 경로는 먼저 확보)
+        final String oldPathStr = folder.getRelativePath();
+        final String newPathStr = newPath.toString();
         folder.updateName(newName);
-        folder.updateRelativePath(newPath.toString());
-        rewriteSubtreePaths(folder);
+        folder.updateRelativePath(newPathStr);
 
-        // 10) 경로/접근 캐시 무효화 (하위 파일 경로가 일괄 변경됨)
+        // 10) 하위 폴더/파일의 경로 접두사를 LIKE 치환으로 일괄 갱신 (재귀 N+1 제거)
+        //     벌크 연산이라 영속성 컨텍스트를 flush 후 clear 하므로 folder 는 detached 된다
+        final String pattern = escapeLike(oldPathStr) + "/%";
+        final int cutFrom = oldPathStr.length() + 1;
+        folderRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
+        fileRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
+
+        // 11) 경로/접근 캐시 무효화 (하위 파일 경로가 일괄 변경됨)
         filePathCache.invalidateAll();
         fileAccessCache.invalidateAll();
 
-        return FolderResponseDto.of(folder);
+        // 12) clear 로 detached 된 폴더를 다시 조회해 응답 생성
+        final Folder updated = folderRepository.findById(folderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
+        return FolderResponseDto.of(updated);
     }
 
     /**
@@ -343,24 +355,15 @@ public class FolderService {
     }
 
     /**
-     * 폴더와 그 하위 폴더/파일의 상대 경로를 일괄 재작성하는 메서드
-     * 디스크 이동은 최상위 폴더 한 번으로 끝나므로 DB의 경로 정보만 갱신한다
-     * @param folder 재작성 기준 폴더 (이미 자신의 새 경로가 반영된 상태여야 함)
+     * LIKE 패턴에서 와일드카드로 해석되는 문자(\ % _)를 이스케이프한다 (ESCAPE '\' 기준)
+     * 폴더명에 _ 나 % 가 들어가도 형제 경로가 잘못 치환되지 않도록 한다
+     * @param raw 접두사로 쓸 원본 경로 문자열
+     * @return 이스케이프된 문자열
      */
-    private void rewriteSubtreePaths(final Folder folder) {
-        final Path basePath = Path.of(folder.getRelativePath());
-
-        // 직속 파일 경로 갱신 (파일 경로 + 부모 경로)
-        for (final File file : folder.getFiles()) {
-            file.updateRelativePath(basePath.resolve(file.getName()).toString());
-            file.updateParentPath(basePath.toString());
-        }
-
-        // 직속 하위 폴더 경로 갱신 후 재귀
-        for (final Folder child : folder.getFolders()) {
-            child.updateRelativePath(basePath.resolve(child.getName()).toString());
-            rewriteSubtreePaths(child);
-        }
+    private static String escapeLike(final String raw) {
+        return raw.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     /**

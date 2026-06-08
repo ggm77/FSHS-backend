@@ -61,6 +61,7 @@ class FolderServiceMoveTest {
 
     private static final String USERNAME = "tester";
 
+    private Long userARootId;
     private Long docsId;
     private Long archiveId;
     private Long projectsId;
@@ -77,7 +78,7 @@ class FolderServiceMoveTest {
 
         final Cache<Long, String> filePathCache = Caffeine.newBuilder().build();
         final Cache<String, Boolean> fileAccessCache = Caffeine.newBuilder().build();
-        folderService = new FolderService(folderRepository, userRepository, storageManager, filePathCache, fileAccessCache);
+        folderService = new FolderService(folderRepository, fileRepository, userRepository, storageManager, filePathCache, fileAccessCache);
 
         // --- 시스템 루트 ---
         if (folderRepository.findById(1L).isEmpty()) {
@@ -98,6 +99,7 @@ class FolderServiceMoveTest {
         final User user = userRepository.save(User.builder().username(USERNAME).password("pw").build());
         user.updateRootFolder(userARoot);
 
+        userARootId = userARoot.getId();
         docsId = docs.getId();
         archiveId = archive.getId();
         projectsId = projects.getId();
@@ -182,6 +184,45 @@ class FolderServiceMoveTest {
 
         // 디스크는 그대로 유지됨
         assertThat(Files.exists(tempRoot.resolve("userA/docs/projects"))).isTrue();
+    }
+
+    @Test
+    @DisplayName("폴더 이동 : 이름의 LIKE 와일드카드(_)가 형제 폴더 경로를 오염시키지 않는다")
+    void moveFolder_escapesLikeWildcard() throws IOException {
+        // Given : userA 아래 형제 폴더 a_b, axb 와 각자의 파일 (이스케이프 누락 시 a_b 패턴이 axb 도 매칭함)
+        final Folder userARoot = folderRepository.findById(userARootId).orElseThrow();
+        final Folder underscore = persistFolder("a_b", userARoot, "userA/a_b");
+        final Folder sibling = persistFolder("axb", userARoot, "userA/axb");
+        final File underscoreFile = persistFile("f1.txt", underscore, "userA/a_b/f1.txt", "userA/a_b");
+        final File siblingFile = persistFile("f2.txt", sibling, "userA/axb/f2.txt", "userA/axb");
+        mkdir("userA/a_b");
+        mkdir("userA/axb");
+        touch("userA/a_b/f1.txt");
+        touch("userA/axb/f2.txt");
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        final Long underscoreId = underscore.getId();
+        final Long siblingId = sibling.getId();
+        final Long underscoreFileId = underscoreFile.getId();
+        final Long siblingFileId = siblingFile.getId();
+
+        // When : a_b 를 archive 아래로 이동
+        folderService.updateFolder(underscoreId, new FolderRequestDto(archiveId, null), USERNAME);
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        // Then : a_b 하위 파일만 갱신됨
+        final File movedFile = fileRepository.findById(underscoreFileId).orElseThrow();
+        assertThat(movedFile.getRelativePath()).isEqualTo("userA/archive/a_b/f1.txt");
+        assertThat(movedFile.getParentPath()).isEqualTo("userA/archive/a_b");
+
+        // Then : 와일드카드로 오염될 뻔한 형제 axb 와 그 파일은 그대로 유지됨
+        final File untouchedFile = fileRepository.findById(siblingFileId).orElseThrow();
+        assertThat(untouchedFile.getRelativePath()).isEqualTo("userA/axb/f2.txt");
+        assertThat(untouchedFile.getParentPath()).isEqualTo("userA/axb");
+        final Folder untouchedSibling = folderRepository.findById(siblingId).orElseThrow();
+        assertThat(untouchedSibling.getRelativePath()).isEqualTo("userA/axb");
     }
 
     private Folder persistFolder(final String name, final Folder parent, final String relativePath) {
