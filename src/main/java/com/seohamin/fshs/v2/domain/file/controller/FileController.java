@@ -54,7 +54,7 @@ public class FileController {
 
     // 파일 다운로드 및 직접 스트리밍 API
     @GetMapping("/files/{fileId}/content")
-    public ResponseEntity<ResourceRegion> getFile(
+    public ResponseEntity<?> getFile(
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable final Long fileId,
             @RequestParam final boolean download,
@@ -71,28 +71,46 @@ public class FileController {
         final MediaType mediaType = MediaType.parseMediaType(dto.mimeType());
         final long fileSize = dto.size();
 
-        // 3) Range 파싱 (없으면 전체 파일)
-        final long start;
-        final long end;
-        if (rangeHeader != null && !HttpRange.parseRanges(rangeHeader).isEmpty()) {
-            final HttpRange range = HttpRange.parseRanges(rangeHeader).getFirst();
-            start = range.getRangeStart(fileSize);
-            end = range.getRangeEnd(fileSize);
-        } else {
-            start = 0;
-            end = fileSize - 1;
+        // 3) Range 파싱 및 검증
+        if (rangeHeader != null) {
+            try {
+                final java.util.List<HttpRange> ranges = HttpRange.parseRanges(rangeHeader);
+                if (!ranges.isEmpty()) {
+                    final HttpRange range = ranges.getFirst();
+                    final long start = range.getRangeStart(fileSize);
+                    final long end = range.getRangeEnd(fileSize);
+
+                    // 범위가 유효하지 않은 경우 (416 Range Not Satisfiable)
+                    if (start >= fileSize || start < 0 || start > end) {
+                        return ResponseEntity
+                                .status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                                .header(HttpHeaders.CONTENT_RANGE, "bytes */" + fileSize)
+                                .build();
+                    }
+
+                    final long contentLength = end - start + 1;
+                    return ResponseEntity
+                            .status(HttpStatus.PARTIAL_CONTENT)
+                            .contentType(mediaType)
+                            .contentLength(contentLength)
+                            .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                            .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                            .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize)
+                            .body(new ResourceRegion(dto.resource(), start, contentLength));
+                }
+            } catch (IllegalArgumentException e) {
+                // 잘못된 형식의 Range 헤더는 무시하고 전체 파일 전송 (200 OK)
+            }
         }
 
-        final long contentLength = end - start + 1;
-
+        // 4) Range 헤더가 없거나 잘못된 형식인 경우 전체 파일 전송 (200 OK)
         return ResponseEntity
-                .status(HttpStatus.PARTIAL_CONTENT)
+                .ok()
                 .contentType(mediaType)
-                .contentLength(contentLength)
+                .contentLength(fileSize)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize)
-                .body(new ResourceRegion(dto.resource(), start, contentLength));
+                .body(dto.resource());
     }
 
     // 실시간 트랜스코딩을 통해 스트리밍하는 API
@@ -105,6 +123,7 @@ public class FileController {
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("video/mp4"))
+                .header(HttpHeaders.ACCEPT_RANGES, "none")
                 .body(fileService.streamFile(fileId, start, userDetails.getUsername()));
     }
 
