@@ -418,23 +418,22 @@ public class FileService {
         final Path filePath = Path.of(file.getRelativePath());
         final Path folderPath = Path.of(folder.getRelativePath());
 
-        // 3) 실제로 옮기기
-        storageManager.moveFile(filePath, folderPath);
-
-        // 4) 원래 폴더에서 연관 정리
-        final Folder presentFolder = file.getParentFolder();
-        presentFolder.getFiles().remove(file);
-
-        // 5) 폴더에 파일 등록
+        // 3) 부모 폴더 재지정 (소유측 FK 만 변경)
+        //    Folder.files 는 orphanRemoval=true 라 inverse 컬렉션에서 remove 하면 파일이 삭제된다.
+        //    폴더 이동과 동일하게 컬렉션은 건드리지 않고 FK 만 바꾼다.
         file.updateParentFolder(folder);
 
-        if (!folder.getFiles().contains(file)) {
-            folder.getFiles().add(file);
-        }
-
-        // 6) DB에서 경로 수정 (파일 경로 + 부모 경로)
+        // 4) DB에서 경로 수정 (파일 경로 + 부모 경로)
         file.updateRelativePath(folderPath.resolve(file.getName()).toString());
         file.updateParentPath(folderPath.toString());
+
+        // 5) 디스크 이동 전에 flush 해 제약 위반(uk_file_path 등) DB 실패를 먼저 드러낸다.
+        //    실패하면 디스크를 건드리기 전에 예외가 나므로 디스크-DB 정합성이 유지된다.
+        fileRepository.flush();
+
+        // 6) DB 작업이 끝난 뒤 마지막으로 디스크 이동.
+        //    디스크 이동이 실패하면 예외로 트랜잭션이 롤백돼 DB 도 원복된다.
+        storageManager.moveFile(filePath, folderPath);
     }
 
     /**

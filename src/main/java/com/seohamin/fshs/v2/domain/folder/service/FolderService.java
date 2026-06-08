@@ -275,10 +275,11 @@ public class FolderService {
             return FolderResponseDto.of(folder);
         }
 
-        // 7) 디스크에서 최종 경로로 이동 (하위 항목은 함께 따라감)
+        // 7) 옛/새 경로 확보 (하위 치환에 쓸 옛 경로는 변경 전에 확보)
         final Path oldPath = Path.of(folder.getRelativePath());
         final Path newPath = Path.of(newParent.getRelativePath()).resolve(newName);
-        storageManager.moveFolder(oldPath, newPath);
+        final String oldPathStr = folder.getRelativePath();
+        final String newPathStr = newPath.toString();
 
         // 8) 부모 폴더 재지정
         //    소유측 FK(parentFolder)만 변경한다. folders 컬렉션은 orphanRemoval=true 이므로
@@ -287,24 +288,27 @@ public class FolderService {
             folder.updateParentFolder(newParent);
         }
 
-        // 9) 폴더 자신의 이름/경로 갱신 (하위 치환에 쓸 옛 경로는 먼저 확보)
-        final String oldPathStr = folder.getRelativePath();
-        final String newPathStr = newPath.toString();
+        // 9) 폴더 자신의 이름/경로 갱신
         folder.updateName(newName);
         folder.updateRelativePath(newPathStr);
 
         // 10) 하위 폴더/파일의 경로 접두사를 LIKE 치환으로 일괄 갱신 (재귀 N+1 제거)
-        //     벌크 연산이라 영속성 컨텍스트를 flush 후 clear 하므로 folder 는 detached 된다
+        //     벌크 연산의 flushAutomatically 가 폴더 자신의 변경까지 DB 에 반영하므로
+        //     제약 위반 등 DB 실패는 디스크를 건드리기 전에 드러난다
         final String pattern = escapeLike(oldPathStr) + "/%";
         final int cutFrom = oldPathStr.length() + 1;
         folderRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
         fileRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
 
-        // 11) 경로/접근 캐시 무효화 (하위 파일 경로가 일괄 변경됨)
+        // 11) DB 작업이 모두 끝난 뒤 마지막으로 디스크 이동.
+        //     디스크 이동이 실패하면 예외로 트랜잭션이 롤백돼 DB 도 원복되므로 정합성이 유지된다.
+        storageManager.moveFolder(oldPath, newPath);
+
+        // 12) 경로/접근 캐시 무효화 (하위 파일 경로가 일괄 변경됨)
         filePathCache.invalidateAll();
         fileAccessCache.invalidateAll();
 
-        // 12) clear 로 detached 된 폴더를 다시 조회해 응답 생성
+        // 13) clear 로 detached 된 폴더를 다시 조회해 응답 생성
         final Folder updated = folderRepository.findById(folderId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.FOLDER_NOT_EXIST));
         return FolderResponseDto.of(updated);

@@ -225,6 +225,28 @@ class FolderServiceMoveTest {
         assertThat(untouchedSibling.getRelativePath()).isEqualTo("userA/axb");
     }
 
+    @Test
+    @DisplayName("폴더 이동 : DB 작업이 실패하면 디스크 이동이 일어나지 않는다")
+    void moveFolder_dbFailure_doesNotMoveDisk() {
+        // Given : DB 상으로만 archive 아래 'projects' 가 이미 존재 (디스크엔 없음)
+        //         → docs/projects 를 archive 로 옮기면 디스크 이동 전에
+        //           DB flush 때 uk_folder_path(parent, name) 충돌로 실패해야 한다
+        final Folder archive = folderRepository.findById(archiveId).orElseThrow();
+        persistFolder("projects", archive, "userA/archive/projects");
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        // When & Then : 이동 시도 → 예외 전파
+        assertThatThrownBy(() ->
+                folderService.updateFolder(projectsId, new FolderRequestDto(archiveId, null), USERNAME))
+                .isInstanceOf(RuntimeException.class);
+
+        // Then : 디스크는 손대지 않았으므로 원위치 그대로 (DB 먼저 → 실패 시 디스크 미이동)
+        assertThat(Files.exists(tempRoot.resolve("userA/docs/projects/report.txt"))).isTrue();
+        assertThat(Files.exists(tempRoot.resolve("userA/docs/projects/sub/nested.txt"))).isTrue();
+        assertThat(Files.exists(tempRoot.resolve("userA/archive/projects"))).isFalse();
+    }
+
     private Folder persistFolder(final String name, final Folder parent, final String relativePath) {
         final Folder folder = Folder.builder()
                 .parentFolder(parent)
