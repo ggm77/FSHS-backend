@@ -53,6 +53,34 @@ public record FfmpegAnalysisResultDto(
         }
     }
 
+    public String getVideoPixFmt() {
+
+        if (streams == null) {
+            return null;
+        }
+
+        return streams.stream()
+                .filter(FfprobeStream::isVideo)
+                .map(FfprobeStream::pix_fmt)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public String getVideoCodec() {
+
+        if (streams == null) {
+            return null;
+        }
+
+        return streams.stream()
+                .filter(FfprobeStream::isVideo)
+                .map(FfprobeStream::codec_name)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+    }
+
     public String getLocation() {
 
         if (format == null || format.tags() == null) {
@@ -77,6 +105,7 @@ public record FfmpegAnalysisResultDto(
             int index,
             String codec_type,
             String codec_name,
+            String pix_fmt,
             Integer width,
             Integer height,
             String display_aspect_ratio,
