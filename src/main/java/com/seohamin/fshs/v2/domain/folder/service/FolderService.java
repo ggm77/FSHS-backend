@@ -353,10 +353,13 @@ public class FolderService {
             throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
-        // 6) DB에서 삭제
+        // 6) DB에서 삭제 후 flush — 하위 cascade 삭제를 디스크보다 먼저 확정한다.
+        //    DB 측 실패(예: 유저 루트 폴더 삭제 시 member FK 위반)가 나면 디스크를 건드리지 않는다.
         folderRepository.delete(folder);
+        folderRepository.flush();
 
-        // 7) 디스크에서 삭제
+        // 7) DB 삭제가 끝난 뒤 마지막으로 디스크에서 삭제.
+        //    디스크 삭제가 실패하면 예외로 트랜잭션이 롤백돼 DB 삭제도 원복된다.
         storageManager.removeFolder(folder.getRelativePath());
 
         // 8) 하위 파일 관련 캐시 무효화 (폴더 삭제는 드물어 전체 무효화로 단순 처리)

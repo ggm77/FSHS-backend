@@ -388,10 +388,13 @@ public class FileService {
             throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
-        // 5) DB에서 파일 삭제
+        // 5) DB에서 파일 삭제 후 flush — DB 삭제를 디스크보다 먼저 확정한다.
+        //    DB 측 실패가 나면 디스크를 건드리지 않는다 (이동과 동일한 순서).
         fileRepository.delete(file);
+        fileRepository.flush();
 
-        // 6) 실제 파일 삭제
+        // 6) DB 삭제가 끝난 뒤 마지막으로 실제 파일 삭제.
+        //    디스크 삭제가 실패하면 예외로 트랜잭션이 롤백돼 DB 삭제도 원복된다.
         storageManager.removeFile(file.getRelativePath());
 
         // 7) 삭제된 파일 관련 캐시 무효화
