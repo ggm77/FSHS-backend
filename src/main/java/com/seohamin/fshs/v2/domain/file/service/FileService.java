@@ -15,6 +15,7 @@ import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,8 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +43,9 @@ public class FileService {
     private final Cache<String, Status> fileStatusCache;
     private final Cache<String, Boolean> fileAccessCache;
     private final FfmpegProcessor ffmpegProcessor;
+
+    // HLS 세그먼트 파일명 패턴 (예: segment12.ts) — 자릿수를 제한해 int 오버플로 방지
+    private static final Pattern HLS_SEGMENT_PATTERN = Pattern.compile("segment(\\d{1,9})\\.ts");
 
     /**
      * 파일 하나 업로드처리하는 메서드
@@ -245,7 +251,7 @@ public class FileService {
         return ffmpegProcessor.getVideoStream(absPath.toString(), start);
     }
 
-    public Resource streamHlsFile(
+    public InputStreamResource streamHlsFile(
             final Long fileId,
             final String hlsFile,
             final String username
@@ -283,8 +289,18 @@ public class FileService {
         // 4) 절대 경로로 변환
         final Path absPath = storageManager.resolvePath(path, false);
 
-        // 5) 단일 FFmpeg HLS 세션에서 요청한 산출물(index.m3u8 / segmentN.ts)을 반환
-        return ffmpegProcessor.getHlsFile(absPath, hlsFile);
+        // 5) 재생목록(.m3u8) 요청이면 즉시 생성해 반환
+        if (hlsFile.endsWith(".m3u8")) {
+            return ffmpegProcessor.getHlsPlaylist(absPath);
+        }
+
+        // 6) 세그먼트(.ts) 요청이면 인덱스를 파싱해 해당 구간만 실시간 트랜스코딩
+        final Matcher matcher = HLS_SEGMENT_PATTERN.matcher(hlsFile);
+        if (!matcher.matches()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        return ffmpegProcessor.getHlsSegment(absPath, Integer.parseInt(matcher.group(1)));
     }
 
     /**
