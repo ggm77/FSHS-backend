@@ -71,6 +71,7 @@ public class FfmpegProcessor {
         command.add(ffmpegConfig.getFfmpeg());
         command.add("-loglevel");
         command.add("error");
+        command.addAll(getHwAccelOptions());
         command.add("-ss");
         command.add(String.valueOf(start));
         command.add("-i");
@@ -181,6 +182,7 @@ public class FfmpegProcessor {
         command.add(ffmpegConfig.getFfmpeg());
         command.add("-loglevel");
         command.add("error");
+        command.addAll(getHwAccelOptions());
         command.add("-ss");
         command.add(String.valueOf(start));
         command.add("-i");
@@ -268,6 +270,19 @@ public class FfmpegProcessor {
                     "-bf", "0"
             );
         }
+    }
+
+    /**
+     * 설정된 하드웨어 가속 API로 입력 디코딩을 GPU에 위임하는 옵션을 생성하는 메서드
+     * -hwaccel 은 입력(-i) 앞에 와야 하며, 미설정 시 소프트웨어 디코딩으로 동작한다
+     * @return -hwaccel 옵션 리스트 (미설정 시 빈 리스트)
+     */
+    private List<String> getHwAccelOptions() {
+        final String api = ffmpegConfig.getSelectedHwAccelApi();
+        if (api == null || api.isBlank()) {
+            return List.of();
+        }
+        return List.of("-hwaccel", api);
     }
 
     /**
