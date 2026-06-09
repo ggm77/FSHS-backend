@@ -5,21 +5,31 @@ import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.ffmpeg.dto.FfmpegAnalysisResultDto;
 import com.seohamin.fshs.v2.global.infra.json.JsonMapper;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 @Component
 @RequiredArgsConstructor
@@ -29,8 +39,15 @@ public class FfmpegProcessor {
     private final FfmpegConfig ffmpegConfig;
     private final JsonMapper jsonMapper;
 
-    // HLS 세그먼트 한 개의 길이(초)
-    private static final int HLS_SEGMENT_SECONDS = 6;
+    private final Map<HlsCacheKey, HlsSession> hlsSessions = new ConcurrentHashMap<>();
+
+    private static final int HLS_SEGMENT_SECONDS = 5;
+    private static final long HLS_OUTPUT_WAIT_TIMEOUT_MILLIS = 60_000L;
+    private static final Pattern HLS_FILE_PATTERN = Pattern.compile("index\\.m3u8|segment\\d{1,9}\\.ts");
+    private static final Path HLS_WORK_ROOT = Path.of(
+            System.getProperty("java.io.tmpdir"),
+            "fshs-hls"
+    ).toAbsolutePath().normalize();
 
     /**
      * FFprobe를 통해 파일을 분석하는 메서드
@@ -130,73 +147,157 @@ public class FfmpegProcessor {
     }
 
     /**
-     * 영상 길이를 기반으로 HLS VOD 재생목록(.m3u8)을 즉시 생성하는 메서드
-     * 전체 트랜스코딩 없이 ffprobe로 길이만 측정해 고정 길이 세그먼트로 분할한다
-     * @param filePath 파일 절대 경로
-     * @return 재생목록이 담긴 InputStreamResource
+     * FFmpeg HLS muxer 한 프로세스로 EVENT playlist와 연속된 세그먼트를 생성하고,
+     * 생성된 산출물(index.m3u8 또는 segmentN.ts)을 파일 Resource로 반환한다.
+     * @param filePath 원본 파일 절대 경로
+     * @param hlsFile 요청한 HLS 파일명
+     * @return HLS 산출물 Resource
      */
-    public InputStreamResource getHlsPlaylist(final Path filePath) {
-        final double duration = parseDurationSeconds(analyze(filePath));
-
-        final int fullSegments = (int) (duration / HLS_SEGMENT_SECONDS);
-        final double remainder = duration - ((double) fullSegments * HLS_SEGMENT_SECONDS);
-
-        final StringBuilder sb = new StringBuilder();
-        sb.append("#EXTM3U\n");
-        sb.append("#EXT-X-VERSION:3\n");
-        sb.append("#EXT-X-TARGETDURATION:").append(HLS_SEGMENT_SECONDS).append("\n");
-        sb.append("#EXT-X-MEDIA-SEQUENCE:0\n");
-        sb.append("#EXT-X-PLAYLIST-TYPE:VOD\n");
-
-        for (int i = 0; i < fullSegments; i++) {
-            sb.append("#EXTINF:")
-                    .append(String.format(Locale.ROOT, "%.3f", (double) HLS_SEGMENT_SECONDS))
-                    .append(",\n");
-            sb.append("segment").append(i).append(".ts\n");
+    public Resource getHlsFile(
+            final Path filePath,
+            final String hlsFile
+    ) {
+        if (filePath == null || hlsFile == null || !HLS_FILE_PATTERN.matcher(hlsFile).matches()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
-        // 마지막 자투리 구간 (영상 길이가 세그먼트로 딱 나눠떨어지지 않을 때)
-        if (remainder > 0.001) {
-            sb.append("#EXTINF:")
-                    .append(String.format(Locale.ROOT, "%.3f", remainder))
-                    .append(",\n");
-            sb.append("segment").append(fullSegments).append(".ts\n");
-        }
-        sb.append("#EXT-X-ENDLIST\n");
 
-        return new InputStreamResource(
-                new ByteArrayInputStream(sb.toString().getBytes(StandardCharsets.UTF_8)));
+        final HlsSession session = ensureHlsSession(filePath);
+        final Path output = session.outputDir().resolve(hlsFile).normalize();
+        if (!output.startsWith(session.outputDir())) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        waitForHlsOutput(output, session);
+        return new FileSystemResource(output);
     }
 
     /**
-     * 요청된 인덱스의 HLS 세그먼트(.ts)를 실시간 트랜스코딩하는 메서드
-     * 해당 구간만 잘라 h264 / aac mpeg-ts로 변환한다
-     * 세그먼트별로 PTS가 타임라인 상 제 위치를 갖도록 -output_ts_offset으로 보정한다
-     * @param filePath 파일 절대 경로
-     * @param segmentIndex 세그먼트 인덱스 (0부터 시작)
-     * @return 트랜스코딩된 세그먼트가 담긴 InputStreamResource
+     * 원본 파일에 대한 HLS 변환 세션을 확보하는 메서드
+     * 같은 파일(경로·크기·수정시각 동일)에 대해서는 단일 FFmpeg 프로세스를 공유해
+     * 연속된 타임스탬프의 세그먼트를 만들고, 이미 완료된 세션은 디스크 산출물을 재사용한다
+     * @param filePath 원본 파일 절대 경로
+     * @return 확보된 HLS 세션
      */
-    public InputStreamResource getHlsSegment(
-            final Path filePath,
-            final int segmentIndex
+    private HlsSession ensureHlsSession(final Path filePath) {
+        final HlsCacheKey key = buildHlsCacheKey(filePath);
+        evictOtherVersions(key);
+        return hlsSessions.compute(key, (k, existing) -> {
+            if (existing != null && existing.isReusable()) {
+                return existing;
+            }
+            if (existing != null) {
+                existing.destroy();
+            }
+            return startHlsSession(k);
+        });
+    }
+
+    /**
+     * 파일의 경로·크기·수정시각으로 세션 캐시 키를 만드는 메서드
+     * 파일이 교체되면 크기/수정시각이 달라져 새 세션으로 분리된다
+     * @param filePath 원본 파일 절대 경로
+     * @return 세션 캐시 키
+     */
+    private HlsCacheKey buildHlsCacheKey(final Path filePath) {
+        try {
+            final BasicFileAttributes attrs = Files.readAttributes(filePath, BasicFileAttributes.class);
+            return new HlsCacheKey(
+                    filePath.toAbsolutePath().normalize().toString(),
+                    attrs.size(),
+                    attrs.lastModifiedTime().toMillis()
+            );
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FILE_NOT_EXIST, ex);
+        }
+    }
+
+    /**
+     * 같은 경로의 옛 버전 세션(크기/수정시각이 달라진 키)을 정리하는 메서드
+     * 파일이 in-place 로 교체됐을 때 옛 프로세스·작업 디렉터리가 쌓이지 않게 한다
+     * @param keep 유지할 현재 키
+     */
+    private void evictOtherVersions(final HlsCacheKey keep) {
+        hlsSessions.keySet().removeIf(k -> {
+            if (k.path().equals(keep.path()) && !k.equals(keep)) {
+                final HlsSession stale = hlsSessions.get(k);
+                if (stale != null) {
+                    stale.destroy();
+                }
+                return true;
+            }
+            return false;
+        });
+    }
+
+    /**
+     * FFmpeg HLS muxer 한 프로세스를 띄워 새 변환 세션을 시작하는 메서드
+     * 작업 디렉터리를 깨끗이 비운 뒤 index.m3u8 / segmentN.ts 를 그 디렉터리에 출력한다
+     * @param key 세션 캐시 키
+     * @return 시작된 HLS 세션
+     */
+    private HlsSession startHlsSession(final HlsCacheKey key) {
+        final Path outputDir = HLS_WORK_ROOT.resolve(hashKey(key));
+        try {
+            deleteRecursively(outputDir);
+            Files.createDirectories(outputDir);
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FFMPEG_ERROR, ex);
+        }
+
+        final List<String> command = buildHlsCommand(Path.of(key.path()), outputDir);
+        try {
+            final ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+            final Process process = pb.start();
+
+            // stderr 를 비동기로 소비 — 버퍼가 차서 프로세스가 멈추는 것을 막고 에러를 로깅한다
+            final Thread errorReader = Thread.ofPlatform().start(() -> {
+                try (final BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        log.error("[FFmpeg HLS 프로세스 에러] {}", line);
+                    }
+                } catch (final Exception ignored) {}
+            });
+
+            return new HlsSession(outputDir, process, errorReader);
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FFMPEG_ERROR, ex);
+        }
+    }
+
+    /**
+     * 단일 프로세스로 EVENT 재생목록과 연속 세그먼트를 만드는 FFmpeg HLS 명령을 조립하는 메서드
+     * 세그먼트 경계마다 keyframe 을 강제(-force_key_frames)해 hls_time 과 정렬하고,
+     * Safari 호환을 위해 H.264 / AAC / yuv420p 로 출력한다
+     * @param input 원본 파일 절대 경로
+     * @param outputDir 산출물을 쓸 작업 디렉터리
+     * @return FFmpeg 명령 리스트
+     */
+    private List<String> buildHlsCommand(
+            final Path input,
+            final Path outputDir
     ) {
-        final double start = (double) segmentIndex * HLS_SEGMENT_SECONDS;
         final List<String> encoderOpts = getEncoderOptions(ffmpegConfig.getSelectedH264Encoder());
-        final boolean zeroCopy = useCudaZeroCopy(filePath);
+        final boolean zeroCopy = useCudaZeroCopy(input);
 
         final List<String> command = new java.util.ArrayList<>();
         command.add(ffmpegConfig.getFfmpeg());
         command.add("-loglevel");
         command.add("error");
+        command.add("-y");
         command.addAll(getHwAccelOptions(zeroCopy));
-        command.add("-ss");
-        command.add(String.valueOf(start));
         command.add("-i");
-        command.add(filePath.toString());
-        command.add("-t");
-        command.add(String.valueOf(HLS_SEGMENT_SECONDS));
+        command.add(input.toString());
+        command.add("-map");
+        command.add("0:v:0");
+        command.add("-map");
+        command.add("0:a:0?");
         command.addAll(encoderOpts);
+        // 세그먼트 시작점이 항상 keyframe 이 되도록 hls_time 주기로 keyframe 강제 (Safari 민감)
         command.add("-force_key_frames");
-        command.add("expr:gte(t," + start + ")");
+        command.add("expr:gte(t,n_forced*" + HLS_SEGMENT_SECONDS + ")");
         if (!zeroCopy) {
             command.add("-pix_fmt");
             command.add("yuv420p");
@@ -204,29 +305,126 @@ public class FfmpegProcessor {
         command.addAll(List.of(
                 "-acodec", "aac",
                 "-b:a", "128k",
-                "-muxdelay", "0",
-                "-muxpreload", "0",
-                "-f", "mpegts",
-                "pipe:1"
+                "-f", "hls",
+                "-hls_time", String.valueOf(HLS_SEGMENT_SECONDS),
+                // EVENT: 변환 중에는 ENDLIST 없이 자라고, 완료 시 FFmpeg 가 ENDLIST 를 붙인다
+                "-hls_playlist_type", "event",
+                // temp_file: 세그먼트/재생목록을 .tmp 로 쓰고 원자적 rename → 미완성 파일 노출 방지
+                "-hls_flags", "independent_segments+temp_file",
+                "-hls_segment_filename", outputDir.resolve("segment%d.ts").toString(),
+                outputDir.resolve("index.m3u8").toString()
         ));
-
-        return new InputStreamResource(new ByteArrayInputStream(executeBinary(command, 60)));
+        return command;
     }
 
     /**
-     * 분석 결과에서 영상 길이(초)를 파싱하는 메서드
-     * @param analysis ffprobe 분석 결과
-     * @return 영상 길이 (초)
+     * 요청한 HLS 산출물이 디스크에 나타날 때까지 대기하는 메서드
+     * 프로세스가 끝났는데도 파일이 없으면(실패 또는 범위 밖 세그먼트) 예외를 던진다
+     * @param output 기다릴 산출물 경로
+     * @param session 해당 HLS 세션
      */
-    private double parseDurationSeconds(final FfmpegAnalysisResultDto analysis) {
-        if (analysis == null || analysis.format() == null
-                || analysis.format().duration() == null || analysis.format().duration().isBlank()) {
-            throw new CustomException(ExceptionCode.FFMPEG_ERROR);
+    private void waitForHlsOutput(
+            final Path output,
+            final HlsSession session
+    ) {
+        final long deadline = System.currentTimeMillis() + HLS_OUTPUT_WAIT_TIMEOUT_MILLIS;
+        while (true) {
+            if (Files.exists(output)) {
+                return;
+            }
+            if (!session.process().isAlive()) {
+                // 프로세스 종료 후에도 없으면 변환 실패이거나 존재하지 않는 세그먼트
+                throw new CustomException(ExceptionCode.FFMPEG_ERROR);
+            }
+            if (System.currentTimeMillis() > deadline) {
+                throw new CustomException(ExceptionCode.COMMAND_TIMEOUT);
+            }
+            try {
+                Thread.sleep(80L);
+            } catch (final InterruptedException ex) {
+                Thread.currentThread().interrupt();
+                throw new CustomException(ExceptionCode.PROCESS_INTERRUPTED);
+            }
         }
+    }
+
+    /**
+     * 캐시 키를 작업 디렉터리 이름으로 쓸 수 있게 SHA-256 16진 문자열로 만드는 메서드
+     * @param key 세션 캐시 키
+     * @return 16진 해시 문자열
+     */
+    private static String hashKey(final HlsCacheKey key) {
         try {
-            return Double.parseDouble(analysis.format().duration());
-        } catch (final NumberFormatException ex) {
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            final byte[] hash = digest.digest(
+                    (key.path() + "|" + key.size() + "|" + key.lastModified())
+                            .getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (final NoSuchAlgorithmException ex) {
             throw new CustomException(ExceptionCode.FFMPEG_ERROR, ex);
+        }
+    }
+
+    /**
+     * 디렉터리 트리를 하위부터 역순으로 삭제하는 메서드
+     * @param dir 삭제할 디렉터리
+     */
+    private static void deleteRecursively(final Path dir) {
+        if (!Files.exists(dir)) {
+            return;
+        }
+        try (final java.util.stream.Stream<Path> paths = Files.walk(dir)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (final IOException ignored) {}
+            });
+        } catch (final IOException ignored) {}
+    }
+
+    /**
+     * 애플리케이션 종료 시 모든 HLS 프로세스를 종료하고 작업 디렉터리를 정리하는 메서드
+     */
+    @PreDestroy
+    void shutdownHlsSessions() {
+        hlsSessions.values().forEach(HlsSession::destroy);
+        hlsSessions.clear();
+        deleteRecursively(HLS_WORK_ROOT);
+    }
+
+    /**
+     * HLS 세션 캐시 키 — 같은 경로라도 크기/수정시각이 다르면 다른 세션으로 본다
+     */
+    private record HlsCacheKey(String path, long size, long lastModified) {}
+
+    /**
+     * 진행 중이거나 완료된 단일 FFmpeg HLS 변환 세션
+     */
+    private record HlsSession(Path outputDir, Process process, Thread errorReader) {
+
+        /**
+         * 재사용 가능한 세션인지 판별한다 — 진행 중이거나, 정상 종료(exit 0)했고 재생목록이 아직 남아있을 때
+         */
+        boolean isReusable() {
+            if (process.isAlive()) {
+                return true;
+            }
+            return process.exitValue() == 0 && Files.exists(outputDir.resolve("index.m3u8"));
+        }
+
+        /**
+         * 프로세스를 강제 종료하고 작업 디렉터리를 정리한다
+         */
+        void destroy() {
+            if (process.isAlive()) {
+                process.destroyForcibly();
+            }
+            try {
+                errorReader.join(500L);
+            } catch (final InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+            deleteRecursively(outputDir);
         }
     }
 
@@ -392,58 +590,6 @@ public class FfmpegProcessor {
 
             readerThread.join(1000);
             return output.toString();
-        } catch (final CustomException ex) {
-            throw ex;
-        } catch (final InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            throw new CustomException(ExceptionCode.PROCESS_INTERRUPTED);
-        } catch (final Exception ex) {
-            log.error("[FFmpeg 에러 발생] {}", ex.getMessage());
-            throw new CustomException(ExceptionCode.FFMPEG_ERROR, ex);
-        }
-    }
-
-    /**
-     * FFmpeg 명령어를 실행해 표준 출력(stdout) 바이너리를 통째로 읽어오는 메서드
-     * 길이가 제한된(-t) 세그먼트 변환처럼 출력이 유한할 때 사용한다
-     * @param command 실행할 명령어
-     * @param timeoutSecond 타임아웃 시간 (초)
-     * @return stdout 바이너리
-     */
-    private byte[] executeBinary(
-            final List<String> command,
-            final int timeoutSecond
-    ) {
-        final ProcessBuilder pb = new ProcessBuilder(command);
-
-        try {
-            final Process p = pb.start();
-
-            // 에러 스트림(stderr)을 비동기적으로 읽어 버퍼 블로킹 방지 및 에러 로깅
-            final Thread errorReader = Thread.ofPlatform().start(() -> {
-                try (final BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        log.error("[FFmpeg 프로세스 에러] {}", line);
-                    }
-                } catch (final Exception ignored) {}
-            });
-
-            // stdout을 EOF까지 읽음 — 출력이 -t로 제한되어 유한함
-            final byte[] data;
-            try (final InputStream is = p.getInputStream()) {
-                data = is.readAllBytes();
-            }
-
-            if (!p.waitFor(timeoutSecond, TimeUnit.SECONDS)) {
-                p.destroyForcibly();
-                log.error("[FFmpeg 타임아웃] - 명령어: {}", command);
-                throw new CustomException(ExceptionCode.COMMAND_TIMEOUT);
-            }
-
-            errorReader.join(1000);
-            return data;
         } catch (final CustomException ex) {
             throw ex;
         } catch (final InterruptedException ex) {
