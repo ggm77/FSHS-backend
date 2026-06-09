@@ -236,10 +236,12 @@ class FolderServiceMoveTest {
         testEntityManager.flush();
         testEntityManager.clear();
 
-        // When & Then : 이동 시도 → 예외 전파
+        // When & Then : 이동 시도 → 이름 충돌이 FILE_ALREADY_EXIST(400) 로 변환되어 전파
         assertThatThrownBy(() ->
                 folderService.updateFolder(projectsId, new FolderRequestDto(archiveId, null), USERNAME))
-                .isInstanceOf(RuntimeException.class);
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getExceptionCode())
+                .isEqualTo(ExceptionCode.FILE_ALREADY_EXIST);
 
         // Then : 디스크는 손대지 않았으므로 원위치 그대로 (DB 먼저 → 실패 시 디스크 미이동)
         assertThat(Files.exists(tempRoot.resolve("userA/docs/projects/report.txt"))).isTrue();
