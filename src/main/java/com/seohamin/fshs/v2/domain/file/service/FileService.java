@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -427,9 +428,14 @@ public class FileService {
         file.updateRelativePath(folderPath.resolve(file.getName()).toString());
         file.updateParentPath(folderPath.toString());
 
-        // 5) 디스크 이동 전에 flush 해 제약 위반(uk_file_path 등) DB 실패를 먼저 드러낸다.
+        // 5) 디스크 이동 전에 flush 해 이름 충돌(uk_file_path) 등 DB 실패를 먼저 드러낸다.
         //    실패하면 디스크를 건드리기 전에 예외가 나므로 디스크-DB 정합성이 유지된다.
-        fileRepository.flush();
+        try {
+            fileRepository.flush();
+        } catch (final DataIntegrityViolationException e) {
+            // 목적지에 같은 이름의 파일이 이미 존재 (uk_file_path 위반) → 400
+            throw new CustomException(ExceptionCode.FILE_ALREADY_EXIST, e);
+        }
 
         // 6) DB 작업이 끝난 뒤 마지막으로 디스크 이동.
         //    디스크 이동이 실패하면 예외로 트랜잭션이 롤백돼 DB 도 원복된다.

@@ -15,6 +15,7 @@ import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import com.seohamin.fshs.v2.global.util.storage.PathNameUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -294,11 +295,16 @@ public class FolderService {
 
         // 10) 하위 폴더/파일의 경로 접두사를 LIKE 치환으로 일괄 갱신 (재귀 N+1 제거)
         //     벌크 연산의 flushAutomatically 가 폴더 자신의 변경까지 DB 에 반영하므로
-        //     제약 위반 등 DB 실패는 디스크를 건드리기 전에 드러난다
+        //     이름 충돌(uk_folder_path) 등 DB 실패는 디스크를 건드리기 전에 드러난다
         final String pattern = escapeLike(oldPathStr) + "/%";
         final int cutFrom = oldPathStr.length() + 1;
-        folderRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
-        fileRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
+        try {
+            folderRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
+            fileRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
+        } catch (final DataIntegrityViolationException e) {
+            // 목적지에 같은 이름의 폴더가 이미 존재 (uk_folder_path 위반) → 400
+            throw new CustomException(ExceptionCode.FILE_ALREADY_EXIST, e);
+        }
 
         // 11) DB 작업이 모두 끝난 뒤 마지막으로 디스크 이동.
         //     디스크 이동이 실패하면 예외로 트랜잭션이 롤백돼 DB 도 원복되므로 정합성이 유지된다.
