@@ -3,7 +3,7 @@ package com.seohamin.fshs.v2.domain.file.controller;
 import com.seohamin.fshs.v2.domain.file.dto.*;
 import com.seohamin.fshs.v2.domain.file.service.FileService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +15,7 @@ import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/v2")
@@ -112,19 +113,27 @@ public class FileController {
 
     // 실시간 트랜스코딩을 통해 스트리밍하는 API - HLS 버전
     @GetMapping("/files/{fileId}/stream/{hlsFile}")
-    public ResponseEntity<InputStreamResource> streamHlsFile(
+    public ResponseEntity<Resource> streamHlsFile(
             @AuthenticationPrincipal final UserDetails userDetails,
             @PathVariable final Long fileId,
             @PathVariable final String hlsFile
     ) {
 
+        final boolean isPlaylist = hlsFile.endsWith(".m3u8");
+
         // 재생목록(.m3u8)과 세그먼트(.ts)는 Content-Type이 다름
-        final MediaType mediaType = hlsFile.endsWith(".m3u8")
+        final MediaType mediaType = isPlaylist
                 ? MediaType.parseMediaType("application/x-mpegURL")
                 : MediaType.parseMediaType("video/mp2t");
 
+        // 변환 중에는 재생목록이 계속 자라므로 캐시 금지, 세그먼트는 불변이라 캐시 허용
+        final CacheControl cacheControl = isPlaylist
+                ? CacheControl.noStore()
+                : CacheControl.maxAge(1, TimeUnit.HOURS).cachePublic();
+
         return ResponseEntity.ok()
                 .contentType(mediaType)
+                .cacheControl(cacheControl)
                 .body(fileService.streamHlsFile(fileId, hlsFile, userDetails.getUsername()));
     }
 
