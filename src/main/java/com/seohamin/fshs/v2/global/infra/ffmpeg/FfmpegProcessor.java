@@ -32,6 +32,9 @@ public class FfmpegProcessor {
     // HLS 세그먼트 한 개의 길이(초)
     private static final int HLS_SEGMENT_SECONDS = 6;
 
+    private static final String MAX_OUTPUT_RESOLUTION_FILTER =
+            "scale=w=1920:h=1080:force_original_aspect_ratio=decrease:force_divisible_by=2";
+
     /**
      * FFprobe를 통해 파일을 분석하는 메서드
      * @param filePath 분석할 파일의 정규화 된 경로
@@ -64,32 +67,7 @@ public class FfmpegProcessor {
             final String filePath,
             final double start
     ) {
-        final String encoder = ffmpegConfig.getSelectedH264Encoder();
-        final List<String> encoderOpts = getEncoderOptions(encoder);
-        final boolean zeroCopy = useCudaZeroCopy(Path.of(filePath));
-
-        final List<String> command = new java.util.ArrayList<>();
-        command.add(ffmpegConfig.getFfmpeg());
-        command.add("-loglevel");
-        command.add("error");
-        command.addAll(getHwAccelOptions(zeroCopy));
-        command.add("-ss");
-        command.add(String.valueOf(start));
-        command.add("-i");
-        command.add(filePath);
-        command.addAll(encoderOpts);
-        if (!zeroCopy) {
-            command.add("-pix_fmt");
-            command.add("yuv420p");
-        }
-        command.addAll(List.of(
-                "-acodec", "aac",
-                "-b:a", "128k",
-                "-f", "mp4",
-                "-movflags", "frag_keyframe+empty_moov+default_base_moof+omit_tfhd_offset",
-                "-flush_packets", "1",
-                "pipe:1"
-        ));
+        final List<String> command = buildVideoStreamCommand(filePath, start);
 
         return outputStream -> {
             final ProcessBuilder pb = new ProcessBuilder(command);
@@ -127,6 +105,35 @@ public class FfmpegProcessor {
                 }
             }
         };
+    }
+
+    List<String> buildVideoStreamCommand(
+            final String filePath,
+            final double start
+    ) {
+        final List<String> command = new java.util.ArrayList<>();
+        command.add(ffmpegConfig.getFfmpeg());
+        command.add("-loglevel");
+        command.add("error");
+        command.addAll(getHwAccelOptions());
+        command.add("-ss");
+        command.add(String.valueOf(start));
+        command.add("-i");
+        command.add(filePath);
+        command.add("-vf");
+        command.add(MAX_OUTPUT_RESOLUTION_FILTER);
+        command.addAll(getEncoderOptions(ffmpegConfig.getSelectedH264Encoder()));
+        command.add("-pix_fmt");
+        command.add("yuv420p");
+        command.addAll(List.of(
+                "-acodec", "aac",
+                "-b:a", "128k",
+                "-f", "mp4",
+                "-movflags", "frag_keyframe+empty_moov+default_base_moof+omit_tfhd_offset",
+                "-flush_packets", "1",
+                "pipe:1"
+        ));
+        return command;
     }
 
     /**
@@ -180,27 +187,33 @@ public class FfmpegProcessor {
             final int segmentIndex
     ) {
         final double start = (double) segmentIndex * HLS_SEGMENT_SECONDS;
-        final List<String> encoderOpts = getEncoderOptions(ffmpegConfig.getSelectedH264Encoder());
-        final boolean zeroCopy = useCudaZeroCopy(filePath);
+        final List<String> command = buildHlsSegmentCommand(filePath, start);
 
+        return new InputStreamResource(new ByteArrayInputStream(executeBinary(command, 60)));
+    }
+
+    List<String> buildHlsSegmentCommand(
+            final Path filePath,
+            final double start
+    ) {
         final List<String> command = new java.util.ArrayList<>();
         command.add(ffmpegConfig.getFfmpeg());
         command.add("-loglevel");
         command.add("error");
-        command.addAll(getHwAccelOptions(zeroCopy));
+        command.addAll(getHwAccelOptions());
         command.add("-ss");
         command.add(String.valueOf(start));
         command.add("-i");
         command.add(filePath.toString());
         command.add("-t");
         command.add(String.valueOf(HLS_SEGMENT_SECONDS));
-        command.addAll(encoderOpts);
+        command.add("-vf");
+        command.add(MAX_OUTPUT_RESOLUTION_FILTER);
+        command.addAll(getEncoderOptions(ffmpegConfig.getSelectedH264Encoder()));
         command.add("-force_key_frames");
         command.add("expr:gte(t," + start + ")");
-        if (!zeroCopy) {
-            command.add("-pix_fmt");
-            command.add("yuv420p");
-        }
+        command.add("-pix_fmt");
+        command.add("yuv420p");
         command.addAll(List.of(
                 "-acodec", "aac",
                 "-b:a", "128k",
@@ -209,8 +222,7 @@ public class FfmpegProcessor {
                 "-f", "mpegts",
                 "pipe:1"
         ));
-
-        return new InputStreamResource(new ByteArrayInputStream(executeBinary(command, 60)));
+        return command;
     }
 
     /**
@@ -281,81 +293,12 @@ public class FfmpegProcessor {
         }
     }
 
-    /**
-     * 설정된 하드웨어 가속 API로 입력 디코딩을 GPU에 위임하는 옵션을 생성하는 메서드
-     * -hwaccel 은 입력(-i) 앞에 와야 하며, 미설정 시 소프트웨어 디코딩으로 동작한다
-     * zeroCopy 인 경우 -hwaccel_output_format 까지 지정해 디코딩 프레임을 GPU 메모리에 유지한다
-     * @param zeroCopy 디코딩 결과를 GPU 메모리에 둘지 여부 (VRAM↔RAM 왕복 제거)
-     * @return -hwaccel 옵션 리스트 (미설정 시 빈 리스트)
-     */
-    private List<String> getHwAccelOptions(final boolean zeroCopy) {
+    private List<String> getHwAccelOptions() {
         final String api = ffmpegConfig.getSelectedHwAccelApi();
         if (api == null || api.isBlank()) {
             return List.of();
         }
-        if (zeroCopy) {
-            return List.of("-hwaccel", api, "-hwaccel_output_format", api);
-        }
         return List.of("-hwaccel", api);
-    }
-
-    /**
-     * 완전 GPU(zero-copy) 트랜스코딩 경로를 쓸 수 있는지 판별하는 메서드
-     * cuda + nvenc 조합이고, 소스 코덱을 NVDEC 가 디코딩할 수 있으며, 8비트 4:2:0 일 때만 가능하다
-     * 그 외(NVDEC 미지원 코덱·10비트·4:2:2·4:4:4 등)는 GPU 측 변환 필터(scale_cuda)가 없는
-     * 바닐라 빌드에서 깨지므로, -hwaccel_output_format 없이 소프트웨어 디코딩 + CPU 픽셀포맷 변환으로 처리한다
-     * cuda + nvenc 가 아니면 소스 분석(ffprobe) 없이 바로 false 를 반환한다
-     * @param filePath 파일 절대 경로
-     * @return zero-copy 사용 가능 여부
-     */
-    private boolean useCudaZeroCopy(final Path filePath) {
-        final String api = ffmpegConfig.getSelectedHwAccelApi();
-        final String enc = ffmpegConfig.getSelectedH264Encoder();
-        if (!"cuda".equalsIgnoreCase(api) || enc == null || !enc.contains("nvenc")) {
-            return false;
-        }
-
-        final FfmpegAnalysisResultDto analysis;
-        try {
-            analysis = analyze(filePath);
-        } catch (final Exception ex) {
-            log.warn("[소스 분석 실패 — 소프트웨어 변환 경로로 폴백] {}", ex.getMessage());
-            return false;
-        }
-        return isNvdecDecodable(analysis.getVideoCodec())
-                && isEightBit420(analysis.getVideoPixFmt());
-    }
-
-    /**
-     * NVDEC 가 디코딩 가능한 코덱인지 판별하는 메서드 (보수적 화이트리스트)
-     * 목록에 없는 코덱(mjpeg, theora 등)은 zero-copy 에서 제외해 소프트웨어 디코딩으로 폴백시킨다
-     * av1 은 구형 GPU(Ampere 미만)에서 NVDEC 디코딩이 안 되므로 제외한다
-     * @param codec 소스 비디오 코덱명
-     * @return NVDEC 디코딩 가능 여부
-     */
-    private boolean isNvdecDecodable(final String codec) {
-        if (codec == null) {
-            return false;
-        }
-        return switch (codec) {
-            case "h264", "hevc", "vp9", "mpeg2video", "vc1" -> true;
-            default -> false;
-        };
-    }
-
-    /**
-     * NVDEC 가 추가 변환 없이 NV12 로 디코딩 가능한 8비트 4:2:0 포맷인지 판별하는 메서드
-     * @param pixFmt 소스 픽셀 포맷
-     * @return 8비트 4:2:0 여부
-     */
-    private boolean isEightBit420(final String pixFmt) {
-        if (pixFmt == null) {
-            return false;
-        }
-        return switch (pixFmt) {
-            case "yuv420p", "yuvj420p", "nv12", "nv21" -> true;
-            default -> false;
-        };
     }
 
     /**
