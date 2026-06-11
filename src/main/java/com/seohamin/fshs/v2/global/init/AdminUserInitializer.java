@@ -50,7 +50,7 @@ public class AdminUserInitializer implements CommandLineRunner {
             // 6) 유저 정보에 루트 폴더 정보 저장
             admin.updateRootFolder(systemRootFolder);
 
-            log.info("[초기 관리자 계정 생성 완료] ID: admin / PW: admin");
+            log.info("[초기 관리자 계정 생성 완료]");
         } else {
             log.info("[초기 관리자 계정 생성 스킵] 이미 사용자가 존재합니다.");
         }
