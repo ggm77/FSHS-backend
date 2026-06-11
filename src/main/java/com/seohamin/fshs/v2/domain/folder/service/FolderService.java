@@ -71,8 +71,11 @@ public class FolderService {
             throw new CustomException(ExceptionCode.ROOT_NOT_EXIST);
         }
 
-        // 5) 폴더명 정규화
-        final String name = PathNameUtil.normalize(rawName);
+        // 5) 폴더명 정규화 및 경로 탈출 방지
+        final String name = PathNameUtil.normalize(PathNameUtil.extractFileName(rawName));
+        if (name.isBlank() || name.equals(".") || name.equals("..")) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
 
         // 6) 상위 폴더 정보 가져오기
         final Folder parentFolder = folderRepository.findById(parentFolderId)
@@ -265,9 +268,16 @@ public class FolderService {
         }
 
         // 5) 새 이름 결정 (name 없으면 현재 이름 유지)
-        final String newName = (folderRequestDto.name() != null && !folderRequestDto.name().isBlank())
-                ? PathNameUtil.normalize(folderRequestDto.name())
-                : folder.getName();
+        final String newName;
+        if (folderRequestDto.name() != null && !folderRequestDto.name().isBlank()) {
+            final String sanitized = PathNameUtil.normalize(PathNameUtil.extractFileName(folderRequestDto.name()));
+            if (sanitized.isBlank() || sanitized.equals(".") || sanitized.equals("..")) {
+                throw new CustomException(ExceptionCode.INVALID_PATH);
+            }
+            newName = sanitized;
+        } else {
+            newName = folder.getName();
+        }
 
         // 6) 실제 변경 사항 없으면 그대로 반환
         final boolean parentChanged = !newParent.getId().equals(oldParent.getId());
