@@ -25,30 +25,33 @@ public class UserController {
     // 추가 유저 등록하는 API
     @PostMapping("/users")
     public ResponseEntity<UserResponseDto> createUser(
+            @AuthenticationPrincipal final UserDetails userDetails,
             @Validated(Create.class) @RequestBody final UserRequestDto userRequestDto
     ) {
 
-        return ResponseEntity.ok().body(userService.createUser(userRequestDto));
+        return ResponseEntity.ok().body(userService.createUser(userRequestDto, userDetails.getAuthorities()));
     }
 
     // 유저 정보 조회하는 API
     @GetMapping("/users/{userId}")
     public ResponseEntity<UserResponseDto> getUser(
+            @AuthenticationPrincipal final UserDetails userDetails,
             @PathVariable final Long userId
     ) {
 
-        return ResponseEntity.ok().body(userService.getUser(userId));
+        return ResponseEntity.ok().body(userService.getUser(userId, userDetails.getUsername()));
     }
 
     // 유저 정보 수정하는 API
     @PatchMapping("/users/{userId}")
     public ResponseEntity<UserResponseDto> updateUser(
+            @AuthenticationPrincipal final UserDetails userDetails,
             @PathVariable final Long userId,
             @Validated(Update.class) @RequestBody final UserRequestDto userRequestDto,
             final HttpServletRequest request
     ) {
 
-        final UserResponseDto userResponseDto = userService.updateUser(userId, userRequestDto);
+        final UserResponseDto userResponseDto = userService.updateUser(userId, userRequestDto, userDetails.getUsername());
 
         if(isSecuritySensitiveChange(userRequestDto)) {
             SessionUtil.forceLogout(request);
@@ -59,11 +62,12 @@ public class UserController {
 
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<Void> deleteUser(
+            @AuthenticationPrincipal final UserDetails userDetails,
             @PathVariable final Long userId,
             final HttpServletRequest request
     ) {
 
-        userService.deleteUser(userId);
+        userService.deleteUser(userId, userDetails.getAuthorities());
 
         SessionUtil.forceLogout(request);
 
