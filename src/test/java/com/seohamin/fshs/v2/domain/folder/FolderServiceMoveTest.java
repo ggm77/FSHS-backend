@@ -21,6 +21,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
@@ -170,6 +172,36 @@ class FolderServiceMoveTest {
         final File nested = fileRepository.findById(nestedFileId).orElseThrow();
         assertThat(nested.getRelativePath()).isEqualTo("userA/documents/projects/sub/nested.txt");
         assertThat(nested.getParentPath()).isEqualTo("userA/documents/projects/sub");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"../escape", "child/name", "child\\name", ".", ".."})
+    @DisplayName("폴더 생성 : 경로 성분이 포함된 이름은 거부한다")
+    void createFolder_rejectsPathName(final String folderName) {
+        // When & Then
+        assertThatThrownBy(() ->
+                folderService.createFolder(new FolderRequestDto(docsId, folderName), USERNAME))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getExceptionCode())
+                .isEqualTo(ExceptionCode.INVALID_PATH);
+
+        assertThat(Files.exists(tempRoot.resolve("userA/docs/escape"))).isFalse();
+        assertThat(Files.exists(tempRoot.resolve("userA/docs/name"))).isFalse();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"../documents", "child/name", "child\\name", ".", ".."})
+    @DisplayName("폴더 이름 변경 : 경로 성분이 포함된 이름은 거부한다")
+    void renameFolder_rejectsPathName(final String folderName) {
+        // When & Then
+        assertThatThrownBy(() ->
+                folderService.updateFolder(docsId, new FolderRequestDto(null, folderName), USERNAME))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getExceptionCode())
+                .isEqualTo(ExceptionCode.INVALID_PATH);
+
+        assertThat(Files.exists(tempRoot.resolve("userA/docs"))).isTrue();
+        assertThat(Files.exists(tempRoot.resolve("userA/documents"))).isFalse();
     }
 
     @Test
