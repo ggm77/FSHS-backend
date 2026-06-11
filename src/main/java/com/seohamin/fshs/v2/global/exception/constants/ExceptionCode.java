@@ -32,6 +32,8 @@ public enum ExceptionCode {
 
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
 
+    TRANSCODE_CAPACITY_EXCEEDED(HttpStatus.SERVICE_UNAVAILABLE, "트랜스코딩 처리 용량을 초과했습니다. 잠시 후 다시 시도해주세요."),
+
     FILE_WRITE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 중 오류가 발생했습니다."),
     FILE_READ_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 읽어오는 중 오류가 발생했습니다."),
     FILE_DELETE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 삭제하는 중 오류가 발생했습니다."),

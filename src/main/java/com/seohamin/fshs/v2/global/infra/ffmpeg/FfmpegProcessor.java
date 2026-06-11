@@ -11,6 +11,9 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -19,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -28,6 +32,16 @@ public class FfmpegProcessor {
 
     private final FfmpegConfig ffmpegConfig;
     private final JsonMapper jsonMapper;
+
+    @Value("${ffmpeg.max-concurrent:4}")
+    private int maxConcurrent;
+
+    private Semaphore transcodeSlots;
+
+    @PostConstruct
+    private void init() {
+        transcodeSlots = new Semaphore(maxConcurrent);
+    }
 
     // HLS 세그먼트 한 개의 길이(초)
     private static final int HLS_SEGMENT_SECONDS = 6;
@@ -67,6 +81,10 @@ public class FfmpegProcessor {
             final String filePath,
             final double start
     ) {
+        if (!transcodeSlots.tryAcquire()) {
+            throw new CustomException(ExceptionCode.TRANSCODE_CAPACITY_EXCEEDED);
+        }
+
         final List<String> command = buildVideoStreamCommand(filePath, start);
 
         return outputStream -> {
@@ -95,6 +113,7 @@ public class FfmpegProcessor {
                     log.info(ex.getMessage());
                 }
             } finally {
+                transcodeSlots.release();
                 if (process.isAlive()) {
                     process.destroyForcibly();
                 }
@@ -184,10 +203,16 @@ public class FfmpegProcessor {
             final Path filePath,
             final int segmentIndex
     ) {
-        final double start = (double) segmentIndex * HLS_SEGMENT_SECONDS;
-        final List<String> command = buildHlsSegmentCommand(filePath, start);
-
-        return new InputStreamResource(new ByteArrayInputStream(executeBinary(command, 60)));
+        if (!transcodeSlots.tryAcquire()) {
+            throw new CustomException(ExceptionCode.TRANSCODE_CAPACITY_EXCEEDED);
+        }
+        try {
+            final double start = (double) segmentIndex * HLS_SEGMENT_SECONDS;
+            final List<String> command = buildHlsSegmentCommand(filePath, start);
+            return new InputStreamResource(new ByteArrayInputStream(executeBinary(command, 60)));
+        } finally {
+            transcodeSlots.release();
+        }
     }
 
     List<String> buildHlsSegmentCommand(
