@@ -443,6 +443,10 @@ public class FileService {
         // 6) DB 작업이 끝난 뒤 마지막으로 디스크 이동.
         //    디스크 이동이 실패하면 예외로 트랜잭션이 롤백돼 DB 도 원복된다.
         storageManager.moveFile(filePath, folderPath);
+
+        // 7) 경로/권한 캐시 무효화 — 이동 후 옛 경로가 서빙되는 것을 방지
+        filePathCache.invalidate(file.getId());
+        fileAccessCache.asMap().keySet().removeIf(key -> key.startsWith(file.getId() + ":"));
     }
 
     /**
