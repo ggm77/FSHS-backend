@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.user.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
 import com.seohamin.fshs.v2.domain.user.dto.UserRootFolderRequestDto;
@@ -27,6 +28,7 @@ public class UserService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
     private final FolderRepository folderRepository;
+    private final Cache<String, Boolean> fileAccessCache;
 
     /**
      * 유저 생성하는 메서드
@@ -180,6 +182,10 @@ public class UserService implements UserDetailsService {
 
         // 5) 루트 폴더 설정
         user.updateRootFolder(folder);
+
+        // 6) 해당 유저의 권한 캐시 무효화 — 루트 재지정 즉시 새 권한 적용
+        final String username = user.getUsername();
+        fileAccessCache.asMap().keySet().removeIf(key -> key.endsWith(":" + username));
     }
 
     /**
