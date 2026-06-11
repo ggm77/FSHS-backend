@@ -13,10 +13,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import static org.mockito.BDDMockito.*;
@@ -24,6 +28,11 @@ import static org.assertj.core.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
+
+    private static final Collection<? extends GrantedAuthority> ADMIN_AUTHORITIES =
+            List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    private static final Collection<? extends GrantedAuthority> USER_AUTHORITIES =
+            List.of(new SimpleGrantedAuthority("ROLE_USER"));
 
     @Mock
     private UserRepository userRepository;
@@ -45,7 +54,7 @@ public class UserServiceTest {
         given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         // When
-        final UserResponseDto response = userService.createUser(dto);
+        final UserResponseDto response = userService.createUser(dto, ADMIN_AUTHORITIES);
 
         // Then
         assertThat(response).isNotNull();
@@ -59,7 +68,7 @@ public class UserServiceTest {
         final UserRequestDto userRequestDto = new UserRequestDto("", "password123");
 
         // When & Then
-        assertThatThrownBy(() -> userService.createUser(userRequestDto))
+        assertThatThrownBy(() -> userService.createUser(userRequestDto, ADMIN_AUTHORITIES))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_USERNAME);
     }
@@ -71,7 +80,7 @@ public class UserServiceTest {
         final UserRequestDto userRequestDto = new UserRequestDto(null, "password123");
 
         // When & Then
-        assertThatThrownBy(() -> userService.createUser(userRequestDto))
+        assertThatThrownBy(() -> userService.createUser(userRequestDto, ADMIN_AUTHORITIES))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_USERNAME);
     }
@@ -83,7 +92,7 @@ public class UserServiceTest {
         final UserRequestDto userRequestDto = new UserRequestDto("test", "1");
 
         // When & Then
-        assertThatThrownBy(() -> userService.createUser(userRequestDto))
+        assertThatThrownBy(() -> userService.createUser(userRequestDto, ADMIN_AUTHORITIES))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.TOO_SHORT_PASSWORD);
     }
@@ -96,9 +105,21 @@ public class UserServiceTest {
         final UserRequestDto userRequestDto = new UserRequestDto("test", "test");
 
         // When & Then
-        assertThatThrownBy(() -> userService.createUser(userRequestDto))
+        assertThatThrownBy(() -> userService.createUser(userRequestDto, ADMIN_AUTHORITIES))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.USERNAME_DUPLICATE);
+    }
+
+    @Test
+    @DisplayName("유저 등록 : 어드민이 아니면 등록 불가")
+    void createUser_AccessDenied() {
+        // Given
+        final UserRequestDto userRequestDto = new UserRequestDto("test", "password123");
+
+        // When & Then
+        assertThatThrownBy(() -> userService.createUser(userRequestDto, USER_AUTHORITIES))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.ACCESS_DENIED);
     }
 
     @Test
@@ -110,7 +131,7 @@ public class UserServiceTest {
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
 
         // When
-        final UserResponseDto userResponseDto = userService.getUser(userId);
+        final UserResponseDto userResponseDto = userService.getUser(userId, "oldName");
 
         // Then
         assertThat(userResponseDto).isNotNull();
@@ -126,9 +147,23 @@ public class UserServiceTest {
         given(userRepository.findById(userId)).willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.getUser(userId))
+        assertThatThrownBy(() -> userService.getUser(userId, "oldName"))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.USER_NOT_EXIST);
+    }
+
+    @Test
+    @DisplayName("유저 조회 : 다른 유저 조회 불가")
+    void findUserById_AccessDenied() {
+        // Given
+        final Long userId = 1L;
+        final User existingUser = User.builder().username("oldName").password("oldPass").build();
+        given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.getUser(userId, "otherName"))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.ACCESS_DENIED);
     }
 
     @Test
@@ -141,7 +176,7 @@ public class UserServiceTest {
         given(userRepository.findById(userId)).willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> userService.updateUser(userId, updateDto))
+        assertThatThrownBy(() -> userService.updateUser(userId, updateDto, "oldName"))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.USER_NOT_EXIST);
     }
@@ -158,7 +193,7 @@ public class UserServiceTest {
         given(passwordEncoder.encode("newPassword")).willReturn("hashedNewPassword");
 
         // When
-        userService.updateUser(userId, updateDto);
+        userService.updateUser(userId, updateDto, "oldName");
 
         // Then
         assertThat(existingUser.getPassword()).isEqualTo("hashedNewPassword");
@@ -176,7 +211,7 @@ public class UserServiceTest {
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
 
         // When
-        userService.updateUser(userId, updateDto);
+        userService.updateUser(userId, updateDto, "oldName");
 
         // Then
         assertThat(existingUser.getPassword()).isEqualTo("oldPass");
@@ -194,11 +229,27 @@ public class UserServiceTest {
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
 
         // When
-        userService.updateUser(userId, updateDto);
+        userService.updateUser(userId, updateDto, "oldName");
 
         // Then
         assertThat(existingUser.getPassword()).isEqualTo("oldPass");
         assertThat(existingUser.getUsername()).isEqualTo("oldName");
+    }
+
+    @Test
+    @DisplayName("유저 수정 : 다른 유저 수정 불가")
+    void updateUser_AccessDenied() {
+        // Given
+        final Long userId = 1L;
+        final User existingUser = User.builder().username("oldName").password("oldPass").build();
+        final UserRequestDto updateDto = new UserRequestDto("newName", "");
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser(userId, updateDto, "otherName"))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.ACCESS_DENIED);
     }
 
     @Test
@@ -209,7 +260,7 @@ public class UserServiceTest {
         given(userRepository.existsById(userId)).willReturn(Boolean.TRUE);
 
         // When
-        userService.deleteUser(userId);
+        userService.deleteUser(userId, ADMIN_AUTHORITIES);
 
         // Then
         then(userRepository).should().deleteById(userId);
@@ -223,7 +274,7 @@ public class UserServiceTest {
         given(userRepository.existsById(userId)).willReturn(Boolean.FALSE);
 
         // When & Then
-        assertThatThrownBy(() -> userService.deleteUser(userId))
+        assertThatThrownBy(() -> userService.deleteUser(userId, ADMIN_AUTHORITIES))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.USER_NOT_EXIST);
     }

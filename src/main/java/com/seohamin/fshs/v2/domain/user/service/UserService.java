@@ -37,7 +37,10 @@ public class UserService implements UserDetailsService {
      * @return 저장된 유저 정보 담긴 DTO
      */
     @Transactional
-    public UserResponseDto createUser(final UserRequestDto userRequestDto) {
+    public UserResponseDto createUser(
+            final UserRequestDto userRequestDto,
+            final Collection<? extends GrantedAuthority> authorities
+    ) {
 
         // 1) null 및 유효성 검사
         final String username = userRequestDto.username();
@@ -50,21 +53,24 @@ public class UserService implements UserDetailsService {
             throw new CustomException(ExceptionCode.TOO_SHORT_PASSWORD);
         }
 
-        // 2) 유저명 겹치는지 확인
+        // 2) 어드민인지 확인
+        validateAdmin(authorities);
+
+        // 3) 유저명 겹치는지 확인
         if (userRepository.existsByUsername(username)) {
             throw new CustomException(ExceptionCode.USERNAME_DUPLICATE);
         }
 
-        // 3) 비밀번호 해싱
+        // 4) 비밀번호 해싱
         final String password = passwordEncoder.encode(rawPassword);
 
-        // 4) 엔티티 만들기
+        // 5) 엔티티 만들기
         final User user = User.builder()
                 .username(username)
                 .password(password)
                 .build();
 
-        // 5) DB에 저장
+        // 6) DB에 저장
         final User savedUser = userRepository.save(user);
 
         return UserResponseDto.of(savedUser);
@@ -74,13 +80,21 @@ public class UserService implements UserDetailsService {
      * 유저 조회하는 메서드
      * @return 조회한 유저 DTO
      */
-    public UserResponseDto getUser(final Long userId) {
+    public UserResponseDto getUser(
+            final Long userId,
+            final String sessionUsername
+    ) {
 
         // 1) 유저 조회
         final User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
 
-        // 2) DTO에 담아 리턴
+        // 2) 다른 유저 접근 제한
+        if (!user.getUsername().equals(sessionUsername)) {
+            throw new CustomException(ExceptionCode.ACCESS_DENIED);
+        }
+
+        // 3) DTO에 담아 리턴
         return UserResponseDto.of(user);
     }
 
@@ -92,7 +106,8 @@ public class UserService implements UserDetailsService {
     @Transactional
     public UserResponseDto updateUser(
             final Long userId,
-            final UserRequestDto userRequestDto
+            final UserRequestDto userRequestDto,
+            final String sessionUsername
     ) {
 
         // 1) 유저 이름 변수에 저장
@@ -117,17 +132,22 @@ public class UserService implements UserDetailsService {
         final User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
 
-        // 4) 유저명 비어있지 않다면 변경
+        // 4) 자기 계정인지 확인
+        if (!user.getUsername().equals(sessionUsername)) {
+            throw new CustomException(ExceptionCode.ACCESS_DENIED);
+        }
+
+        // 5) 유저명 비어있지 않다면 변경
         if(username != null && !username.isEmpty()) {
             user.updateUsername(username);
         }
 
-        // 5) 비밀번호 비어있지 않다면 변경
+        // 6) 비밀번호 비어있지 않다면 변경
         if(password != null) {
             user.updatePassword(password);
         }
 
-        // 6) DTO에 담아서 리턴
+        // 7) DTO에 담아서 리턴
         return UserResponseDto.of(user);
     }
 
@@ -136,14 +156,20 @@ public class UserService implements UserDetailsService {
      * @param userId 삭제할 유저 ID
      */
     @Transactional
-    public void deleteUser(final Long userId) {
+    public void deleteUser(
+            final Long userId,
+            final Collection<? extends GrantedAuthority> authorities
+    ) {
 
-        // 1) 유저 존재 확인
+        // 1) 어드민인지 확인
+        validateAdmin(authorities);
+
+        // 2) 유저 존재 확인
         if (!userRepository.existsById(userId)) {
             throw new CustomException(ExceptionCode.USER_NOT_EXIST);
         }
 
-        // 2) 삭제
+        // 3) 삭제
         userRepository.deleteById(userId);
     }
 
@@ -166,11 +192,7 @@ public class UserService implements UserDetailsService {
         }
 
         // 2) 어드민 권한 확인
-        boolean isAdmin = authorities.stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin) {
-            throw new CustomException(ExceptionCode.ACCESS_DENIED);
-        }
+        validateAdmin(authorities);
 
         // 3) 유저 조회
         final User user = userRepository.findById(userId)
@@ -206,5 +228,18 @@ public class UserService implements UserDetailsService {
                 .password(user.getPassword())
                 .roles(user.getUserRole().name())
                 .build();
+    }
+
+    /**
+     * 권환 확인해서 어드민인지 판단하는 메서드
+     * @param authorities 유저 권한
+     */
+    private void validateAdmin(final Collection<? extends GrantedAuthority> authorities) {
+        // 어드민 권한 확인
+        boolean isAdmin = authorities.stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            throw new CustomException(ExceptionCode.ACCESS_DENIED);
+        }
     }
 }

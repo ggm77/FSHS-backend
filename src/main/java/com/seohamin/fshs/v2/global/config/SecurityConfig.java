@@ -40,7 +40,7 @@ public class SecurityConfig {
             httpSecurity.csrf(csrf -> csrf
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                     .csrfTokenRequestHandler(requestHandler)
-                    .ignoringRequestMatchers("/api/v2/auth/login", "/api/v2/auth/signup")
+                    .ignoringRequestMatchers("/api/v2/auth/login")
             );
             httpSecurity.addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
         } else {
