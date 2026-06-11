@@ -138,15 +138,13 @@ public class FfmpegProcessor {
 
     /**
      * 영상 길이를 기반으로 HLS VOD 재생목록(.m3u8)을 즉시 생성하는 메서드
-     * 전체 트랜스코딩 없이 ffprobe로 길이만 측정해 고정 길이 세그먼트로 분할한다
-     * @param filePath 파일 절대 경로
+     * DB에서 전달받은 재생 길이로 고정 길이 세그먼트 재생목록을 생성한다
+     * @param durationSeconds 파일 재생 길이(초)
      * @return 재생목록이 담긴 InputStreamResource
      */
-    public InputStreamResource getHlsPlaylist(final Path filePath) {
-        final double duration = parseDurationSeconds(analyze(filePath));
-
-        final int fullSegments = (int) (duration / HLS_SEGMENT_SECONDS);
-        final double remainder = duration - ((double) fullSegments * HLS_SEGMENT_SECONDS);
+    public InputStreamResource getHlsPlaylist(final double durationSeconds) {
+        final int fullSegments = (int) (durationSeconds / HLS_SEGMENT_SECONDS);
+        final double remainder = durationSeconds - ((double) fullSegments * HLS_SEGMENT_SECONDS);
 
         final StringBuilder sb = new StringBuilder();
         sb.append("#EXTM3U\n");

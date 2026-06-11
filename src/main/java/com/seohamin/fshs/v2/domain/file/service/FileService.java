@@ -289,9 +289,11 @@ public class FileService {
         // 4) 절대 경로로 변환
         final Path absPath = storageManager.resolvePath(path, false);
 
-        // 5) 재생목록(.m3u8) 요청이면 즉시 생성해 반환
+        // 5) 재생목록(.m3u8) 요청이면 DB duration으로 즉시 생성해 반환 (ffprobe 불필요)
         if (hlsFile.endsWith(".m3u8")) {
-            return ffmpegProcessor.getHlsPlaylist(absPath);
+            final File file = fileRepository.findById(fileId)
+                    .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+            return ffmpegProcessor.getHlsPlaylist(file.getDuration());
         }
 
         // 6) 세그먼트(.ts) 요청이면 인덱스를 파싱해 해당 구간만 실시간 트랜스코딩
