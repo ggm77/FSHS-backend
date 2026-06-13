@@ -4,6 +4,7 @@ import com.seohamin.fshs.v2.domain.file.dto.*;
 import com.seohamin.fshs.v2.domain.file.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,6 +52,21 @@ public class FileController {
     ) {
 
         return ResponseEntity.ok().body(fileService.getFileDetails(fileId, userDetails.getUsername()));
+    }
+
+    // 파일 썸네일 조회 API
+    @GetMapping("/files/{fileUuid}/thumbnail")
+    public ResponseEntity<Resource> getFileThumbnail(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable final String fileUuid
+    ) {
+        final FileDownloadResponseDto dto = fileService.getFileThumbnail(fileUuid, userDetails.getUsername());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(dto.mimeType()))
+                .contentLength(dto.size())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + dto.name() + "\"")
+                .body(dto.resource());
     }
 
     // 파일 다운로드 및 직접 스트리밍 API

@@ -15,6 +15,7 @@ import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.TaskRejectedException;
@@ -24,6 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.UUID;
@@ -44,6 +47,7 @@ public class FileService {
     private final Cache<String, Status> fileStatusCache;
     private final Cache<String, Boolean> fileAccessCache;
     private final FfmpegProcessor ffmpegProcessor;
+    private final FileThumbnailProcessor fileThumbnailProcessor;
 
     // HLS 세그먼트 파일명 패턴 (예: segment12.ts) — 자릿수를 제한해 int 오버플로 방지
     private static final Pattern HLS_SEGMENT_PATTERN = Pattern.compile("segment(\\d{1,9})\\.ts");
@@ -209,6 +213,50 @@ public class FileService {
                 file.getSize(),
                 resource
         );
+    }
+
+    /**
+     * 파일 UUID로 썸네일을 조회하는 메서드
+     * @param fileUuid 썸네일을 조회할 파일 UUID
+     * @param username 요청 유저명
+     * @return 썸네일 파일 정보가 담긴 DTO
+     */
+    public FileDownloadResponseDto getFileThumbnail(
+            final String fileUuid,
+            final String username
+    ) {
+        // 1) null 검사
+        if (fileUuid == null || fileUuid.isBlank() || username == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 파일 및 유저 조회
+        final File file = fileRepository.findByUuid(fileUuid)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 3) 접근 권한 확인
+        if (!hasPermission(user, file)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 4) 썸네일 파일 조회
+        final Path thumbnailPath = fileThumbnailProcessor.resolveThumbnailPath(fileUuid);
+        if (Files.notExists(thumbnailPath) || !Files.isRegularFile(thumbnailPath)) {
+            throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
+        }
+
+        try {
+            return new FileDownloadResponseDto(
+                    fileUuid + ".jpg",
+                    "image/jpeg",
+                    Files.size(thumbnailPath),
+                    new FileSystemResource(thumbnailPath)
+            );
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FILE_READ_ERROR, ex);
+        }
     }
 
     /**
