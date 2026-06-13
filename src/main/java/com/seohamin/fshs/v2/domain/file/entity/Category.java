@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 public enum Category {
 
     IMAGE("이미지", List.of("jpg", "jpeg", "png", "gif", "webp", "heic")),
-    VIDEO("동영상", List.of("mp4", "mkv", "mov", "avi", "wmv")),
+    VIDEO("동영상", List.of("mp4", "mkv", "mov", "avi", "wmv", "webm")),
     AUDIO("오디오", List.of("mp3", "wav", "flac", "ogg", "aac", "m4a")),
     DOCUMENT("문서", List.of("pdf", "txt", "doc", "docx", "ppt", "pptx", "xls", "xlsx")),
     ARCHIVE("압축파일", List.of("zip", "7z", "rar", "tar", "gz")),

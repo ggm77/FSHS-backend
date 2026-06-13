@@ -8,6 +8,7 @@ import java.util.List;
 
 public record FileResponseDto (
         Long id,
+        String uuid,
         Long ownerId,
         String name,
         String baseName,
@@ -38,6 +39,7 @@ public record FileResponseDto (
     public static FileResponseDto of(final File file) {
         return new FileResponseDto(
                 file.getId(),
+                file.getUuid(),
                 file.getOwnerId(),
                 file.getName(),
                 file.getBaseName(),

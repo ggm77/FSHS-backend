@@ -45,6 +45,7 @@ public class FfmpegProcessor {
 
     // HLS 세그먼트 한 개의 길이(초)
     private static final int HLS_SEGMENT_SECONDS = 6;
+    private static final int THUMBNAIL_TIMEOUT_SECONDS = 60;
 
     private static final String MAX_OUTPUT_RESOLUTION_FILTER =
             "scale=w=1920:h=1080:force_original_aspect_ratio=decrease:force_divisible_by=2";
@@ -249,6 +250,53 @@ public class FfmpegProcessor {
     }
 
     /**
+     * FFmpeg가 읽을 수 있는 파일의 첫 프레임을 JPEG 썸네일로 생성하는 메서드
+     * @param filePath 원본 파일 절대 경로
+     * @param targetPath 생성할 썸네일 절대 경로
+     * @param thumbnailMaxSize 썸네일 최대 가로/세로 크기
+     */
+    public void createThumbnail(
+            final Path filePath,
+            final Path targetPath,
+            final int thumbnailMaxSize
+    ) {
+        if (filePath == null || targetPath == null || thumbnailMaxSize <= 0) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        executeAndRequireSuccess(
+                buildThumbnailCommand(filePath, targetPath, thumbnailMaxSize),
+                THUMBNAIL_TIMEOUT_SECONDS
+        );
+    }
+
+    List<String> buildThumbnailCommand(
+            final Path filePath,
+            final Path targetPath,
+            final int thumbnailMaxSize
+    ) {
+        final List<String> command = new java.util.ArrayList<>();
+        command.add(ffmpegConfig.getFfmpeg());
+        command.add("-loglevel");
+        command.add("error");
+        command.add("-y");
+        command.addAll(getHwAccelOptions());
+        command.add("-i");
+        command.add(filePath.toString());
+        command.add("-map");
+        command.add("0:v:0");
+        command.add("-frames:v");
+        command.add("1");
+        command.add("-vf");
+        command.add("scale=w=" + thumbnailMaxSize + ":h=" + thumbnailMaxSize
+                + ":force_original_aspect_ratio=decrease");
+        command.add("-q:v");
+        command.add("3");
+        command.add(targetPath.toString());
+        return command;
+    }
+
+    /**
      * 분석 결과에서 영상 길이(초)를 파싱하는 메서드
      * @param analysis ffprobe 분석 결과
      * @return 영상 길이 (초)
@@ -410,6 +458,45 @@ public class FfmpegProcessor {
 
             errorReader.join(1000);
             return data;
+        } catch (final CustomException ex) {
+            throw ex;
+        } catch (final InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new CustomException(ExceptionCode.PROCESS_INTERRUPTED);
+        } catch (final Exception ex) {
+            log.error("[FFmpeg 에러 발생] {}", ex.getMessage());
+            throw new CustomException(ExceptionCode.FFMPEG_ERROR, ex);
+        }
+    }
+
+    private void executeAndRequireSuccess(
+            final List<String> command,
+            final int timeoutSecond
+    ) {
+        final ProcessBuilder pb = new ProcessBuilder(command);
+        pb.redirectErrorStream(true);
+
+        try {
+            final Process process = pb.start();
+            final StringBuilder output = new StringBuilder();
+            final Thread readerThread = Thread.ofPlatform().start(() -> {
+                try (final BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+                    reader.lines().forEach(line -> output.append(line).append("\n"));
+                } catch (final java.io.IOException ignored) {}
+            });
+
+            if (!process.waitFor(timeoutSecond, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                log.error("[FFmpeg 타임아웃] - 명령어: {}", command);
+                throw new CustomException(ExceptionCode.COMMAND_TIMEOUT);
+            }
+
+            readerThread.join(1000);
+            if (process.exitValue() != 0) {
+                log.error("[FFmpeg 에러 발생] - exitCode={}, output={}", process.exitValue(), output);
+                throw new CustomException(ExceptionCode.FFMPEG_ERROR);
+            }
         } catch (final CustomException ex) {
             throw ex;
         } catch (final InterruptedException ex) {
