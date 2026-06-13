@@ -45,7 +45,7 @@ public class FfmpegProcessor {
 
     // HLS 세그먼트 한 개의 길이(초)
     private static final int HLS_SEGMENT_SECONDS = 6;
-    private static final int VIDEO_THUMBNAIL_TIMEOUT_SECONDS = 60;
+    private static final int THUMBNAIL_TIMEOUT_SECONDS = 60;
 
     private static final String MAX_OUTPUT_RESOLUTION_FILTER =
             "scale=w=1920:h=1080:force_original_aspect_ratio=decrease:force_divisible_by=2";
@@ -250,12 +250,12 @@ public class FfmpegProcessor {
     }
 
     /**
-     * 동영상 첫 프레임을 JPEG 썸네일로 생성하는 메서드
-     * @param filePath 원본 동영상 절대 경로
+     * FFmpeg가 읽을 수 있는 파일의 첫 프레임을 JPEG 썸네일로 생성하는 메서드
+     * @param filePath 원본 파일 절대 경로
      * @param targetPath 생성할 썸네일 절대 경로
      * @param thumbnailMaxSize 썸네일 최대 가로/세로 크기
      */
-    public void createVideoThumbnail(
+    public void createThumbnail(
             final Path filePath,
             final Path targetPath,
             final int thumbnailMaxSize
@@ -265,12 +265,12 @@ public class FfmpegProcessor {
         }
 
         executeAndRequireSuccess(
-                buildVideoThumbnailCommand(filePath, targetPath, thumbnailMaxSize),
-                VIDEO_THUMBNAIL_TIMEOUT_SECONDS
+                buildThumbnailCommand(filePath, targetPath, thumbnailMaxSize),
+                THUMBNAIL_TIMEOUT_SECONDS
         );
     }
 
-    List<String> buildVideoThumbnailCommand(
+    List<String> buildThumbnailCommand(
             final Path filePath,
             final Path targetPath,
             final int thumbnailMaxSize

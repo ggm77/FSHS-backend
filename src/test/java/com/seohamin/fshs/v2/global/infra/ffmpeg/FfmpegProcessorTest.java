@@ -52,9 +52,9 @@ class FfmpegProcessorTest {
     }
 
     @Test
-    @DisplayName("동영상 썸네일 명령은 첫 비디오 프레임을 지정 크기 이하 JPEG로 생성한다")
-    void buildVideoThumbnailCommand_extractsFirstVideoFrame() {
-        final List<String> command = ffmpegProcessor.buildVideoThumbnailCommand(
+    @DisplayName("썸네일 명령은 첫 프레임을 지정 크기 이하 JPEG로 생성한다")
+    void buildThumbnailCommand_extractsFirstFrame() {
+        final List<String> command = ffmpegProcessor.buildThumbnailCommand(
                 Path.of("/tmp/input.mkv"),
                 Path.of("/tmp/thumb.jpg"),
                 480

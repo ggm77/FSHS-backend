@@ -5,6 +5,7 @@ import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
+import com.seohamin.fshs.v2.global.util.storage.PathNameUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
@@ -16,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,6 +27,7 @@ import java.util.UUID;
 public class FileThumbnailProcessor {
 
     private static final Set<Category> SUPPORTED_CATEGORIES = EnumSet.of(Category.IMAGE, Category.VIDEO);
+    private static final Set<String> FFMPEG_IMAGE_EXTENSIONS = Set.of("webp", "heic");
     private static final int THUMBNAIL_MAX_SIZE = 480;
     private static final String THUMBNAIL_EXTENSION = ".jpg";
 
@@ -69,10 +72,11 @@ public class FileThumbnailProcessor {
             }
 
             Files.createDirectories(targetPath.getParent());
-            if (category == Category.IMAGE) {
+            final String extension = extractExtension(relativePath);
+            if (category == Category.IMAGE && !requiresFfmpegForImage(extension)) {
                 createImageThumbnail(fileUuid, sourcePath, targetPath);
-            } else if (category == Category.VIDEO) {
-                createVideoThumbnail(fileUuid, sourcePath, targetPath);
+            } else {
+                createFfmpegThumbnail(fileUuid, sourcePath, targetPath);
             }
             log.info("[썸네일 생성 완료]: uuid={}", fileUuid);
         } catch (final Exception ex) {
@@ -128,14 +132,23 @@ public class FileThumbnailProcessor {
         }
     }
 
-    private void createVideoThumbnail(
+    private boolean requiresFfmpegForImage(final String extension) {
+        return FFMPEG_IMAGE_EXTENSIONS.contains(extension);
+    }
+
+    private String extractExtension(final String relativePath) {
+        return PathNameUtil.extractExtension(PathNameUtil.extractFileName(relativePath))
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private void createFfmpegThumbnail(
             final String fileUuid,
             final Path sourcePath,
             final Path targetPath
     ) {
         final Path tempPath = resolveTempPath(fileUuid, targetPath);
         try {
-            ffmpegProcessor.createVideoThumbnail(sourcePath, tempPath, THUMBNAIL_MAX_SIZE);
+            ffmpegProcessor.createThumbnail(sourcePath, tempPath, THUMBNAIL_MAX_SIZE);
             Files.move(tempPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
         } catch (final CustomException ex) {
             throw ex;

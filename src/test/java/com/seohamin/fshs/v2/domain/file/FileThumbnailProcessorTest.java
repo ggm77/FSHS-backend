@@ -4,6 +4,7 @@ import com.seohamin.fshs.v2.domain.file.entity.Category;
 import com.seohamin.fshs.v2.domain.file.service.FileThumbnailProcessor;
 import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
+import com.seohamin.fshs.v2.global.util.MimeTypeUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,13 +77,69 @@ class FileThumbnailProcessorTest {
             final Path targetPath = invocation.getArgument(1);
             Files.writeString(targetPath, "thumbnail");
             return null;
-        }).given(ffmpegProcessor).createVideoThumbnail(eq(sourcePath), any(Path.class), eq(480));
+        }).given(ffmpegProcessor).createThumbnail(eq(sourcePath), any(Path.class), eq(480));
 
         fileThumbnailProcessor.process(fileUuid, "user/source.mp4", Category.VIDEO);
 
         assertThat(Files.exists(tempDir.resolve("thumbnails").resolve(fileUuid + ".jpg"))).isTrue();
         then(ffmpegProcessor).should()
-                .createVideoThumbnail(eq(sourcePath), any(Path.class), eq(480));
+                .createThumbnail(eq(sourcePath), any(Path.class), eq(480));
+    }
+
+    @Test
+    @DisplayName("WebP 이미지는 FfmpegProcessor로 위임한다")
+    void process_webpImage_delegatesToFfmpegProcessor() throws Exception {
+        final String fileUuid = "webp-uuid";
+        final Path sourcePath = tempDir.resolve("source.webp");
+        Files.writeString(sourcePath, "webp");
+        given(storageManager.resolvePath("user/source.webp", false)).willReturn(sourcePath);
+        willAnswer(invocation -> {
+            final Path targetPath = invocation.getArgument(1);
+            Files.writeString(targetPath, "thumbnail");
+            return null;
+        }).given(ffmpegProcessor).createThumbnail(eq(sourcePath), any(Path.class), eq(480));
+
+        fileThumbnailProcessor.process(fileUuid, "user/source.webp", Category.IMAGE);
+
+        assertThat(Files.exists(tempDir.resolve("thumbnails").resolve(fileUuid + ".jpg"))).isTrue();
+        then(ffmpegProcessor).should()
+                .createThumbnail(eq(sourcePath), any(Path.class), eq(480));
+    }
+
+    @Test
+    @DisplayName("HEIC 이미지는 FfmpegProcessor로 위임한다")
+    void process_heicImage_delegatesToFfmpegProcessor() throws Exception {
+        final String fileUuid = "heic-uuid";
+        final Path sourcePath = tempDir.resolve("source.heic");
+        Files.writeString(sourcePath, "heic");
+        given(storageManager.resolvePath("user/source.heic", false)).willReturn(sourcePath);
+        willAnswer(invocation -> {
+            final Path targetPath = invocation.getArgument(1);
+            Files.writeString(targetPath, "thumbnail");
+            return null;
+        }).given(ffmpegProcessor).createThumbnail(eq(sourcePath), any(Path.class), eq(480));
+
+        fileThumbnailProcessor.process(fileUuid, "user/source.heic", Category.IMAGE);
+
+        assertThat(Files.exists(tempDir.resolve("thumbnails").resolve(fileUuid + ".jpg"))).isTrue();
+        then(ffmpegProcessor).should()
+                .createThumbnail(eq(sourcePath), any(Path.class), eq(480));
+    }
+
+    @Test
+    @DisplayName("WebM은 영상 파일로 분류하고 video/webm MIME을 사용한다")
+    void webm_isVideoMimeType() {
+        assertThat(Category.EXTENSION_MAP.get("webm")).isEqualTo(Category.VIDEO);
+        assertThat(MimeTypeUtil.getMimeType("webm")).isEqualTo("video/webm");
+    }
+
+    @Test
+    @DisplayName("WebP와 HEIC는 이미지 MIME을 사용한다")
+    void webpAndHeic_areImageMimeTypes() {
+        assertThat(Category.EXTENSION_MAP.get("webp")).isEqualTo(Category.IMAGE);
+        assertThat(Category.EXTENSION_MAP.get("heic")).isEqualTo(Category.IMAGE);
+        assertThat(MimeTypeUtil.getMimeType("webp")).isEqualTo("image/webp");
+        assertThat(MimeTypeUtil.getMimeType("heic")).isEqualTo("image/heic");
     }
 
     private void writeImage(final Path path) throws Exception {
