@@ -17,8 +17,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 
@@ -101,33 +99,14 @@ public class FileUploadProcessor {
             // 6) 캐시 상태 완료로 변경
             fileStatusCache.put(fileUuid, Status.COMPLETE);
         } catch (final CustomException ex) {
-            cleanupTempFile(tempFilePath);
+            storageManager.deleteTemporaryFile(tempFilePath);
             fileStatusCache.put(fileUuid, Status.ERROR);
             log.error("[파일 처리 중 에러 발생]: {}, {}, {}",
                     fileUuid, ex.getExceptionCode(), ex.getExceptionCode().getMessage());
         } catch (final Exception ex) {
-            cleanupTempFile(tempFilePath);
+            storageManager.deleteTemporaryFile(tempFilePath);
             fileStatusCache.put(fileUuid, Status.ERROR);
             log.error("[파일 처리 중 에러 발생]: {}, {}", fileUuid, ex.getMessage(), ex);
-        }
-    }
-
-    private void cleanupTempFile(final Path tempFilePath) {
-        try {
-            Files.deleteIfExists(tempFilePath);
-        } catch (final IOException ex) {
-            log.warn("[임시 파일 정리 실패]: {}", tempFilePath, ex);
-        }
-        cleanupTempParent(tempFilePath);
-    }
-
-    private void cleanupTempParent(final Path tempFilePath) {
-        final Path parent = tempFilePath.getParent();
-        if (parent == null) return;
-        try {
-            Files.deleteIfExists(parent);
-        } catch (final IOException ex) {
-            log.warn("[임시 디렉토리 정리 실패]: {}", parent, ex);
         }
     }
 }

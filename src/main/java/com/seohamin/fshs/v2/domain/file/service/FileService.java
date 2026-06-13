@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,7 +90,14 @@ public class FileService {
         fileStatusCache.put(fileUuid, Status.PROCESSING);
 
         // 7) 비동기 처리 위임
-        fileUploadProcessor.process(fileUuid, tempFilePath, folderId, lastModified);
+        try {
+            fileUploadProcessor.process(fileUuid, tempFilePath, folderId, lastModified);
+        } catch (final TaskRejectedException ex) {
+            storageManager.deleteTemporaryFile(tempFilePath);
+            fileStatusCache.put(fileUuid, Status.ERROR);
+            log.warn("[파일 업로드 처리 큐 초과]: {}", fileUuid, ex);
+            throw new CustomException(ExceptionCode.UPLOAD_CAPACITY_EXCEEDED, ex);
+        }
 
         return new FileUploadResponseDto(fileUuid);
     }

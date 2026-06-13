@@ -101,6 +101,24 @@ public class StorageManager {
     }
 
     /**
+     * 임시 파일과 업로드별 UUID 서브디렉토리를 정리하는 메서드
+     * @param rawTempPath 정리할 임시 파일 경로
+     */
+    public void deleteTemporaryFile(final Path rawTempPath) {
+        if (rawTempPath == null) {
+            throw new CustomException(ExceptionCode.INVALID_FILE);
+        }
+
+        final Path tempFilePath = toAbsolutePath(tempPath, rawTempPath);
+        try {
+            Files.deleteIfExists(tempFilePath);
+        } catch (final IOException ex) {
+            log.warn("[임시 파일 정리 실패]: {}", tempFilePath, ex);
+        }
+        cleanupTempParent(rawTempPath);
+    }
+
+    /**
      * 파일에서 상세 속성을 가져오는 메서드
      * @param path 상세 속성 가져올 파일 절대 경로
      * @return 상세 속성 담긴 DTO
