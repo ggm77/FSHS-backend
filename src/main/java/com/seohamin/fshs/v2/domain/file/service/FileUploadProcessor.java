@@ -13,6 +13,7 @@ import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ public class FileUploadProcessor {
     private final StorageManager storageManager;
     private final FileAnalyzer fileAnalyzer;
     private final Cache<String, Status> fileStatusCache;
+    private final FileThumbnailProcessor fileThumbnailProcessor;
 
     /**
      * 임시 폴더에 저장된 파일을 분석/이동/DB 저장까지 비동기로 처리하는 메서드
@@ -96,7 +98,14 @@ public class FileUploadProcessor {
             fileRepository.save(file);
             log.info("[파일 정보 DB에 저장 완료]: {}", fileUuid);
 
-            // 6) 캐시 상태 완료로 변경
+            // 6) 썸네일 생성은 파일 처리 성공 여부와 분리해서 비동기로 요청
+            try {
+                fileThumbnailProcessor.process(fileUuid, savedPath.toString(), analysisResult.category());
+            } catch (final TaskRejectedException ex) {
+                log.warn("[썸네일 생성 큐 초과]: {}", fileUuid, ex);
+            }
+
+            // 7) 캐시 상태 완료로 변경
             fileStatusCache.put(fileUuid, Status.COMPLETE);
         } catch (final CustomException ex) {
             storageManager.deleteTemporaryFile(tempFilePath);
