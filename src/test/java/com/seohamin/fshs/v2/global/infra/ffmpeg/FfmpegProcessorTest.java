@@ -50,4 +50,21 @@ class FfmpegProcessorTest {
         assertThat(command).containsSubsequence("-f", "mpegts");
         assertThat(command).doesNotContain("-hwaccel_output_format");
     }
+
+    @Test
+    @DisplayName("동영상 썸네일 명령은 첫 비디오 프레임을 지정 크기 이하 JPEG로 생성한다")
+    void buildVideoThumbnailCommand_extractsFirstVideoFrame() {
+        final List<String> command = ffmpegProcessor.buildVideoThumbnailCommand(
+                Path.of("/tmp/input.mkv"),
+                Path.of("/tmp/thumb.jpg"),
+                480
+        );
+
+        assertThat(command).containsSubsequence("-map", "0:v:0");
+        assertThat(command).containsSubsequence("-frames:v", "1");
+        assertThat(command).containsSubsequence("-vf",
+                "scale=w=480:h=480:force_original_aspect_ratio=decrease");
+        assertThat(command).containsSubsequence("-q:v", "3", "/tmp/thumb.jpg");
+        assertThat(command).doesNotContain("-hwaccel_output_format");
+    }
 }

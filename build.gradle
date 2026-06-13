@@ -61,6 +61,9 @@ dependencies {
 	//metadata-extractor
 	implementation 'com.drewnoakes:metadata-extractor:2.19.0'
 
+	//Thumbnailator
+	implementation 'net.coobird:thumbnailator:0.4.20'
+
 	//Caffeine
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 
