@@ -67,9 +67,6 @@ public class FileUploadProcessor {
             final Path savedPath = storageManager.savePermanently(tempFilePath, parentFolderPath, lastModified);
             log.info("[파일 저장 완료]: {}", fileUuid);
 
-            // 파일 이동 완료 후 빈 UUID 서브디렉토리 정리
-            cleanupTempParent(tempFilePath);
-
             // 4) 파일 엔티티 생성
             final File file = File.builder()
                     .parentFolder(parentFolder)

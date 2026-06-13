@@ -72,10 +72,7 @@ public class FolderService {
         }
 
         // 5) 폴더명 정규화 및 경로 탈출 방지
-        final String name = PathNameUtil.normalize(PathNameUtil.extractFileName(rawName));
-        if (name.isBlank() || name.equals(".") || name.equals("..")) {
-            throw new CustomException(ExceptionCode.INVALID_PATH);
-        }
+        final String name = validateAndNormalizeFolderName(rawName);
 
         // 6) 상위 폴더 정보 가져오기
         final Folder parentFolder = folderRepository.findById(parentFolderId)
@@ -270,11 +267,7 @@ public class FolderService {
         // 5) 새 이름 결정 (name 없으면 현재 이름 유지)
         final String newName;
         if (folderRequestDto.name() != null && !folderRequestDto.name().isBlank()) {
-            final String sanitized = PathNameUtil.normalize(PathNameUtil.extractFileName(folderRequestDto.name()));
-            if (sanitized.isBlank() || sanitized.equals(".") || sanitized.equals("..")) {
-                throw new CustomException(ExceptionCode.INVALID_PATH);
-            }
-            newName = sanitized;
+            newName = validateAndNormalizeFolderName(folderRequestDto.name());
         } else {
             newName = folder.getName();
         }
@@ -387,6 +380,18 @@ public class FolderService {
         return raw.replace("\\", "\\\\")
                 .replace("%", "\\%")
                 .replace("_", "\\_");
+    }
+
+    private String validateAndNormalizeFolderName(final String rawName) {
+        final String name = PathNameUtil.normalize(rawName);
+        if (name.isBlank()
+                || name.contains("/")
+                || name.contains("\\")
+                || name.equals(".")
+                || name.equals("..")) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+        return name;
     }
 
     /**

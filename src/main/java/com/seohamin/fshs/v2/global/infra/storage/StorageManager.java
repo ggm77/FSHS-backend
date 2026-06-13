@@ -8,11 +8,14 @@ import com.seohamin.fshs.v2.global.util.MimeTypeUtil;
 import com.seohamin.fshs.v2.global.util.storage.FileCategoryUtil;
 import com.seohamin.fshs.v2.global.util.storage.PathNameUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
@@ -24,6 +27,7 @@ import java.util.UUID;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class StorageManager {
 
     @Value("${fshs.storage.data-path}")
@@ -89,6 +93,9 @@ public class StorageManager {
         // 3) 마지막 수정 시점 수정
         final Path absPath = toAbsolutePath(rootPath, path);
         storageIoCore.updateLastModified(absPath, lastModified);
+
+        // 4) 파일 이동 완료 후 빈 UUID 서브디렉토리 정리
+        cleanupTempParent(rawTempPath);
 
         return path;
     }
@@ -314,6 +321,16 @@ public class StorageManager {
         // 5) root 경로를 통해 상대 경로로 변환
         final Path root = Path.of(rootPath).toAbsolutePath().normalize();
         return root.relativize(targetPath);
+    }
+
+    private void cleanupTempParent(final Path rawTempPath) {
+        final Path parent = toAbsolutePath(tempPath, rawTempPath).getParent();
+        if (parent == null) return;
+        try {
+            Files.deleteIfExists(parent);
+        } catch (final IOException ex) {
+            log.warn("[임시 디렉토리 정리 실패]: {}", parent, ex);
+        }
     }
 
     /**
