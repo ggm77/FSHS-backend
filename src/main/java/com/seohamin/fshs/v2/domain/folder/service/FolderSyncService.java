@@ -106,7 +106,8 @@ public class FolderSyncService {
             throw new CustomException(ExceptionCode.INVALID_PATH);
         }
 
-        final String targetRelativePath = normalizeRelativePath(targetFolder.getRelativePath());
+        final String targetRelativePath = targetFolder.getRelativePath();
+        final String targetComparePath = comparePath(targetRelativePath);
         final Path targetAbsolutePath = storageManager.resolvePath(targetFolder.getRelativePath(), false);
         if (Files.notExists(targetAbsolutePath) || !Files.isDirectory(targetAbsolutePath)) {
             throw new CustomException(ExceptionCode.PATH_NOT_FOUND);
@@ -118,12 +119,13 @@ public class FolderSyncService {
         // 디스크 스냅샷과 DB 스냅샷을 각각 만든 뒤 차이만 DB에 반영한다.
         final SyncResult result = new SyncResult();
         final DiskSnapshot diskSnapshot = scanDisk(targetRelativePath, targetAbsolutePath);
-        final Map<String, Folder> foldersByPath = loadFoldersByPath(targetRelativePath);
-        final Map<String, File> filesByPath = loadFilesByPath(targetRelativePath);
+        final Map<String, Folder> foldersByPath = loadFoldersByPath(targetComparePath);
+        final Map<String, File> filesByPath = loadFilesByPath(targetComparePath);
 
-        normalizeExistingFolders(diskSnapshot, foldersByPath);
+        recordConflicts(diskSnapshot, result);
+        alignExistingFolders(diskSnapshot, foldersByPath);
         deleteMissingFiles(diskSnapshot, filesByPath, result);
-        deleteMissingFolders(targetRelativePath, diskSnapshot, foldersByPath, result);
+        deleteMissingFolders(targetComparePath, diskSnapshot, foldersByPath, result);
         createMissingFolders(diskSnapshot, foldersByPath, user, result);
         syncFiles(diskSnapshot, foldersByPath, filesByPath, user, result);
 
@@ -152,21 +154,45 @@ public class FolderSyncService {
             final String targetRelativePath,
             final Path targetAbsolutePath
     ) {
-        final Map<String, Instant> folders = new HashMap<>();
+        final Map<String, DiskFolder> folders = new HashMap<>();
         final Map<String, DiskFile> files = new HashMap<>();
+        final Map<String, List<String>> conflicts = new HashMap<>();
 
         try (Stream<Path> paths = Files.walk(targetAbsolutePath)) {
             for (final Path path : (Iterable<Path>) paths::iterator) {
                 final String relativePath = toStorageRelativePath(targetRelativePath, targetAbsolutePath, path);
                 if (Files.isDirectory(path)) {
-                    folders.put(relativePath, Files.getLastModifiedTime(path).toInstant());
+                    final String key = comparePath(relativePath);
+                    if (conflicts.containsKey(key)) {
+                        addConflict(conflicts, key, relativePath);
+                        continue;
+                    }
+
+                    final DiskFolder previous = folders.putIfAbsent(key, new DiskFolder(
+                            relativePath,
+                            Files.getLastModifiedTime(path).toInstant()
+                    ));
+                    if (previous != null && !previous.relativePath().equals(relativePath)) {
+                        folders.remove(key);
+                        addConflict(conflicts, key, previous.relativePath(), relativePath);
+                    }
                 } else if (Files.isRegularFile(path) && !isIgnoredFile(path)) {
-                    files.put(relativePath, new DiskFile(
+                    final String key = comparePath(relativePath);
+                    if (conflicts.containsKey(key)) {
+                        addConflict(conflicts, key, relativePath);
+                        continue;
+                    }
+
+                    final DiskFile previous = files.putIfAbsent(key, new DiskFile(
                             path,
                             relativePath,
                             Files.size(path),
                             Files.getLastModifiedTime(path).toInstant()
                     ));
+                    if (previous != null && !previous.relativePath().equals(relativePath)) {
+                        files.remove(key);
+                        addConflict(conflicts, key, previous.relativePath(), relativePath);
+                    }
                 }
             }
         } catch (final UncheckedIOException ex) {
@@ -175,7 +201,20 @@ public class FolderSyncService {
             throw new CustomException(ExceptionCode.FILE_READ_ERROR, ex);
         }
 
-        return new DiskSnapshot(folders, files);
+        return new DiskSnapshot(folders, files, conflicts);
+    }
+
+    private void addConflict(
+            final Map<String, List<String>> conflicts,
+            final String key,
+            final String... paths
+    ) {
+        final List<String> conflictPaths = conflicts.computeIfAbsent(key, ignored -> new ArrayList<>());
+        for (final String path : paths) {
+            if (!conflictPaths.contains(path)) {
+                conflictPaths.add(path);
+            }
+        }
     }
 
     /**
@@ -189,18 +228,18 @@ public class FolderSyncService {
      * 대상 폴더 자신과 하위 폴더만 조회한다.
      * 시스템 루트처럼 상대 경로가 빈 문자열이면 전체 storage root 범위를 대상으로 한다.
      */
-    private Map<String, Folder> loadFoldersByPath(final String targetRelativePath) {
+    private Map<String, Folder> loadFoldersByPath(final String targetComparePath) {
         final List<Folder> folders;
-        if (targetRelativePath.isBlank()) {
+        if (targetComparePath.isBlank()) {
             folders = folderRepository.findAll();
         } else {
             folders = folderRepository.findAll().stream()
-                    .filter(folder -> isFolderInTarget(folder, targetRelativePath))
+                    .filter(folder -> isFolderInTarget(folder, targetComparePath))
                     .toList();
         }
 
         final Map<String, Folder> foldersByPath = new HashMap<>();
-        folders.forEach(folder -> foldersByPath.put(normalizeRelativePath(folder.getRelativePath()), folder));
+        folders.forEach(folder -> foldersByPath.put(comparePath(folder.getRelativePath()), folder));
         return foldersByPath;
     }
 
@@ -208,38 +247,54 @@ public class FolderSyncService {
      * 대상 폴더 하위 파일만 조회한다.
      * 파일은 폴더 자신과 같은 경로가 될 수 없으므로 prefix 조회만으로 충분하다.
      */
-    private Map<String, File> loadFilesByPath(final String targetRelativePath) {
+    private Map<String, File> loadFilesByPath(final String targetComparePath) {
         final List<File> files = fileRepository.findAll().stream()
-                .filter(file -> isFileInTarget(file, targetRelativePath))
+                .filter(file -> isFileInTarget(file, targetComparePath))
                 .toList();
 
         final Map<String, File> filesByPath = new HashMap<>();
-        files.forEach(file -> filesByPath.put(normalizeRelativePath(file.getRelativePath()), file));
+        files.forEach(file -> filesByPath.put(comparePath(file.getRelativePath()), file));
         return filesByPath;
     }
 
     /**
-     * 기존 DB에 NFD 한글 경로가 들어간 경우도 디스크 스냅샷과 같은 NFC 기준으로 보정한다.
+     * NFC 기준으로 같은 경로가 둘 이상 존재하면 자동 동기화하지 않고 사용자 정리 대상으로 남긴다.
      */
-    private void normalizeExistingFolders(
+    private void recordConflicts(
+            final DiskSnapshot diskSnapshot,
+            final SyncResult result
+    ) {
+        for (final Map.Entry<String, List<String>> entry : diskSnapshot.conflicts().entrySet()) {
+            result.errors().add("Unicode-normalized path conflict: " + entry.getKey());
+            result.skipped().addAll(entry.getValue());
+            log.warn("[동기화 유니코드 경로 충돌]: key={}, paths={}", entry.getKey(), entry.getValue());
+        }
+    }
+
+    /**
+     * 기존 DB 경로가 실제 디스크 경로와 다른 정규화 형태이면 디스크에서 읽은 실제 경로로 맞춘다.
+     */
+    private void alignExistingFolders(
             final DiskSnapshot diskSnapshot,
             final Map<String, Folder> foldersByPath
     ) {
         for (final Map.Entry<String, Folder> entry : foldersByPath.entrySet()) {
-            final String normalizedPath = entry.getKey();
+            final String comparePath = entry.getKey();
             final Folder folder = entry.getValue();
-            if (!diskSnapshot.folders().containsKey(normalizedPath)) {
+            final DiskFolder diskFolder = diskSnapshot.folders().get(comparePath);
+            if (diskFolder == null) {
                 continue;
             }
 
-            final String normalizedName = fileName(normalizedPath);
-            if (!folder.getRelativePath().equals(normalizedPath)) {
-                folder.updateRelativePath(normalizedPath);
-                log.info("[동기화 폴더 경로 NFC 보정]: {}", normalizedPath);
+            final String diskPath = diskFolder.relativePath();
+            final String normalizedName = fileName(diskPath);
+            if (!folder.getRelativePath().equals(diskPath)) {
+                folder.updateRelativePath(diskPath);
+                log.info("[동기화 폴더 실제 경로 보정]: {}", diskPath);
             }
             if (!folder.getName().equals(normalizedName)) {
                 folder.updateName(normalizedName);
-                log.info("[동기화 폴더 이름 NFC 보정]: {}", normalizedPath);
+                log.info("[동기화 폴더 이름 NFC 보정]: {}", diskPath);
             }
         }
     }
@@ -254,15 +309,16 @@ public class FolderSyncService {
             final SyncResult result
     ) {
         final List<File> filesToDelete = filesByPath.values().stream()
-                .filter(file -> !diskSnapshot.files().containsKey(normalizeRelativePath(file.getRelativePath())))
+                .filter(file -> !diskSnapshot.conflicts().containsKey(comparePath(file.getRelativePath())))
+                .filter(file -> !diskSnapshot.files().containsKey(comparePath(file.getRelativePath())))
                 .toList();
 
         for (final File file : filesToDelete) {
-            final String normalizedPath = normalizeRelativePath(file.getRelativePath());
+            final String normalizedPath = comparePath(file.getRelativePath());
             fileRepository.delete(file);
             filesByPath.remove(normalizedPath);
-            result.deletedFiles().add(normalizedPath);
-            log.info("[동기화 파일 DB 삭제]: {}", normalizedPath);
+            result.deletedFiles().add(file.getRelativePath());
+            log.info("[동기화 파일 DB 삭제]: {}", file.getRelativePath());
         }
     }
 
@@ -271,27 +327,28 @@ public class FolderSyncService {
      * 자식 폴더가 먼저 삭제되도록 깊은 경로부터 처리한다.
      */
     private void deleteMissingFolders(
-            final String targetRelativePath,
+            final String targetComparePath,
             final DiskSnapshot diskSnapshot,
             final Map<String, Folder> foldersByPath,
             final SyncResult result
     ) {
         final List<Folder> foldersToDelete = foldersByPath.values().stream()
-                .filter(folder -> !normalizeRelativePath(folder.getRelativePath()).equals(targetRelativePath))
-                .filter(folder -> !diskSnapshot.folders().containsKey(normalizeRelativePath(folder.getRelativePath())))
-                .sorted(Comparator.comparingInt((Folder folder) -> depth(normalizeRelativePath(folder.getRelativePath()))).reversed())
+                .filter(folder -> !comparePath(folder.getRelativePath()).equals(targetComparePath))
+                .filter(folder -> !diskSnapshot.conflicts().containsKey(comparePath(folder.getRelativePath())))
+                .filter(folder -> !diskSnapshot.folders().containsKey(comparePath(folder.getRelativePath())))
+                .sorted(Comparator.comparingInt((Folder folder) -> depth(folder.getRelativePath())).reversed())
                 .toList();
 
         for (final Folder folder : foldersToDelete) {
-            final String normalizedPath = normalizeRelativePath(folder.getRelativePath());
+            final String normalizedPath = comparePath(folder.getRelativePath());
             if (Boolean.TRUE.equals(folder.getIsRoot()) || Boolean.TRUE.equals(folder.getIsSystemRoot())) {
-                result.skipped().add(normalizedPath);
+                result.skipped().add(folder.getRelativePath());
                 continue;
             }
             folderRepository.delete(folder);
             foldersByPath.remove(normalizedPath);
-            result.deletedFolders().add(normalizedPath);
-            log.info("[동기화 폴더 DB 삭제]: {}", normalizedPath);
+            result.deletedFolders().add(folder.getRelativePath());
+            log.info("[동기화 폴더 DB 삭제]: {}", folder.getRelativePath());
         }
     }
 
@@ -305,15 +362,17 @@ public class FolderSyncService {
             final User user,
             final SyncResult result
     ) {
-        final List<String> foldersToCreate = diskSnapshot.folders().keySet().stream()
-                .filter(path -> !path.isBlank())
-                .filter(path -> !foldersByPath.containsKey(path))
-                .sorted(Comparator.comparingInt(this::depth))
+        final List<DiskFolder> foldersToCreate = diskSnapshot.folders().entrySet().stream()
+                .filter(entry -> !entry.getValue().relativePath().isBlank())
+                .filter(entry -> !foldersByPath.containsKey(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .sorted(Comparator.comparingInt(folder -> depth(folder.relativePath())))
                 .toList();
 
-        for (final String relativePath : foldersToCreate) {
+        for (final DiskFolder diskFolder : foldersToCreate) {
+            final String relativePath = diskFolder.relativePath();
             final String parentPath = parentPath(relativePath);
-            final Folder parentFolder = foldersByPath.get(parentPath);
+            final Folder parentFolder = foldersByPath.get(comparePath(parentPath));
             if (parentFolder == null) {
                 result.errors().add(relativePath + ": parent folder not found");
                 continue;
@@ -324,11 +383,11 @@ public class FolderSyncService {
                     .ownerId(user.getId())
                     .relativePath(relativePath)
                     .name(fileName(relativePath))
-                    .originUpdatedAt(diskSnapshot.folders().get(relativePath))
+                    .originUpdatedAt(diskFolder.lastModified())
                     .isRoot(false)
                     .build();
             final Folder savedFolder = folderRepository.save(folder);
-            foldersByPath.put(relativePath, savedFolder);
+            foldersByPath.put(comparePath(relativePath), savedFolder);
             result.createdFolders().add(relativePath);
             log.info("[동기화 폴더 DB 생성]: {}", relativePath);
         }
@@ -345,7 +404,7 @@ public class FolderSyncService {
             final SyncResult result
     ) {
         for (final DiskFile diskFile : diskSnapshot.files().values()) {
-            final File file = filesByPath.get(diskFile.relativePath());
+            final File file = filesByPath.get(comparePath(diskFile.relativePath()));
             if (file == null) {
                 createFile(diskFile, foldersByPath, user, filesByPath, result);
             } else if (isChanged(file, diskFile) || isIdentityNotNormalized(file, diskFile)) {
@@ -366,7 +425,7 @@ public class FolderSyncService {
             final SyncResult result
     ) {
         final String parentPath = parentPath(diskFile.relativePath());
-        final Folder parentFolder = foldersByPath.get(parentPath);
+        final Folder parentFolder = foldersByPath.get(comparePath(parentPath));
         if (parentFolder == null) {
             result.errors().add(diskFile.relativePath() + ": parent folder not found");
             return;
@@ -401,7 +460,7 @@ public class FolderSyncService {
                     .category(analysisResult.category())
                     .build();
             final File savedFile = fileRepository.save(file);
-            filesByPath.put(diskFile.relativePath(), savedFile);
+            filesByPath.put(comparePath(diskFile.relativePath()), savedFile);
             result.createdFiles().add(diskFile.relativePath());
             requestThumbnail(savedFile.getUuid(), diskFile.relativePath(), analysisResult.category());
             log.info("[동기화 파일 DB 생성]: {}", diskFile.relativePath());
@@ -421,7 +480,7 @@ public class FolderSyncService {
     ) {
         try {
             final FileAnalysisResultDto analysisResult = fileAnalyzer.analyzeFile(diskFile.absolutePath());
-            applyAnalysis(file, analysisResult, diskFile.lastModified());
+            applyAnalysis(file, analysisResult, diskFile.relativePath(), diskFile.lastModified());
             result.updatedFiles().add(diskFile.relativePath());
             requestThumbnail(file.getUuid(), diskFile.relativePath(), analysisResult.category());
             log.info("[동기화 파일 DB 갱신]: {}", diskFile.relativePath());
@@ -453,18 +512,19 @@ public class FolderSyncService {
 
     /**
      * FileAnalyzer 결과를 기존 엔티티에 반영한다.
-     * relativePath와 parentPath는 같은 경로의 파일 갱신이므로 변경하지 않는다.
+     * relativePath와 parentPath는 디스크에서 읽은 실제 경로 형태로 맞춘다.
      */
     private void applyAnalysis(
             final File file,
             final FileAnalysisResultDto analysisResult,
+            final String relativePath,
             final Instant lastModified
     ) {
         file.updateName(analysisResult.name());
         file.updateBaseName(analysisResult.baseName());
         file.updateExtension(analysisResult.extension());
-        file.updateRelativePath(normalizeRelativePath(file.getRelativePath()));
-        file.updateParentPath(parentPath(normalizeRelativePath(file.getRelativePath())));
+        file.updateRelativePath(relativePath);
+        file.updateParentPath(parentPath(relativePath));
         file.updateMimeType(analysisResult.mimeType());
         file.updateSize(analysisResult.size());
         file.updateVideoCodec(analysisResult.videoCodec());
@@ -513,19 +573,19 @@ public class FolderSyncService {
     ) {
         final Path localPath = targetAbsolutePath.relativize(path);
         if (localPath.toString().isBlank()) {
-            return PathNameUtil.normalize(targetRelativePath);
+            return targetRelativePath;
         }
         final Path relativePath = targetRelativePath.isBlank()
                 ? localPath
                 : Path.of(targetRelativePath).resolve(localPath);
-        return PathNameUtil.normalizePath(relativePath).toString();
+        return relativePath.toString();
     }
 
     /**
      * storage root 직하 항목은 부모 경로를 빈 문자열로 표현한다.
      */
     private String parentPath(final String relativePath) {
-        final Path parentPath = Path.of(normalizeRelativePath(relativePath)).getParent();
+        final Path parentPath = Path.of(relativePath).getParent();
         return parentPath == null ? "" : parentPath.toString();
     }
 
@@ -533,7 +593,7 @@ public class FolderSyncService {
      * 경로의 마지막 이름 성분을 NFC 정규화된 DB 이름으로 변환한다.
      */
     private String fileName(final String relativePath) {
-        return PathNameUtil.normalize(PathNameUtil.extractFileNameFromPath(Path.of(normalizeRelativePath(relativePath))));
+        return PathNameUtil.normalize(PathNameUtil.extractFileNameFromPath(Path.of(relativePath)));
     }
 
     /**
@@ -543,29 +603,29 @@ public class FolderSyncService {
         if (relativePath == null || relativePath.isBlank()) {
             return 0;
         }
-        return Path.of(normalizeRelativePath(relativePath)).getNameCount();
+        return Path.of(relativePath).getNameCount();
     }
 
     private boolean isFolderInTarget(
             final Folder folder,
-            final String targetRelativePath
+            final String targetComparePath
     ) {
-        final String relativePath = normalizeRelativePath(folder.getRelativePath());
-        return targetRelativePath.isBlank()
-                || relativePath.equals(targetRelativePath)
-                || relativePath.startsWith(targetRelativePath + java.io.File.separator);
+        final String relativePath = comparePath(folder.getRelativePath());
+        return targetComparePath.isBlank()
+                || relativePath.equals(targetComparePath)
+                || relativePath.startsWith(targetComparePath + java.io.File.separator);
     }
 
     private boolean isFileInTarget(
             final File file,
-            final String targetRelativePath
+            final String targetComparePath
     ) {
-        final String relativePath = normalizeRelativePath(file.getRelativePath());
-        return targetRelativePath.isBlank()
-                || relativePath.startsWith(targetRelativePath + java.io.File.separator);
+        final String relativePath = comparePath(file.getRelativePath());
+        return targetComparePath.isBlank()
+                || relativePath.startsWith(targetComparePath + java.io.File.separator);
     }
 
-    private String normalizeRelativePath(final String relativePath) {
+    private String comparePath(final String relativePath) {
         if (relativePath == null || relativePath.isBlank()) {
             return "";
         }
@@ -592,8 +652,18 @@ public class FolderSyncService {
      * 디스크 스캔 결과. key는 모두 storage root 기준 상대 경로다.
      */
     private record DiskSnapshot(
-            Map<String, Instant> folders,
-            Map<String, DiskFile> files
+            Map<String, DiskFolder> folders,
+            Map<String, DiskFile> files,
+            Map<String, List<String>> conflicts
+    ) {
+    }
+
+    /**
+     * 디스크 폴더 하나의 실제 상대 경로와 수정 시점.
+     */
+    private record DiskFolder(
+            String relativePath,
+            Instant lastModified
     ) {
     }
 

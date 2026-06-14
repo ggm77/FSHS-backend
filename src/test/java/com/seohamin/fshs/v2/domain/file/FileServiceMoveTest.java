@@ -32,6 +32,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -148,6 +149,31 @@ class FileServiceMoveTest {
         // Then : 디스크는 손대지 않았으므로 원위치 그대로 (DB 먼저 → 실패 시 디스크 미이동)
         assertThat(Files.exists(tempRoot.resolve("userA/docs/projects/report.txt"))).isTrue();
         assertThat(Files.exists(tempRoot.resolve("userA/archive/report.txt"))).isFalse();
+    }
+
+    @Test
+    @DisplayName("파일 이동 : DB는 NFC 경로지만 디스크가 NFD 파일명이어도 실제 파일을 찾아 이동한다")
+    void moveFile_nfcDbPathAndNfdDiskPath_movesFile() throws IOException {
+        final Folder projects = folderRepository.findAll().stream()
+                .filter(folder -> folder.getRelativePath().equals("userA/docs/projects"))
+                .findFirst()
+                .orElseThrow();
+        final String nfcName = "성경의이해6_중간기.pdf";
+        final String nfdName = Normalizer.normalize(nfcName, Normalizer.Form.NFD);
+        final File file = persistFile(nfcName, projects, "userA/docs/projects/" + nfcName, "userA/docs/projects");
+        Files.writeString(tempRoot.resolve("userA/docs/projects/" + nfdName), "x");
+        final Long fileId = file.getId();
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        fileService.updateFile(fileId, new FileUpdateRequestDto(archiveId, null), USERNAME);
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        assertThat(Files.exists(tempRoot.resolve("userA/archive/" + nfcName))).isTrue();
+        assertThat(Files.exists(tempRoot.resolve("userA/docs/projects/" + nfdName))).isFalse();
+        final File movedFile = fileRepository.findById(fileId).orElseThrow();
+        assertThat(movedFile.getRelativePath()).isEqualTo("userA/archive/" + nfcName);
     }
 
     private Folder persistFolder(final String name, final Folder parent, final String relativePath) {

@@ -22,6 +22,8 @@ import com.seohamin.fshs.v2.global.init.SystemRootInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -206,10 +208,57 @@ class FolderSyncServiceTest {
         testEntityManager.flush();
         testEntityManager.clear();
 
-        assertThat(response.deletedFiles()).contains("userA/docs/" + nfcName);
+        assertThat(response.deletedFiles().stream()
+                .map(path -> Normalizer.normalize(path, Normalizer.Form.NFC)))
+                .contains("userA/docs/" + nfcName);
         assertThat(fileRepository.findAll().stream()
                 .noneMatch(file -> Normalizer.normalize(file.getRelativePath(), Normalizer.Form.NFC)
                         .equals("userA/docs/" + nfcName))).isTrue();
+    }
+
+    @Test
+    @DisplayName("폴더 동기화 : 디스크에 NFD로 존재하는 한글 파일의 실제 상대 경로를 보존한다")
+    void syncFolder_preservesNfdKoreanDiskPath() throws IOException {
+        final String nfcName = "한글.txt";
+        final String nfdName = Normalizer.normalize(nfcName, Normalizer.Form.NFD);
+        write("userA/docs/" + nfdName, "korean", Instant.parse("2026-06-12T00:00:00Z"));
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        folderSyncService.syncFolder(docsId, USERNAME);
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        final File syncedFile = fileRepository.findAll().stream()
+                .filter(file -> file.getName().equals(nfcName))
+                .findFirst()
+                .orElseThrow();
+        assertThat(syncedFile.getRelativePath()).isEqualTo("userA/docs/" + nfdName);
+        assertThat(syncedFile.getParentPath()).isEqualTo("userA/docs");
+    }
+
+    @Test
+    @EnabledOnOs(OS.LINUX)
+    @DisplayName("폴더 동기화 : NFC/NFD 파일이 동시에 존재하면 충돌로 남기고 자동 반영하지 않는다")
+    void syncFolder_unicodeConflict_skipsBothFiles() throws IOException {
+        final Folder userRoot = folderRepository.findByRelativePath("userA").orElseThrow();
+        final Folder conflictFolder = persistFolder("conflict", userRoot, "userA/conflict");
+        final String nfcName = "한글.txt";
+        final String nfdName = Normalizer.normalize(nfcName, Normalizer.Form.NFD);
+        write("userA/conflict/" + nfcName, "nfc", Instant.parse("2026-06-12T00:00:00Z"));
+        write("userA/conflict/" + nfdName, "nfd", Instant.parse("2026-06-12T00:00:00Z"));
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        final FolderSyncResponseDto response = folderSyncService.syncFolder(conflictFolder.getId(), USERNAME);
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        assertThat(response.errors()).contains("Unicode-normalized path conflict: userA/conflict/" + nfcName);
+        assertThat(response.skipped()).contains("userA/conflict/" + nfcName, "userA/conflict/" + nfdName);
+        assertThat(fileRepository.findAll().stream()
+                .noneMatch(file -> Normalizer.normalize(file.getRelativePath(), Normalizer.Form.NFC)
+                        .equals("userA/conflict/" + nfcName))).isTrue();
     }
 
     @Test
