@@ -19,9 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Stream;
 
 /**
  * 파일이나 폴더의 저장, 조회, 이동, 삭제 등을 제공하는 클래스
@@ -242,9 +240,9 @@ public class StorageManager {
         final Path relativePath = Path.of(rawRelativePath);
 
         if (isTempFilePath) {
-            return resolveExistingPathIfPossible(tempPath, relativePath);
+            return toAbsolutePath(tempPath, relativePath);
         } else {
-            return resolveExistingPathIfPossible(rootPath, relativePath);
+            return toAbsolutePath(rootPath, relativePath);
         }
 
     }
@@ -260,7 +258,7 @@ public class StorageManager {
         }
 
         // 2) 절대 경로로 변환
-        final Path path = resolveExistingPathIfPossible(rootPath, Path.of(pathStr));
+        final Path path = toAbsolutePath(rootPath, Path.of(pathStr));
 
         // 3) 추후 휴지통 기능 구현하기 위해 메서드로 분리
         deleteFile(path);
@@ -277,7 +275,7 @@ public class StorageManager {
         }
 
         // 2) 절대 경로로 변환
-        final Path path = resolveExistingPathIfPossible(rootPath, Path.of(pathStr));
+        final Path path = toAbsolutePath(rootPath, Path.of(pathStr));
 
         // 3) 휴지통 기능 구현을 위한 메서드 분리
         deleteFolder(path);
@@ -311,48 +309,6 @@ public class StorageManager {
         return absolutePath;
     }
 
-    private Path resolveExistingPathIfPossible(
-            final String base,
-            final Path rawPath
-    ) {
-        final Path requestedPath = toAbsolutePath(base, rawPath);
-        if (Files.exists(requestedPath)) {
-            return requestedPath;
-        }
-
-        final Path basePath = Path.of(base).toAbsolutePath().normalize();
-        final Path relativePath = basePath.relativize(requestedPath);
-        Path current = basePath;
-        for (final Path name : relativePath) {
-            final Path exactPath = current.resolve(name);
-            if (Files.exists(exactPath)) {
-                current = exactPath;
-                continue;
-            }
-            if (!Files.isDirectory(current)) {
-                return requestedPath;
-            }
-
-            final String normalizedName = PathNameUtil.normalize(name.toString());
-            try (Stream<Path> children = Files.list(current)) {
-                final List<Path> matches = children
-                        .filter(child -> PathNameUtil.normalize(child.getFileName().toString()).equals(normalizedName))
-                        .toList();
-                if (matches.size() != 1) {
-                    return requestedPath;
-                }
-                current = matches.getFirst();
-            } catch (final IOException ex) {
-                return requestedPath;
-            }
-        }
-
-        if (!current.normalize().startsWith(basePath)) {
-            throw new CustomException(ExceptionCode.INVALID_PATH);
-        }
-        return current.normalize();
-    }
-
     /**
      * 실제로 파일 이동을 시키는 메서드
      * @param rawSource 이동 시킬 파일 상대 경로
@@ -368,11 +324,11 @@ public class StorageManager {
             final String destBase
     ) {
         // 1) null 검사 및 절대 경로로 변환
-        final Path source = resolveExistingPathIfPossible(sourceBase, rawSource);
+        final Path source = toAbsolutePath(sourceBase, rawSource);
         final Path dest = toAbsolutePath(destBase, rawDest);
 
         // 2) 이름 추출
-        final String name = PathNameUtil.normalize(PathNameUtil.extractFileNameFromPath(rawSource));
+        final String name = PathNameUtil.extractFileNameFromPath(source);
 
         // 3) 최종 저장 경로 생성
         final Path targetPath = dest.resolve(name);
@@ -410,7 +366,7 @@ public class StorageManager {
             final String destBase
     ) {
         // 1) null 검사 및 절대 경로로 변환
-        final Path source = resolveExistingPathIfPossible(sourceBase, rawSource);
+        final Path source = toAbsolutePath(sourceBase, rawSource);
         final Path dest = toAbsolutePath(destBase, rawDest);
 
         // 2) 이동 (rawDest가 폴더명을 포함한 최종 경로이므로 파일과 달리 이름을 다시 붙이지 않음)
