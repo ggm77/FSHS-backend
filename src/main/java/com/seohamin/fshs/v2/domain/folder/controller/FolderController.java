@@ -3,7 +3,9 @@ package com.seohamin.fshs.v2.domain.folder.controller;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderRequestDto;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderResponseDto;
+import com.seohamin.fshs.v2.domain.folder.dto.FolderSyncResponseDto;
 import com.seohamin.fshs.v2.domain.folder.service.FolderService;
+import com.seohamin.fshs.v2.domain.folder.service.FolderSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 public class FolderController {
 
     private final FolderService folderService;
+    private final FolderSyncService folderSyncService;
 
     // 폴더 생성 API
     @PostMapping("/folders")
@@ -81,5 +84,15 @@ public class FolderController {
         folderService.deleteFolder(folderId, userDetails.getUsername());
 
         return ResponseEntity.noContent().build();
+    }
+
+    // 특정 폴더 하위 디스크 상태를 DB와 동기화하는 API
+    @PostMapping("/folders/{folderId}/sync")
+    public ResponseEntity<FolderSyncResponseDto> syncFolder(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @PathVariable final Long folderId
+    ) {
+
+        return ResponseEntity.ok(folderSyncService.syncFolder(folderId, userDetails.getUsername()));
     }
 }

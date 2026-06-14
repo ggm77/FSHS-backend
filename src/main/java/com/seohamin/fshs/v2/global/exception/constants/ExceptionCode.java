@@ -34,6 +34,7 @@ public enum ExceptionCode {
 
     UPLOAD_CAPACITY_EXCEEDED(HttpStatus.SERVICE_UNAVAILABLE, "업로드 처리 용량을 초과했습니다. 잠시 후 다시 시도해주세요."),
     TRANSCODE_CAPACITY_EXCEEDED(HttpStatus.SERVICE_UNAVAILABLE, "트랜스코딩 처리 용량을 초과했습니다. 잠시 후 다시 시도해주세요."),
+    SYNC_ALREADY_RUNNING(HttpStatus.CONFLICT, "이미 동기화가 진행 중입니다."),
 
     FILE_WRITE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일 저장 중 오류가 발생했습니다."),
     FILE_READ_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "파일을 읽어오는 중 오류가 발생했습니다."),

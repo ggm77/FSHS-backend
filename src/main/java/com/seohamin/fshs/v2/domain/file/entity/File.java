@@ -298,6 +298,16 @@ public class File {
         this.audioCodec = audioCodec;
     }
 
+    // 이미지 너비 변경 메서드
+    public void updateWidth(final Integer width) {
+        this.width = width;
+    }
+
+    // 이미지 높이 변경 메서드
+    public void updateHeight(final Integer height) {
+        this.height = height;
+    }
+
     // 재생시간 변경 메서드
     public void updateDuration(final Long duration) {
         this.duration = duration;

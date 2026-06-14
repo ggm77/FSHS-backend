@@ -7,7 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Optional;
+
 public interface FolderRepository extends JpaRepository<Folder, Long> {
+    Optional<Folder> findByRelativePath(final String relativePath);
+    List<Folder> findAllByRelativePathStartingWith(final String relativePathPrefix);
 
     // @NotNull 어노테이션 우회해서 시스템 루트 폴더를 DB에 저장하기 위한 메서드
     // 자기 자신을 참조하기 위해 강제로 id를 1번으로 지정함

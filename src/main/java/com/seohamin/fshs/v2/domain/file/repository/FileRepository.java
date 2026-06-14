@@ -6,11 +6,13 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface FileRepository extends JpaRepository<File, Long> {
     boolean existsByUuid(final String uuid);
     Optional<File> findByUuid(final String uuid);
+    List<File> findAllByRelativePathStartingWith(final String relativePathPrefix);
 
     // 폴더 이동/이름 변경 시 하위 파일들의 상대 경로/부모 경로 접두사를 한 번에 치환한다
     // pattern 은 '이전경로/%' 형태(ESCAPE '\'), cutFrom 은 '이전경로 길이 + 1'
