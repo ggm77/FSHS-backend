@@ -56,5 +56,5 @@ jobs:
             pwd
             which sudo
             sudo -n -l
-            sudo systemctl restart fshs-backend
-            sudo systemctl status fshs-backend --no-pager
+            sudo /usr/bin/systemctl restart fshs2-backend
+            sudo /usr/bin/systemctl status fshs2-backend --no-pager
