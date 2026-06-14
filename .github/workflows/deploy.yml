@@ -52,5 +52,9 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            whoami
+            pwd
+            which sudo
+            sudo -n -l
             sudo systemctl restart fshs-backend
             sudo systemctl status fshs-backend --no-pager
