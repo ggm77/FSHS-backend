@@ -442,12 +442,12 @@ public class FolderSyncService {
     ) {
         final Path localPath = targetAbsolutePath.relativize(path);
         if (localPath.toString().isBlank()) {
-            return PathNameUtil.normalize(targetRelativePath);
+            return targetRelativePath;
         }
         final Path relativePath = targetRelativePath.isBlank()
                 ? localPath
                 : Path.of(targetRelativePath).resolve(localPath);
-        return PathNameUtil.normalizePath(relativePath).toString();
+        return relativePath.toString();
     }
 
     /**

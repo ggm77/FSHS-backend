@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -236,6 +237,33 @@ class FolderSyncServiceTest {
 
         then(thumbnailProcessor).should()
                 .process(any(String.class), eq("userA/images/photo.jpg"), eq(Category.IMAGE));
+    }
+
+    @Test
+    @DisplayName("폴더 동기화 : NFD 파일 경로는 보존하고 파일명은 NFC로 저장한다")
+    void syncFolder_preservesNfdPathAndNormalizesFileName() throws IOException {
+        final String nfcName = "한글.txt";
+        final String nfdName = Normalizer.normalize(nfcName, Normalizer.Form.NFD);
+        final String nfdPath = "userA/docs/" + nfdName;
+
+        write(nfdPath, "korean", Instant.parse("2026-06-12T00:00:00Z"));
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        folderSyncService.syncFolder(docsId, USERNAME);
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        final File syncedFile = fileRepository.findAll().stream()
+                .filter(file -> file.getRelativePath().equals(nfdPath))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(syncedFile.getName()).isEqualTo(nfcName);
+        assertThat(syncedFile.getBaseName()).isEqualTo("한글");
+        assertThat(syncedFile.getRelativePath()).isEqualTo(nfdPath);
+        assertThat(syncedFile.getRelativePath()).isNotEqualTo("userA/docs/" + nfcName);
+        assertThat(syncedFile.getParentPath()).isEqualTo("userA/docs");
     }
 
     private Folder persistFolder(
