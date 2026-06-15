@@ -133,13 +133,13 @@ class FolderServiceDeleteTest {
     @Test
     @DisplayName("폴더 삭제 : DB 삭제가 실패하면 디스크 파일을 지우지 않는다")
     void deleteFolder_dbFailure_doesNotDeleteDisk() {
-        // Given : userA 루트는 member.root_folder_id 가 참조하므로 삭제 시 FK 위반이 난다
-        //         → DB flush 단계에서 실패해야 하고, 그 전에 디스크를 건드리면 안 된다
+        // Given : userA 루트는 서비스에서 삭제를 막아야 한다
+        //         → 예외가 나면 디스크를 건드리면 안 된다
         // When & Then : 루트 폴더 삭제 시도 → 예외 전파
         assertThatThrownBy(() -> folderService.deleteFolder(userARootId, USERNAME))
                 .isInstanceOf(RuntimeException.class);
 
-        // Then : DB 가 먼저 실패했으므로 디스크 파일은 그대로 보존됨
+        // Then : 삭제가 실패했으므로 디스크 파일은 그대로 보존됨
         assertThat(Files.exists(tempRoot.resolve("userA/docs/projects/report.txt"))).isTrue();
         assertThat(Files.exists(tempRoot.resolve("userA/docs/projects/sub/nested.txt"))).isTrue();
     }

@@ -25,7 +25,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "spring.profiles.active=dev")
+@SpringBootTest(properties = "spring.profiles.active=test")
 @AutoConfigureMockMvc
 @EnableAutoConfiguration(exclude = {
         DataSourceAutoConfiguration.class,

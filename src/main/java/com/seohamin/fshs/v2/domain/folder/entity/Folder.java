@@ -32,6 +32,7 @@ public class Folder {
     // 폴더 ID
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(columnDefinition = "integer")
     private Long id;
 
     // 루트 폴더 주인

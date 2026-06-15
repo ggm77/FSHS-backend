@@ -35,6 +35,7 @@ public class File {
     // 파일 ID
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(columnDefinition = "integer")
     private Long id;
 
     // 파일이 속한 폴더

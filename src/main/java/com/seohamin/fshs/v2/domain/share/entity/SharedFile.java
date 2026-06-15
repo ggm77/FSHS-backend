@@ -25,6 +25,7 @@ public class SharedFile {
     // 공유 링크 ID
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(columnDefinition = "integer")
     private Long id;
 
     // 공유 키

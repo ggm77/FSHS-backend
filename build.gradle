@@ -48,8 +48,8 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.7'
 
 	//DB
-	implementation 'com.h2database:h2'
-	implementation 'org.springframework.boot:spring-boot-h2console' // 개발용
+	implementation 'org.hibernate.orm:hibernate-community-dialects'
+	implementation 'org.xerial:sqlite-jdbc'
 
 	//lombok
 	compileOnly 'org.projectlombok:lombok'

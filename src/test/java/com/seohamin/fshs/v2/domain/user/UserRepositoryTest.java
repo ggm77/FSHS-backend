@@ -182,12 +182,13 @@ public class UserRepositoryTest {
         // Given
         final User user = new User("username", "password");
         final User savedUser = userRepository.save(user);
-        final Instant createdAt = savedUser.getCreatedAt();
         final Long userId = savedUser.getId();
         testEntityManager.flush();
+        testEntityManager.clear();
 
         // When
         final User targetUser = userRepository.findById(userId).get();
+        final Instant createdAt = targetUser.getCreatedAt();
         targetUser.updateUsername("newUsername");
         testEntityManager.flush();
         testEntityManager.clear();

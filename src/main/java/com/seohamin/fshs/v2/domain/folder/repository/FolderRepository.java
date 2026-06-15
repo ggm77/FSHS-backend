@@ -26,11 +26,9 @@ public interface FolderRepository extends JpaRepository<Folder, Long> {
             origin_updated_at, created_at, updated_at
         ) VALUES (
             1, 1, :name, :lowerName, '',
-            true, true, 0,
+            1, 1, 0,
             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-        );
-
-        ALTER TABLE folder ALTER COLUMN id RESTART WITH 2;
+        )
         """, nativeQuery = true)
     void insertSystemRoot(@Param("name") String name, @Param("lowerName") String lowerName);
 
