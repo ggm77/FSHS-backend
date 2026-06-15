@@ -139,6 +139,12 @@ public class UserService implements UserDetailsService {
 
         // 5) 유저명 비어있지 않다면 변경
         if(username != null && !username.isEmpty()) {
+
+            // 유저명 겹치는지 확인
+            if (userRepository.existsByUsername(username)) {
+                throw new CustomException(ExceptionCode.USERNAME_DUPLICATE);
+            }
+
             user.updateUsername(username);
         }
 
