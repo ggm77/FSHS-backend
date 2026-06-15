@@ -51,7 +51,8 @@ public class FileUploadProcessor {
             final String fileUuid,
             final Path tempFilePath,
             final Long parentFolderId,
-            final Instant lastModified
+            final Instant lastModified,
+            final Long ownerId
     ) {
         try {
             // 1) 상위 폴더 재조회 - 트랜잭션 내에서 로드해야 영속성 컨텍스트에 붙음
@@ -70,6 +71,7 @@ public class FileUploadProcessor {
             // 4) 파일 엔티티 생성
             final File file = File.builder()
                     .parentFolder(parentFolder)
+                    .ownerId(ownerId)
                     .uuid(fileUuid)
                     .name(analysisResult.name())
                     .baseName(analysisResult.baseName())

@@ -95,7 +95,7 @@ public class FileService {
 
         // 7) 비동기 처리 위임
         try {
-            fileUploadProcessor.process(fileUuid, tempFilePath, folderId, lastModified);
+            fileUploadProcessor.process(fileUuid, tempFilePath, folderId, lastModified, user.getId());
         } catch (final TaskRejectedException ex) {
             storageManager.deleteTemporaryFile(tempFilePath);
             fileStatusCache.put(fileUuid, Status.ERROR);
