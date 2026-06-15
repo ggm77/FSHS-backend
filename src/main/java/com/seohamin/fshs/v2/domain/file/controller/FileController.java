@@ -16,6 +16,7 @@ import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v2")
@@ -88,27 +89,43 @@ public class FileController {
         final MediaType mediaType = MediaType.parseMediaType(dto.mimeType());
         final long fileSize = dto.size();
 
-        // 3) Range 파싱 (없으면 전체 파일)
-        final long start;
-        final long end;
-        if (rangeHeader != null && !HttpRange.parseRanges(rangeHeader).isEmpty()) {
-            final HttpRange range = HttpRange.parseRanges(rangeHeader).getFirst();
-            start = range.getRangeStart(fileSize);
-            end = range.getRangeEnd(fileSize);
-        } else {
-            start = 0;
-            end = fileSize - 1;
+        // 3) Range 파싱 — 없거나 형식이 잘못되면 빈 목록으로 보고 전체 파일을 200으로 반환 (RFC 7233)
+        List<HttpRange> ranges;
+        try {
+            ranges = HttpRange.parseRanges(rangeHeader);
+        } catch (final IllegalArgumentException ex) {
+            ranges = List.of();
         }
 
-        final long contentLength = end - start + 1;
+        // 4) Range 없으면 전체 파일을 200으로 반환
+        //    (ResourceRegion 컨버터를 쓰기 위해 전체 구간을 ResourceRegion 으로 감싼다)
+        if (ranges.isEmpty()) {
+            return ResponseEntity.ok()
+                    .contentType(mediaType)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                    .body(new ResourceRegion(dto.resource(), 0, fileSize));
+        }
 
+        // 5) 첫 구간 계산 — 파일 크기를 벗어나면 416 반환
+        final HttpRange range = ranges.getFirst();
+        final long start = range.getRangeStart(fileSize);
+        final long end = range.getRangeEnd(fileSize);
+        if (start >= fileSize) {
+            return ResponseEntity
+                    .status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                    .header(HttpHeaders.CONTENT_RANGE, "bytes */" + fileSize)
+                    .build();
+        }
+
+        // 6) 부분 응답 206 (Content-Range 는 ResourceRegion 직렬화 시 자동 설정됨)
+        final long contentLength = end - start + 1;
         return ResponseEntity
                 .status(HttpStatus.PARTIAL_CONTENT)
                 .contentType(mediaType)
                 .contentLength(contentLength)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-//                .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize)
                 .body(new ResourceRegion(dto.resource(), start, contentLength));
     }
 
