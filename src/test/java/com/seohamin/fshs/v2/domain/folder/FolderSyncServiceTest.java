@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.seohamin.fshs.v2.domain.file.entity.Category;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
+import com.seohamin.fshs.v2.domain.file.service.FileThumbnailProcessor;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderSyncResponseDto;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
@@ -16,6 +17,7 @@ import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.storage.FileAnalyzer;
 import com.seohamin.fshs.v2.global.infra.storage.StorageIoCore;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
+import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
 import com.seohamin.fshs.v2.global.init.SystemRootInitializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,6 +39,11 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 
 @DataJpaTest
 @Import({JpaAuditingConfig.class, SystemRootInitializer.class})
@@ -59,6 +66,7 @@ class FolderSyncServiceTest {
     Path tempRoot;
 
     private FolderSyncService folderSyncService;
+    private FileThumbnailProcessor fileThumbnailProcessor;
 
     private static final String USERNAME = "tester";
 
@@ -72,6 +80,7 @@ class FolderSyncServiceTest {
         ReflectionTestUtils.setField(storageManager, "tempPath", tempRoot.resolve("tmp").toString());
 
         final FileAnalyzer fileAnalyzer = new FileAnalyzer(null, null, storageManager);
+        fileThumbnailProcessor = mock(FileThumbnailProcessor.class);
         folderSyncService = new FolderSyncService(
                 folderRepository,
                 fileRepository,
@@ -79,7 +88,8 @@ class FolderSyncServiceTest {
                 storageManager,
                 fileAnalyzer,
                 Caffeine.newBuilder().build(),
-                Caffeine.newBuilder().build()
+                Caffeine.newBuilder().build(),
+                fileThumbnailProcessor
         );
 
         if (folderRepository.findById(1L).isEmpty()) {
@@ -180,6 +190,54 @@ class FolderSyncServiceTest {
                 .noneMatch(file -> file.getName().equals(".DS_Store"))).isTrue();
     }
 
+    @Test
+    @DisplayName("폴더 동기화 : 신규 이미지 파일 저장 후 썸네일 생성을 요청한다")
+    void syncFolder_createdImageFile_requestsThumbnail() throws IOException {
+        final FileAnalyzer fileAnalyzer = mock(FileAnalyzer.class);
+        final FileThumbnailProcessor thumbnailProcessor = mock(FileThumbnailProcessor.class);
+        given(fileAnalyzer.analyzeFile(any(Path.class))).willReturn(new FileAnalysisResultDto(
+                "none",
+                "none",
+                null,
+                "none",
+                null,
+                null,
+                null,
+                100,
+                100,
+                null,
+                null,
+                null,
+                "image/jpeg",
+                5L,
+                Category.IMAGE,
+                "photo.jpg",
+                "photo",
+                "jpg"
+        ));
+
+        final FolderSyncService syncService = new FolderSyncService(
+                folderRepository,
+                fileRepository,
+                userRepository,
+                testStorageManager(),
+                fileAnalyzer,
+                Caffeine.newBuilder().build(),
+                Caffeine.newBuilder().build(),
+                thumbnailProcessor
+        );
+        final Folder userRoot = folderRepository.findByRelativePath("userA").orElseThrow();
+        final Folder images = persistFolder("images", userRoot, "userA/images");
+        write("userA/images/photo.jpg", "photo", Instant.parse("2026-06-12T00:00:00Z"));
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        syncService.syncFolder(images.getId(), USERNAME);
+
+        then(thumbnailProcessor).should()
+                .process(any(String.class), eq("userA/images/photo.jpg"), eq(Category.IMAGE));
+    }
+
     private Folder persistFolder(
             final String name,
             final Folder parent,
@@ -235,5 +293,12 @@ class FolderSyncServiceTest {
         Files.createDirectories(path.getParent());
         Files.writeString(path, content);
         Files.setLastModifiedTime(path, FileTime.from(lastModified));
+    }
+
+    private StorageManager testStorageManager() {
+        final StorageManager storageManager = new StorageManager(new StorageIoCore());
+        ReflectionTestUtils.setField(storageManager, "rootPath", tempRoot.toString());
+        ReflectionTestUtils.setField(storageManager, "tempPath", tempRoot.resolve("tmp").toString());
+        return storageManager;
     }
 }

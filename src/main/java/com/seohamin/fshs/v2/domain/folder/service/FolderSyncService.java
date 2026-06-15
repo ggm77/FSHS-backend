@@ -3,6 +3,7 @@ package com.seohamin.fshs.v2.domain.folder.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
+import com.seohamin.fshs.v2.domain.file.service.FileThumbnailProcessor;
 import com.seohamin.fshs.v2.domain.folder.dto.FolderSyncResponseDto;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
@@ -15,6 +16,8 @@ import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import com.seohamin.fshs.v2.global.infra.storage.dto.FileAnalysisResultDto;
 import com.seohamin.fshs.v2.global.util.storage.PathNameUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -36,6 +39,7 @@ import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FolderSyncService {
 
     private static final String MACOS_DIRECTORY_METADATA_FILE = ".DS_Store";
@@ -47,6 +51,7 @@ public class FolderSyncService {
     private final FileAnalyzer fileAnalyzer;
     private final Cache<Long, String> filePathCache;
     private final Cache<String, Boolean> fileAccessCache;
+    private final FileThumbnailProcessor fileThumbnailProcessor;
 
     // 부모/자식 폴더 동시 동기화가 겹치면 삭제/생성 판단이 충돌할 수 있어 전역 단일 실행으로 제한한다.
     private final AtomicBoolean syncInProgress = new AtomicBoolean(false);
@@ -323,6 +328,8 @@ public class FolderSyncService {
 
         try {
             final FileAnalysisResultDto analysisResult = fileAnalyzer.analyzeFile(diskFile.absolutePath());
+            log.info("[파일 검증 및 정보 추출 완료]: {}", diskFile.absolutePath());
+
             final File file = File.builder()
                     .parentFolder(parentFolder)
                     .ownerId(user.getId())
@@ -350,8 +357,18 @@ public class FolderSyncService {
                     .category(analysisResult.category())
                     .build();
             final File savedFile = fileRepository.save(file);
+            log.info("[파일 정보 DB에 저장 완료]: {}", file.getUuid());
+
             filesByPath.put(diskFile.relativePath(), savedFile);
             result.createdFiles().add(diskFile.relativePath());
+
+            // 섬네일 생성
+            try {
+                fileThumbnailProcessor.process(file.getUuid(), file.getRelativePath(), analysisResult.category());
+            } catch (final TaskRejectedException ex) {
+                log.warn("[썸네일 생성 큐 초과]: {}", file.getUuid(), ex);
+            }
+
         } catch (final CustomException ex) {
             result.errors().add(diskFile.relativePath() + ": " + ex.getExceptionCode().name());
         }
