@@ -178,7 +178,7 @@ public class UserRepositoryTest {
 
     @Test
     @DisplayName("유저 업데이트 : 정보 수정시 updatedAt 수정됨")
-    void updateUpdatedAt() {
+    void updateUpdatedAt() throws InterruptedException {
         // Given
         final User user = new User("username", "password");
         final User savedUser = userRepository.save(user);
@@ -189,6 +189,7 @@ public class UserRepositoryTest {
         // When
         final User targetUser = userRepository.findById(userId).get();
         final Instant createdAt = targetUser.getCreatedAt();
+        Thread.sleep(10);
         targetUser.updateUsername("newUsername");
         testEntityManager.flush();
         testEntityManager.clear();
