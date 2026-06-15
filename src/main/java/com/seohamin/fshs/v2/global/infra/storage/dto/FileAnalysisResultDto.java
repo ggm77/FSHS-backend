@@ -49,7 +49,7 @@ public record FileAnalysisResultDto(
                 parseSafeInt(format.bit_rate()),
                 metadataExtractorDto.capturedAt() != null
                         ? metadataExtractorDto.capturedAt()
-                        : parseInstant(format.tags().creation_time()),
+                        : parseInstant(format.tags() != null ? format.tags().creation_time() : null),
                 videoStream.map(FfmpegAnalysisResultDto.FfprobeStream::width).orElse(0),
                 videoStream.map(FfmpegAnalysisResultDto.FfprobeStream::height).orElse(0),
                 metadataExtractorDto.orientation(),
@@ -86,7 +86,7 @@ public record FileAnalysisResultDto(
                 format.format_name(),
                 parseDuration(format.duration()),
                 parseSafeInt(format.bit_rate()),
-                parseInstant(format.tags().creation_time()),
+                parseInstant(format.tags() != null ? format.tags().creation_time() : null),
                 videoStream.map(FfmpegAnalysisResultDto.FfprobeStream::width).orElse(0),
                 videoStream.map(FfmpegAnalysisResultDto.FfprobeStream::height).orElse(0),
                 videoStream.map(s -> parseSafeInt(s.tags() != null ? s.tags().rotate() : "0")).orElse(0),
