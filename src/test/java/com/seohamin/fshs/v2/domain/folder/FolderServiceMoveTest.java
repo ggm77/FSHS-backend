@@ -258,6 +258,46 @@ class FolderServiceMoveTest {
     }
 
     @Test
+    @DisplayName("폴더 이름 변경 : 경로에 보충문자(이모지)가 있어도 하위 경로가 올바르게 치환된다")
+    void renameFolder_withSupplementaryCharInPath_rewritesDescendantPaths() throws IOException {
+        // Given : 이름에 이모지(📁, surrogate pair)가 포함된 폴더와 그 하위 폴더/파일
+        //         UTF-16 길이와 코드포인트 수가 달라 SUBSTRING 오프셋이 틀어질 수 있는 경로
+        final Folder userARoot = folderRepository.findById(userARootId).orElseThrow();
+        final Folder pics = persistFolder("pics📁", userARoot, "userA/pics📁");
+        final Folder inner = persistFolder("inner", pics, "userA/pics📁/inner");
+        final File nested = persistFile("n.txt", inner, "userA/pics📁/inner/n.txt", "userA/pics📁/inner");
+        mkdir("userA/pics📁/inner");
+        touch("userA/pics📁/inner/n.txt");
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        final Long picsId = pics.getId();
+        final Long innerId = inner.getId();
+        final Long nestedId = nested.getId();
+
+        // When : pics📁 -> gallery 로 이름 변경
+        folderService.updateFolder(picsId, new FolderRequestDto(null, "gallery"), USERNAME);
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        // Then : 폴더 자신/하위 폴더/하위 파일 경로가 모두 올바르게 치환됨
+        //        (UTF-16 길이로 자르면 구분자 '/'가 잘려 "userA/galleryinner/..." 로 깨진다)
+        final Folder renamed = folderRepository.findById(picsId).orElseThrow();
+        assertThat(renamed.getRelativePath()).isEqualTo("userA/gallery");
+
+        final Folder movedInner = folderRepository.findById(innerId).orElseThrow();
+        assertThat(movedInner.getRelativePath()).isEqualTo("userA/gallery/inner");
+
+        final File movedFile = fileRepository.findById(nestedId).orElseThrow();
+        assertThat(movedFile.getRelativePath()).isEqualTo("userA/gallery/inner/n.txt");
+        assertThat(movedFile.getParentPath()).isEqualTo("userA/gallery/inner");
+
+        // Then : 디스크도 실제로 이동됨
+        assertThat(Files.exists(tempRoot.resolve("userA/gallery/inner/n.txt"))).isTrue();
+        assertThat(Files.exists(tempRoot.resolve("userA/pics📁"))).isFalse();
+    }
+
+    @Test
     @DisplayName("폴더 이동 : DB 작업이 실패하면 디스크 이동이 일어나지 않는다")
     void moveFolder_dbFailure_doesNotMoveDisk() {
         // Given : DB 상으로만 archive 아래 'projects' 가 이미 존재 (디스크엔 없음)

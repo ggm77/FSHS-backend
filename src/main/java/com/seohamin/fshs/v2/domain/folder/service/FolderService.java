@@ -300,7 +300,9 @@ public class FolderService {
         //     벌크 연산의 flushAutomatically 가 폴더 자신의 변경까지 DB 에 반영하므로
         //     이름 충돌(uk_folder_path) 등 DB 실패는 디스크를 건드리기 전에 드러난다
         final String pattern = escapeLike(oldPathStr) + "/%";
-        final int cutFrom = oldPathStr.length() + 1;
+        // SQLite substr 은 코드포인트 기준이라 UTF-16 길이(String.length)가 아닌 코드포인트 수로 잘라야
+        // 보충문자(이모지 등 surrogate pair)가 포함된 경로에서도 하위 경로가 올바르게 치환된다
+        final int cutFrom = oldPathStr.codePointCount(0, oldPathStr.length()) + 1;
         try {
             folderRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
             fileRepository.rewriteDescendantPaths(newPathStr, cutFrom, pattern);
