@@ -25,6 +25,8 @@ class FfmpegProcessorTest {
         ReflectionTestUtils.setField(ffmpegConfig, "ffprobe", "/usr/bin/ffprobe");
         ffmpegConfig.setSelectedHwAccelApi("cuda");
         ffmpegConfig.setSelectedH264Encoder("h264_nvenc");
+        ffmpegConfig.setTranscodingWidth(1920);
+        ffmpegConfig.setTranscodingHeight(1080);
 
         ffmpegProcessor = new FfmpegProcessor(ffmpegConfig, null);
     }

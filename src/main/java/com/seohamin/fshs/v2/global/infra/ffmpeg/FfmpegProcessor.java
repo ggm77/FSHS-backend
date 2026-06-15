@@ -47,9 +47,6 @@ public class FfmpegProcessor {
     private static final int HLS_SEGMENT_SECONDS = 6;
     private static final int THUMBNAIL_TIMEOUT_SECONDS = 60;
 
-    private static final String MAX_OUTPUT_RESOLUTION_FILTER =
-            "scale=w=1920:h=1080:force_original_aspect_ratio=decrease:force_divisible_by=2";
-
     /**
      * FFprobe를 통해 파일을 분석하는 메서드
      * @param filePath 분석할 파일의 정규화 된 경로
@@ -141,7 +138,7 @@ public class FfmpegProcessor {
         command.add("-i");
         command.add(filePath);
         command.add("-vf");
-        command.add(MAX_OUTPUT_RESOLUTION_FILTER);
+        command.add(buildScaleFilter());
         command.addAll(getEncoderOptions(ffmpegConfig.getSelectedH264Encoder()));
         command.add("-pix_fmt");
         command.add("yuv420p");
@@ -232,7 +229,7 @@ public class FfmpegProcessor {
         command.add("-t");
         command.add(String.valueOf(HLS_SEGMENT_SECONDS));
         command.add("-vf");
-        command.add(MAX_OUTPUT_RESOLUTION_FILTER);
+        command.add(buildScaleFilter());
         command.addAll(getEncoderOptions(ffmpegConfig.getSelectedH264Encoder()));
         command.add("-force_key_frames");
         command.add("expr:gte(t," + start + ")");
@@ -370,6 +367,13 @@ public class FfmpegProcessor {
             return List.of();
         }
         return List.of("-hwaccel", api);
+    }
+
+    // 설정된 화질(해상도 상한)로 scale 필터를 구성한다 (원본 비율 유지, 축소만)
+    private String buildScaleFilter() {
+        return "scale=w=" + ffmpegConfig.getTranscodingWidth()
+                + ":h=" + ffmpegConfig.getTranscodingHeight()
+                + ":force_original_aspect_ratio=decrease:force_divisible_by=2";
     }
 
     /**
