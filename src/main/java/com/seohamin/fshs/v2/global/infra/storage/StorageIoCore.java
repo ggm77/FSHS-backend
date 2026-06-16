@@ -97,7 +97,8 @@ public class StorageIoCore {
      */
     public String getMimeType(final Path path) {
         try {
-            return Files.probeContentType(path);
+            final String mimeType = Files.probeContentType(path);
+            return mimeType != null ? mimeType : MimeTypeUtil.DEFAULT_MIME_TYPE;
         } catch (final IOException ex) {
             return MimeTypeUtil.DEFAULT_MIME_TYPE;
         }

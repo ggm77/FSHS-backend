@@ -135,14 +135,14 @@ public class StorageManager {
         final String baseName = PathNameUtil.extractBaseName(lowerName);
         final String extension = PathNameUtil.extractExtension(lowerName);
 
-        // 3) 파일 카테고리 분류
-        final Category category = FileCategoryUtil.categorize(extension);
-
-        // 4) MIME Type 확인 - Map에 정보 없으면 OS에 존재하는 정보로 찾음
+        // 3) MIME Type 확인 - Map에 정보 없으면 OS에 존재하는 정보로 찾음
         String mimeType = MimeTypeUtil.getMimeType(extension);
         if (mimeType == null) {
             mimeType = storageIoCore.getMimeType(path);
         }
+
+        // 4) 파일 카테고리 분류
+        final Category category = FileCategoryUtil.categorize(extension, mimeType);
 
         // 5) 파일 상세 속성 확인
         final BasicFileAttributes attrs = storageIoCore.readAttributes(path);
