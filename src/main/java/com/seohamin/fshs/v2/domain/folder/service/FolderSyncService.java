@@ -1,6 +1,7 @@
 package com.seohamin.fshs.v2.domain.folder.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.seohamin.fshs.v2.domain.file.entity.Category;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
 import com.seohamin.fshs.v2.domain.file.service.FileThumbnailProcessor;
@@ -304,6 +305,8 @@ public class FolderSyncService {
                 createFile(diskFile, foldersByPath, user, filesByPath, result);
             } else if (isChanged(file, diskFile)) {
                 updateFile(file, diskFile, result);
+            } else if (needsCategoryRecheck(file)) {
+                recheckFileCategory(file, diskFile, result);
             }
         }
     }
@@ -392,6 +395,25 @@ public class FolderSyncService {
     }
 
     /**
+     * 기존 분류 실패 파일은 파일 내용이 그대로여도 현재 분류 로직으로 다시 확인한다.
+     */
+    private void recheckFileCategory(
+            final File file,
+            final DiskFile diskFile,
+            final SyncResult result
+    ) {
+        try {
+            final FileAnalysisResultDto analysisResult = fileAnalyzer.analyzeFile(diskFile.absolutePath());
+            if (file.getCategory() != analysisResult.category()) {
+                applyAnalysis(file, analysisResult, diskFile.lastModified());
+                result.updatedFiles().add(diskFile.relativePath());
+            }
+        } catch (final CustomException ex) {
+            result.errors().add(diskFile.relativePath() + ": " + ex.getExceptionCode().name());
+        }
+    }
+
+    /**
      * FileAnalyzer 결과를 기존 엔티티에 반영한다.
      * relativePath와 parentPath는 같은 경로의 파일 갱신이므로 변경하지 않는다.
      */
@@ -430,6 +452,11 @@ public class FolderSyncService {
     ) {
         return !file.getSize().equals(diskFile.size())
                 || file.getOriginUpdatedAt().toEpochMilli() != diskFile.lastModified().toEpochMilli();
+    }
+
+    private boolean needsCategoryRecheck(final File file) {
+        return file.getCategory() == Category.ETC
+                || file.getCategory() == Category.UNKNOWN;
     }
 
     /**

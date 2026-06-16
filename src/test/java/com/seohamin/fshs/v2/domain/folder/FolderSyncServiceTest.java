@@ -240,6 +240,36 @@ class FolderSyncServiceTest {
     }
 
     @Test
+    @DisplayName("폴더 동기화 : 기존 파일 카테고리가 ETC 또는 UNKNOWN이면 파일이 그대로여도 다시 분류한다")
+    void syncFolder_rechecksEtcAndUnknownFileCategory() throws IOException {
+        final Folder docs = folderRepository.findById(docsId).orElseThrow();
+        final Instant lastModified = Instant.parse("2026-06-12T00:00:00Z");
+        write("userA/docs/legacy.csv", "a,b", lastModified);
+        write("userA/docs/legacy.json", "{}", lastModified);
+        persistFile("legacy.csv", docs, "userA/docs/legacy.csv", "userA/docs", 3L, lastModified, Category.ETC);
+        persistFile("legacy.json", docs, "userA/docs/legacy.json", "userA/docs", 2L, lastModified, Category.UNKNOWN);
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        final FolderSyncResponseDto response = folderSyncService.syncFolder(docsId, USERNAME);
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        assertThat(response.updatedFiles())
+                .contains("userA/docs/legacy.csv", "userA/docs/legacy.json");
+        assertThat(fileRepository.findAll().stream()
+                .filter(file -> file.getRelativePath().equals("userA/docs/legacy.csv"))
+                .findFirst()
+                .orElseThrow()
+                .getCategory()).isEqualTo(Category.DOCUMENT);
+        assertThat(fileRepository.findAll().stream()
+                .filter(file -> file.getRelativePath().equals("userA/docs/legacy.json"))
+                .findFirst()
+                .orElseThrow()
+                .getCategory()).isEqualTo(Category.DOCUMENT);
+    }
+
+    @Test
     @DisplayName("폴더 동기화 : NFD 파일 경로는 보존하고 파일명은 NFC로 저장한다")
     void syncFolder_preservesNfdPathAndNormalizesFileName() throws IOException {
         final String nfcName = "한글.txt";
@@ -289,6 +319,18 @@ class FolderSyncServiceTest {
             final Long size,
             final Instant originUpdatedAt
     ) {
+        return persistFile(name, parent, relativePath, parentPath, size, originUpdatedAt, Category.DOCUMENT);
+    }
+
+    private File persistFile(
+            final String name,
+            final Folder parent,
+            final String relativePath,
+            final String parentPath,
+            final Long size,
+            final Instant originUpdatedAt,
+            final Category category
+    ) {
         final int dot = name.lastIndexOf('.');
         final String base = dot > 0 ? name.substring(0, dot) : name;
         final String ext = dot > 0 ? name.substring(dot + 1) : "";
@@ -304,7 +346,7 @@ class FolderSyncServiceTest {
                 .mimeType("text/plain")
                 .size(size)
                 .originUpdatedAt(originUpdatedAt)
-                .category(Category.DOCUMENT)
+                .category(category)
                 .build());
     }
 
