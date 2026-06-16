@@ -18,6 +18,8 @@ GEMINI.md
 CLAUDE.md
 Agents.md
 
+/src/main/resources/static/
+
 /db/
 *.mv.db
 
