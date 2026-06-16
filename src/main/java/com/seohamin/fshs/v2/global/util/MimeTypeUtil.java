@@ -53,6 +53,8 @@ public class MimeTypeUtil {
             Map.entry("txt", "text/plain"),
             Map.entry("doc", "application/msword"),
             Map.entry("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            Map.entry("hwp", "application/x-hwp"),
+            Map.entry("hwpx", "application/vnd.hancom.hwpx"),
             Map.entry("ppt", "application/vnd.ms-powerpoint"),
             Map.entry("pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
             Map.entry("xls", "application/vnd.ms-excel"),

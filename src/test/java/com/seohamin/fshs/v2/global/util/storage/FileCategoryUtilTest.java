@@ -15,6 +15,8 @@ class FileCategoryUtilTest {
         assertThat(FileCategoryUtil.categorize("m4v")).isEqualTo(Category.VIDEO);
         assertThat(FileCategoryUtil.categorize("opus")).isEqualTo(Category.AUDIO);
         assertThat(FileCategoryUtil.categorize("csv")).isEqualTo(Category.DOCUMENT);
+        assertThat(FileCategoryUtil.categorize("hwp")).isEqualTo(Category.DOCUMENT);
+        assertThat(FileCategoryUtil.categorize("hwpx")).isEqualTo(Category.DOCUMENT);
         assertThat(FileCategoryUtil.categorize("tgz")).isEqualTo(Category.ARCHIVE);
     }
 

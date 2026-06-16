@@ -20,6 +20,8 @@ class MimeTypeUtilTest {
         assertThat(MimeTypeUtil.getMimeType("heif")).isEqualTo("image/heif");
         assertThat(MimeTypeUtil.getMimeType("opus")).isEqualTo("audio/opus");
         assertThat(MimeTypeUtil.getMimeType("csv")).isEqualTo("text/csv");
+        assertThat(MimeTypeUtil.getMimeType("hwp")).isEqualTo("application/x-hwp");
+        assertThat(MimeTypeUtil.getMimeType("hwpx")).isEqualTo("application/vnd.hancom.hwpx");
         assertThat(MimeTypeUtil.getMimeType("tgz")).isEqualTo("application/gzip");
     }
 
