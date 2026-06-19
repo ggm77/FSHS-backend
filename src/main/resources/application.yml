@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: FSHS
+  servlet:
+    # 업로드 가능한 파일 크기 제한 (단일 50GB, 총합 100GB)
+    multipart:
+      location: ${fshs.storage.temp-path}
+      file-size-threshold: 1MB
+      max-file-size: 50GB
+      max-request-size: 100GB
+  jpa:
+    properties:
+      hibernate:
+        enable_lazy_load_no_trans: true
+        format_sql: true
+    database-platform: com.seohamin.fshs.v2.global.config.FshsSQLiteDialect
+  profiles:
+#    active: prod
+    active: dev
+
+server:
+  servlet:
+    session:
+      # 쿠키 설정 (http 환경에서도 세션 사용하기 위함)
+      cookie:
+        secure: false
+        http-only: true
+        same-site: lax # 배포 때는 Strict로 변경 / 개발 때는 lax
+
+# 스웨거 기본 주소를 /api/swagger로 변경 (실제 주소: /api/swagger-ui/index.html)
+springdoc:
+  swagger-ui:
+    path: /api/swagger
+  api-docs:
+    path: /api/swagger-ui/v3/api-docs
+
+file:
+  upload:
+    # 한번에 업로드 가능한 최대 파일 개수
+    max-count: 100
+
+ffmpeg:
+  # 동시 트랜스코딩 최대 수 (초과 시 503 반환)
+  max-concurrent: 4
