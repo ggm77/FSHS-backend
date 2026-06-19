@@ -34,8 +34,13 @@ public class SecurityConfig {
     @Value("${spring.profiles.active}")
     private String ACTIVE_PROFILE;
 
-    @Value("${remember-me.key:dev-insecure-default-key}")
-    private String rememberMeKey;
+    private final String rememberMeKey = generateRememberMeKey();
+
+    private static String generateRememberMeKey() {
+        final byte[] bytes = new byte[32];
+        new java.security.SecureRandom().nextBytes(bytes);
+        return java.util.HexFormat.of().formatHex(bytes);
+    }
 
     @Bean
     public PersistentTokenRepository persistentTokenRepository(final DataSource dataSource, final JdbcTemplate jdbcTemplate) {
