@@ -18,15 +18,13 @@ public class FfmpegConfig {
     @Getter
     private String ffprobe;
 
-    @Value("${ffmpeg.default-hw-accelerator}")
     @Getter
     @Setter
-    private String selectedHwAccelApi;
+    private String selectedHwAccelApi = "none";
 
-    @Value("${ffmpeg.default-h264-encoder}")
     @Getter
     @Setter
-    private String selectedH264Encoder;
+    private String selectedH264Encoder = "libx264";
 
     // 실시간 트랜스코딩 출력 해상도 상한 (화질 설정에서 갱신됨)
     @Value("${ffmpeg.default-quality-width:1920}")
