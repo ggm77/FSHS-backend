@@ -9,6 +9,7 @@ import com.seohamin.fshs.v2.global.init.AdminUserInitializer;
 import com.seohamin.fshs.v2.global.init.StoragePathInitializer;
 import com.seohamin.fshs.v2.global.init.SystemRootInitializer;
 import com.seohamin.fshs.v2.global.init.TranscodingSettingInitializer;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +56,10 @@ public class SecurityConfigTest {
 
     @MockitoBean
     private TranscodingSettingRepository transcodingSettingRepository;
+
+    // DataSource 없이 테스트하므로 PersistentTokenRepository Mock으로 대체
+    @MockitoBean
+    private PersistentTokenRepository persistentTokenRepository;
 
     // 보안 필터 체인 검증 테스트라 초기화 러너는 Mock으로 무력화
     @MockitoBean

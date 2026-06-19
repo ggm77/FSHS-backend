@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -15,12 +16,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import javax.sql.DataSource;
 import java.io.IOException;
 
 @Configuration
@@ -30,8 +34,26 @@ public class SecurityConfig {
     @Value("${spring.profiles.active}")
     private String ACTIVE_PROFILE;
 
+    @Value("${remember-me.key:dev-insecure-default-key}")
+    private String rememberMeKey;
+
     @Bean
-    protected SecurityFilterChain configure(final HttpSecurity httpSecurity) throws Exception {
+    public PersistentTokenRepository persistentTokenRepository(final DataSource dataSource, final JdbcTemplate jdbcTemplate) {
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS persistent_logins (
+                    username VARCHAR(64) NOT NULL,
+                    series   VARCHAR(64) PRIMARY KEY,
+                    token    VARCHAR(64) NOT NULL,
+                    last_used DATETIME NOT NULL
+                )
+                """);
+        final JdbcTokenRepositoryImpl tokenRepository = new JdbcTokenRepositoryImpl();
+        tokenRepository.setDataSource(dataSource);
+        return tokenRepository;
+    }
+
+    @Bean
+    protected SecurityFilterChain configure(final HttpSecurity httpSecurity, final PersistentTokenRepository persistentTokenRepository) throws Exception {
 
         // 배포 환경에서는 CSRF 활성
         if ("prod".equals(ACTIVE_PROFILE)) {
@@ -64,6 +86,12 @@ public class SecurityConfig {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         })
                 )
+                .rememberMe(rememberMe -> rememberMe
+                        .rememberMeParameter("remember-me")
+                        .tokenRepository(persistentTokenRepository)
+                        .tokenValiditySeconds(30 * 24 * 60 * 60) // 30일
+                        .key(rememberMeKey)
+                )
                 .logout(logout -> logout
                         // 로그아웃 엔드포인트
                         .logoutUrl("/api/v2/auth/logout")
@@ -75,7 +103,7 @@ public class SecurityConfig {
                         // 세션 삭제
                         .invalidateHttpSession(true)
                         // 쿠키 삭제
-                        .deleteCookies("JSESSIONID")
+                        .deleteCookies("JSESSIONID", "remember-me")
                 )
 
                 // 세션 설정
