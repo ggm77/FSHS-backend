@@ -1,8 +1,6 @@
 spring:
   application:
     name: FSHS
-  profiles:
-    active: prod
   servlet:
     # 업로드 가능한 파일 크기 제한 (단일 50GB, 총합 100GB)
     multipart:
@@ -58,6 +56,9 @@ fshs:
     data-path: ${fshs.base-path}/${fshs.storage.data-dir-name}
     temp-path: ${fshs.base-path}/${fshs.storage.temp-dir-name}
     thumbnail-path: ${fshs.base-path}/${fshs.storage.thumbnail-dir-name}
+
+app:
+  csrf.enabled: true
 
 ffmpeg:
   # 동시 트랜스코딩 최대 수 (초과 시 503 반환)

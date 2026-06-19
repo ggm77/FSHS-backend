@@ -31,8 +31,8 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Value("${spring.profiles.active}")
-    private String ACTIVE_PROFILE;
+    @Value("${app.csrf.enabled:false}")
+    private boolean csrfEnabled;
 
     private final String rememberMeKey = generateRememberMeKey();
 
@@ -60,8 +60,7 @@ public class SecurityConfig {
     @Bean
     protected SecurityFilterChain configure(final HttpSecurity httpSecurity, final PersistentTokenRepository persistentTokenRepository) throws Exception {
 
-        // 배포 환경에서는 CSRF 활성
-        if ("prod".equals(ACTIVE_PROFILE)) {
+        if (csrfEnabled) {
             final CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
 
             httpSecurity.csrf(csrf -> csrf
