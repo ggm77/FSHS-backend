@@ -27,6 +27,7 @@ spring:
 
 server:
   port: 51827
+  forward-headers-strategy: framework
   servlet:
     session:
       # 쿠키 설정 (http 환경에서도 세션 사용하기 위함)
