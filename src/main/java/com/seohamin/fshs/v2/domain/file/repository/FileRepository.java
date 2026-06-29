@@ -1,6 +1,9 @@
 package com.seohamin.fshs.v2.domain.file.repository;
 
+import com.seohamin.fshs.v2.domain.file.entity.Category;
 import com.seohamin.fshs.v2.domain.file.entity.File;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +16,18 @@ public interface FileRepository extends JpaRepository<File, Long> {
     boolean existsByUuid(final String uuid);
     Optional<File> findByUuid(final String uuid);
     List<File> findAllByRelativePathStartingWith(final String relativePathPrefix);
+
+    @Query("""
+            SELECT f
+            FROM File f
+            WHERE f.relativePath LIKE :rootPathPattern ESCAPE '\\'
+              AND f.lowerName LIKE :queryPattern ESCAPE '\\'
+              AND f.category = :category
+            """)
+    Page<File> searchFiles(@Param("rootPathPattern") String rootPathPattern,
+                           @Param("queryPattern") String queryPattern,
+                           @Param("category") Category category,
+                           Pageable pageable);
 
     // 폴더 이동/이름 변경 시 하위 파일들의 상대 경로/부모 경로 접두사를 한 번에 치환한다
     // pattern 은 '이전경로/%' 형태(ESCAPE '\'), cutFrom 은 '이전경로 길이 + 1'

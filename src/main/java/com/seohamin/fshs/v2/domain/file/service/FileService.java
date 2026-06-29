@@ -2,6 +2,7 @@ package com.seohamin.fshs.v2.domain.file.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.file.dto.*;
+import com.seohamin.fshs.v2.domain.file.entity.Category;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.entity.Status;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
@@ -13,6 +14,7 @@ import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
+import com.seohamin.fshs.v2.global.util.EnumUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
@@ -20,6 +22,10 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,6 +35,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,6 +59,9 @@ public class FileService {
 
     // HLS 세그먼트 파일명 패턴 (예: segment12.ts) — 자릿수를 제한해 int 오버플로 방지
     private static final Pattern HLS_SEGMENT_PATTERN = Pattern.compile("segment(\\d{1,9})\\.ts");
+
+    // 파일 검색시 사용가능한 정렬 기준
+    private static final Set<String> SORT_FIELDS = Set.of("name", "size", "originUpdatedAt", "updatedAt");
 
     /**
      * 파일 하나 업로드처리하는 메서드
@@ -168,6 +179,86 @@ public class FileService {
 
         // 5) DTO에 담기
         return FileResponseDto.of(file);
+    }
+
+    /**
+     * 파일 검색하는 메서드
+     * @param username 조회한 유저명
+     * @param query 검색어
+     * @param categoryStr 파일 카테고리 문자열
+     * @param sort 정렬 기준 (name, size, originUpdatedAt, updatedAt)
+     * @param order desc, asc
+     * @param size 페이지 크기
+     * @param page 페이지 번호
+     * @return
+     */
+    @Transactional(readOnly = true)
+    public FileListResponseDto searchFiles(
+            final String username,
+            final String query, // 검색어
+            final String categoryStr, // 파일 종류
+            final String sort, // 정렬 기준 (name, size, originUpdatedAt, updatedAt)
+            final String order, // desc, asc
+            final Integer size,
+            final Integer page
+    ) {
+        // 1) null 검사
+        if (
+                username == null || query == null || categoryStr == null
+                || sort == null || order == null || size == null || page == null
+        ) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 페이지네이션 값 검사
+        if (page < 0 || size <= 0 || size > 1000) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 3) 정렬 기준 검사
+        if (!SORT_FIELDS.contains(sort)) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 4) 정렬 순서 검사
+        final Sort.Direction direction;
+        if (order.equalsIgnoreCase("asc")) {
+            direction = Sort.Direction.ASC;
+        } else if (order.equalsIgnoreCase("desc")) {
+            direction = Sort.Direction.DESC;
+        } else {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 5) 카테고리 Enum으로 변환
+        final Category category = EnumUtil.toEnum(Category.class, categoryStr)
+                .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_REQUEST));
+
+        // 6) 유저 정보 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 7) 유저 루트 폴더 가져오기
+        final Folder userRoot = user.getRootFolder();
+        if (userRoot == null) {
+            throw new CustomException(ExceptionCode.ROOT_NOT_EXIST);
+        }
+
+        // 8) 페이저블 객체 생성
+        final String sortField = sort.equals("name") ? "lowerName" : sort;
+        final Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
+
+        // 9) 파일 검색
+        final String rootPathPattern = toRootPathPattern(userRoot.getRelativePath());
+        final String queryPattern = "%" + escapeLike(query.toLowerCase()) + "%";
+        final Page<File> files = fileRepository.searchFiles(rootPathPattern, queryPattern, category, pageable);
+
+        return new FileListResponseDto(
+                files.hasNext(),
+                files.getContent().stream()
+                        .map(FileResponseDto::of)
+                        .toList()
+        );
     }
 
 
@@ -505,6 +596,24 @@ public class FileService {
         // 7) 경로/권한 캐시 무효화 — 이동 후 옛 경로가 서빙되는 것을 방지
         filePathCache.invalidate(file.getId());
         fileAccessCache.asMap().keySet().removeIf(key -> key.startsWith(file.getId() + ":"));
+    }
+
+    private static String toRootPathPattern(final String rootPath) {
+        if (rootPath.isEmpty()) {
+            return "%";
+        }
+        return escapeLike(rootPath) + (rootPath.endsWith("/") ? "%" : "/%");
+    }
+
+    /**
+     * LIKE 패턴에서 와일드카드로 해석되는 문자(\ % _)를 이스케이프한다 (ESCAPE '\' 기준)
+     * @param raw 패턴에 넣을 원본 문자열
+     * @return 이스케이프된 문자열
+     */
+    private static String escapeLike(final String raw) {
+        return raw.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     /**

@@ -19,6 +19,9 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.orm.jpa.JpaSystemException;
 
 import java.time.Instant;
@@ -251,6 +254,42 @@ public class FileRepositoryTest {
 
         // Then
         assertThat(sharedFileRepository.findById(sharedFileId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("파일 검색 : 루트 경로, 검색어, 카테고리, 정렬 조건으로 조회함")
+    void searchFiles_filtersAndSorts() {
+        // Given
+        final Folder userRoot = createTestFolder("userA");
+        final Folder otherRoot = createTestFolder("userB");
+        testEntityManager.persist(userRoot);
+        testEntityManager.persist(otherRoot);
+
+        fileRepository.save(createTestFile(userRoot, "AlphaPhoto", "jpg", 0));
+        fileRepository.save(createTestFile(userRoot, "BetaPhoto", "jpg", 0));
+
+        final File document = createTestFile(userRoot, "ZetaPhoto", "pdf", 0);
+        document.updateCategory(Category.DOCUMENT);
+        fileRepository.save(document);
+
+        fileRepository.save(createTestFile(otherRoot, "ZetaPhoto", "jpg", 0));
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        // When
+        final Page<File> files = fileRepository.searchFiles(
+                "/userA/%",
+                "%photo%",
+                Category.IMAGE,
+                PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "lowerName"))
+        );
+
+        // Then
+        assertThat(files.getTotalElements()).isEqualTo(2);
+        assertThat(files.hasNext()).isTrue();
+        assertThat(files.getContent())
+                .extracting(File::getName)
+                .containsExactly("BetaPhoto.jpg");
     }
 
     private Folder createTestFolder(final String name) {
