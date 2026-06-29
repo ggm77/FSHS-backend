@@ -8,6 +8,8 @@ import com.seohamin.fshs.v2.domain.file.entity.Status;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
+import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
+import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
@@ -35,7 +37,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -56,6 +57,7 @@ public class FileService {
     private final Cache<String, Boolean> fileAccessCache;
     private final FfmpegProcessor ffmpegProcessor;
     private final FileThumbnailProcessor fileThumbnailProcessor;
+    private final SharedFileRepository sharedFileRepository;
 
     // HLS 세그먼트 파일명 패턴 (예: segment12.ts) — 자릿수를 제한해 int 오버플로 방지
     private static final Pattern HLS_SEGMENT_PATTERN = Pattern.compile("segment(\\d{1,9})\\.ts");
@@ -554,6 +556,56 @@ public class FileService {
         filePathCache.invalidate(fileId);
         fileStatusCache.invalidate(file.getUuid());
         fileAccessCache.asMap().keySet().removeIf(key -> key.startsWith(fileId + ":"));
+    }
+
+    /**
+     * 파일 공유 시키는 메서드
+     * @param username 요청 유저명
+     * @param fileId 파일 아이디
+     * @return 공유 파일 정보
+     */
+    @Transactional
+    public FileShareResponseDto shareFile(
+            final String username,
+            final Long fileId
+    ) {
+
+        // 1) null 검사
+        if (fileId == null || username == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 파일 조회
+        final File file = fileRepository.findById(fileId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST));
+
+        // 3) 유저 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 4) 접근 권환 조회
+        if (!hasPermission(user, file)) {
+            throw new CustomException(ExceptionCode.INVALID_PATH);
+        }
+
+        // 5) 공유키 생성 (UUID에서 -제외)
+        final String shareKey = UUID.randomUUID().toString().replace("-", "");
+
+        // 6) 공유 파일 엔티티 생성
+        final SharedFile sharedFile = SharedFile.builder()
+                .owner(user)
+                .file(file)
+                .shareKey(shareKey)
+                .build();
+
+        // 7) DB저장
+        final SharedFile savedSharedFile = sharedFileRepository.save(sharedFile);
+
+        return new FileShareResponseDto(
+                savedSharedFile.getId(),
+                file.getId(),
+                shareKey
+        );
     }
 
     /**

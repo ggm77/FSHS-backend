@@ -206,4 +206,14 @@ public class FileController {
 
         return ResponseEntity.noContent().build();
     }
+
+    // 파일 공유 링크 만드는 API
+    @PostMapping("/files/{fileId}/shares")
+    public ResponseEntity<FileShareResponseDto> shareFile(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @PathVariable final Long fileId
+    ) {
+
+        return ResponseEntity.ok(fileService.shareFile(userDetails.getUsername(), fileId));
+    }
 }
