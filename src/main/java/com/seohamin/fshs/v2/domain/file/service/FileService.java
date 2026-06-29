@@ -204,7 +204,7 @@ public class FileService {
     ) {
         // 1) null 검사
         if (
-                username == null || query == null || categoryStr == null
+                username == null || query == null
                 || sort == null || order == null || size == null || page == null
         ) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
@@ -232,7 +232,7 @@ public class FileService {
 
         // 5) 카테고리 Enum으로 변환
         final Category category = EnumUtil.toEnum(Category.class, categoryStr)
-                .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_REQUEST));
+                .orElse(null);
 
         // 6) 유저 정보 조회
         final User user = userRepository.findByUsername(username)
@@ -251,7 +251,11 @@ public class FileService {
         // 9) 파일 검색
         final String rootPathPattern = toRootPathPattern(userRoot.getRelativePath());
         final String queryPattern = "%" + escapeLike(query.toLowerCase()) + "%";
-        final Page<File> files = fileRepository.searchFiles(rootPathPattern, queryPattern, category, pageable);
+        final Page<File> files;
+        if (category != null)
+            files = fileRepository.searchFiles(rootPathPattern, queryPattern, category, pageable);
+        else
+            files = fileRepository.searchFiles(rootPathPattern, queryPattern, pageable);
 
         return new FileListResponseDto(
                 files.hasNext(),
