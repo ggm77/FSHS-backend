@@ -8,6 +8,7 @@ import com.seohamin.fshs.v2.domain.file.entity.Status;
 import com.seohamin.fshs.v2.domain.file.repository.FileRepository;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
+import com.seohamin.fshs.v2.domain.share.dto.ShareKeyDto;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.domain.user.entity.User;
@@ -565,7 +566,7 @@ public class FileService {
      * @return 공유 파일 정보
      */
     @Transactional
-    public FileShareResponseDto shareFile(
+    public ShareKeyDto shareFile(
             final String username,
             final Long fileId
     ) {
@@ -601,7 +602,7 @@ public class FileService {
         // 7) DB저장
         final SharedFile savedSharedFile = sharedFileRepository.save(sharedFile);
 
-        return new FileShareResponseDto(
+        return new ShareKeyDto(
                 savedSharedFile.getId(),
                 file.getId(),
                 shareKey

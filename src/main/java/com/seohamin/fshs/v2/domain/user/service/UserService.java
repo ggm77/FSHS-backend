@@ -3,7 +3,10 @@ package com.seohamin.fshs.v2.domain.user.service;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.folder.entity.Folder;
 import com.seohamin.fshs.v2.domain.folder.repository.FolderRepository;
+import com.seohamin.fshs.v2.domain.share.dto.ShareKeyDto;
+import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import com.seohamin.fshs.v2.domain.user.dto.UserRootFolderRequestDto;
+import com.seohamin.fshs.v2.domain.user.dto.UserShareResponseDto;
 import lombok.RequiredArgsConstructor;
 import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -214,6 +218,41 @@ public class UserService implements UserDetailsService {
         // 6) 해당 유저의 권한 캐시 무효화 — 루트 재지정 즉시 새 권한 적용
         final String username = user.getUsername();
         fileAccessCache.asMap().keySet().removeIf(key -> key.endsWith(":" + username));
+    }
+
+    /**
+     * 유저가 생성한 공유키 리스트 조회하는 메서드
+     * @param userId 유저 아이디
+     * @param username 요청한 유저명
+     * @return
+     */
+    public UserShareResponseDto getUserShare(
+            final Long userId,
+            final String username
+    ) {
+        // 1) null 검사
+        if (userId == null || username == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 유저 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 3) 유저 검사
+        if (!userId.equals(user.getId())) {
+            throw new CustomException(ExceptionCode.ACCESS_DENIED);
+        }
+
+        // 4) 공유키 리스트 조회
+        final List<SharedFile> sharedFiles = user.getSharedFiles();
+
+        // 5) DTO로 변환해서 리턴
+        return new UserShareResponseDto(
+                sharedFiles.stream()
+                    .map(ShareKeyDto::of)
+                    .toList()
+        );
     }
 
     /**

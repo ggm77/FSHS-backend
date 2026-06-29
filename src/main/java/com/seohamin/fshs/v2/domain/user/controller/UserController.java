@@ -1,6 +1,7 @@
 package com.seohamin.fshs.v2.domain.user.controller;
 
 import com.seohamin.fshs.v2.domain.user.dto.UserRootFolderRequestDto;
+import com.seohamin.fshs.v2.domain.user.dto.UserShareResponseDto;
 import com.seohamin.fshs.v2.global.util.SessionUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -85,6 +86,16 @@ public class UserController {
         userService.setRootFolder(userId, userRootFolderRequestDto, userDetails.getAuthorities());
 
         return ResponseEntity.noContent().build();
+    }
+
+    // 공유한 파일 목록 조회하는 API
+    @GetMapping("/user/{userId}/shares")
+    public ResponseEntity<UserShareResponseDto> getUserShare(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @PathVariable final Long userId
+    ) {
+
+        return ResponseEntity.ok(userService.getUserShare(userId, userDetails.getUsername()));
     }
 
     // 요청 DTO에 username이나 password가 있는지 확인하는 메서드

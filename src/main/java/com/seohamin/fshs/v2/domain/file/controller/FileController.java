@@ -2,6 +2,7 @@ package com.seohamin.fshs.v2.domain.file.controller;
 
 import com.seohamin.fshs.v2.domain.file.dto.*;
 import com.seohamin.fshs.v2.domain.file.service.FileService;
+import com.seohamin.fshs.v2.domain.share.dto.ShareKeyDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -209,7 +210,7 @@ public class FileController {
 
     // 파일 공유 링크 만드는 API
     @PostMapping("/files/{fileId}/shares")
-    public ResponseEntity<FileShareResponseDto> shareFile(
+    public ResponseEntity<ShareKeyDto> shareFile(
             @AuthenticationPrincipal final UserDetails userDetails,
             @PathVariable final Long fileId
     ) {
