@@ -89,7 +89,7 @@ public class UserController {
     }
 
     // 공유한 파일 목록 조회하는 API
-    @GetMapping("/user/{userId}/shares")
+    @GetMapping("/users/{userId}/shares")
     public ResponseEntity<UserShareResponseDto> getUserShare(
             @AuthenticationPrincipal final UserDetails userDetails,
             @PathVariable final Long userId
