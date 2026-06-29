@@ -60,7 +60,7 @@ public class FileController {
     public ResponseEntity<FileListResponseDto> searchFiles(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam final String query, // 검색어
-            @RequestParam final String category, // 파일 종류
+            @RequestParam(required = false) final String category, // 파일 종류
             @RequestParam final String sort, // 정렬 기준 (name, size 등)
             @RequestParam final String order, // desc, asc
             @RequestParam final Integer size,
