@@ -44,8 +44,12 @@ public interface FileRepository extends JpaRepository<File, Long> {
             FROM File f
             WHERE f.relativePath LIKE :rootPathPattern ESCAPE '\\'
               AND f.category IN ('IMAGE', 'VIDEO')
+            ORDER BY
+              CASE WHEN :ascending = true THEN COALESCE(f.capturedAt, f.originUpdatedAt, f.updatedAt) ELSE NULL END ASC,
+              CASE WHEN :ascending = false THEN COALESCE(f.capturedAt, f.originUpdatedAt, f.updatedAt) ELSE NULL END DESC
             """)
     Page<File> findImageAndVideo(@Param("rootPathPattern") String rootPathPattern,
+                           @Param("ascending") boolean ascending,
                            Pageable pageable);
 
     // 폴더 이동/이름 변경 시 하위 파일들의 상대 경로/부모 경로 접두사를 한 번에 치환한다

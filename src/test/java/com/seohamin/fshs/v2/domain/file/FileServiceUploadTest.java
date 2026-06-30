@@ -76,6 +76,7 @@ class FileServiceUploadTest {
                 fileStatusCache,
                 Caffeine.newBuilder().build(),
                 ffmpegProcessor,
+                null,
                 null
         );
     }

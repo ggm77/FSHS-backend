@@ -656,11 +656,15 @@ public class FileService {
         }
 
         // 6) 페이저블 객체 생성
-        final Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "originUpdatedAt"));
+        final Pageable pageable = PageRequest.of(page, size);
 
         // 7) 파일 검색
         final String rootPathPattern = toRootPathPattern(userRoot.getRelativePath());
-        final Page<File> files = fileRepository.findImageAndVideo(rootPathPattern, pageable);
+        final Page<File> files = fileRepository.findImageAndVideo(
+                rootPathPattern,
+                direction == Sort.Direction.ASC,
+                pageable
+        );
 
         return new FileListResponseDto(
                 files.hasNext(),

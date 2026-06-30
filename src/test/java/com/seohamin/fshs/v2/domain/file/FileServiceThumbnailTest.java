@@ -75,7 +75,8 @@ class FileServiceThumbnailTest {
                 Caffeine.newBuilder().build(),
                 Caffeine.newBuilder().build(),
                 ffmpegProcessor,
-                fileThumbnailProcessor
+                fileThumbnailProcessor,
+                null
         );
     }
 

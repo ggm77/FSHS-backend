@@ -75,9 +75,9 @@ class FileServiceMoveTest {
         final Cache<Long, String> filePathCache = Caffeine.newBuilder().build();
         final Cache<String, Status> fileStatusCache = Caffeine.newBuilder().build();
         final Cache<String, Boolean> fileAccessCache = Caffeine.newBuilder().build();
-        // 이동 경로에서 쓰지 않는 의존성(fileUploadProcessor, ffmpegProcessor, fileThumbnailProcessor)은 null
+        // 이동 경로에서 쓰지 않는 의존성(fileUploadProcessor, ffmpegProcessor, fileThumbnailProcessor, sharedFileRepository)은 null
         fileService = new FileService(fileRepository, folderRepository, userRepository, storageManager,
-                null, filePathCache, fileStatusCache, fileAccessCache, null, null);
+                null, filePathCache, fileStatusCache, fileAccessCache, null, null, null);
 
         // --- 시스템 루트 ---
         if (folderRepository.findById(1L).isEmpty()) {

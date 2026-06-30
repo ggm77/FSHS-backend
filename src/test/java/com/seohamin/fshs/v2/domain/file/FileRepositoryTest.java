@@ -292,6 +292,56 @@ public class FileRepositoryTest {
                 .containsExactly("BetaPhoto.jpg");
     }
 
+    @Test
+    @DisplayName("갤러리 조회 : 촬영일이 있으면 촬영일, 없으면 파일 수정일 기준으로 정렬함")
+    void findImageAndVideo_sortsByCapturedAtFallbackToOriginUpdatedAt() {
+        // Given
+        final Folder userRoot = createTestFolder("userA");
+        testEntityManager.persist(userRoot);
+
+        final File capturedPhoto = createTestFile(userRoot, "CapturedPhoto", "jpg", 0);
+        capturedPhoto.updateCapturedAt(Instant.parse("2026-01-04T00:00:00Z"));
+        capturedPhoto.updateOriginUpdatedAt(Instant.parse("2026-01-01T00:00:00Z"));
+        fileRepository.save(capturedPhoto);
+
+        final File originPhoto = createTestFile(userRoot, "OriginPhoto", "jpg", 0);
+        originPhoto.updateOriginUpdatedAt(Instant.parse("2026-01-03T00:00:00Z"));
+        fileRepository.save(originPhoto);
+
+        final File video = createTestFile(userRoot, "VideoClip", "mp4", 0);
+        video.updateCategory(Category.VIDEO);
+        video.updateOriginUpdatedAt(Instant.parse("2026-01-02T00:00:00Z"));
+        fileRepository.save(video);
+
+        final File document = createTestFile(userRoot, "Document", "pdf", 0);
+        document.updateCategory(Category.DOCUMENT);
+        document.updateOriginUpdatedAt(Instant.parse("2026-01-05T00:00:00Z"));
+        fileRepository.save(document);
+
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        // When
+        final Page<File> descFiles = fileRepository.findImageAndVideo(
+                "/userA/%",
+                false,
+                PageRequest.of(0, 10)
+        );
+        final Page<File> ascFiles = fileRepository.findImageAndVideo(
+                "/userA/%",
+                true,
+                PageRequest.of(0, 10)
+        );
+
+        // Then
+        assertThat(descFiles.getContent())
+                .extracting(File::getName)
+                .containsExactly("CapturedPhoto.jpg", "OriginPhoto.jpg", "VideoClip.mp4");
+        assertThat(ascFiles.getContent())
+                .extracting(File::getName)
+                .containsExactly("VideoClip.mp4", "OriginPhoto.jpg", "CapturedPhoto.jpg");
+    }
+
     private Folder createTestFolder(final String name) {
         return Folder.builder()
                 .parentFolder(systemRootFolder)
