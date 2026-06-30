@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -85,4 +86,18 @@ public class SharedFileController {
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")
                 .body(new ResourceRegion(dto.resource(), start, contentLength));
     }
+
+    // 실시간 h264 트랜스코딩 API
+    @GetMapping("/files/{shareKey}/stream")
+    public ResponseEntity<StreamingResponseBody> streamSharedFile(
+            @PathVariable final String shareKey,
+            @RequestParam(defaultValue = "0") final double start
+    ) {
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("video/mp4"))
+                .header(HttpHeaders.ACCEPT_RANGES, "none")
+                .body(sharedFileService.streamSharedFile(shareKey, start));
+    }
+
 }

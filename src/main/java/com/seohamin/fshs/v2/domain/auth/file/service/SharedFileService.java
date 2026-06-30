@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.auth.file.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
 import com.seohamin.fshs.v2.domain.file.entity.File;
@@ -7,10 +8,13 @@ import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
+import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.file.Path;
 
@@ -20,12 +24,15 @@ public class SharedFileService {
 
     private final SharedFileRepository sharedFileRepository;
     private final StorageManager storageManager;
+    private final Cache<String, String> sharedFilePathCache;
+    private final FfmpegProcessor ffmpegProcessor;
 
     /**
      * 공유 파일의 상세 정보 가져오는 메서드
      * @param shareKey 공유키
      * @return 파일의 상세 정보
      */
+    @Transactional(readOnly = true)
     public FileResponseDto getSharedFileDetail(final String shareKey) {
         // 1) null 검사
         if (shareKey == null || shareKey.isBlank()) {
@@ -45,6 +52,7 @@ public class SharedFileService {
      * @param shareKey 다운할 파일의 공유키
      * @return 바이너리가 담긴 DTO
      */
+    @Transactional(readOnly = true)
     public FileDownloadResponseDto getSharedFile(final String shareKey) {
         // 1) null 검사
         if (shareKey == null || shareKey.isBlank()) {
@@ -68,5 +76,36 @@ public class SharedFileService {
                 file.getSize(),
                 resource
         );
+    }
+
+    /**
+     * 실시간 h264 트랜스코딩 스트리밍하는 메서드
+     * @param shareKey 공유키
+     * @param start 영상 시작 지점
+     * @return 트랜스코딩된 스트리밍 바디
+     */
+    @Transactional(readOnly = true)
+    public StreamingResponseBody streamSharedFile(
+            final String shareKey,
+            final double start
+    ) {
+        // 1) null 검사
+        if (shareKey == null || shareKey.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 캐시에서 공유키 이용해서 파일 위치 확인
+        final String path = sharedFilePathCache.get(
+                shareKey, key -> sharedFileRepository.findByShareKey(shareKey)
+                        .map(SharedFile::getFile)
+                        .map(File::getRelativePath)
+                        .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST))
+        );
+
+        // 3) 절대 경로로 변환
+        final Path absPath = storageManager.resolvePath(path, false);
+
+        // 4) 실시간 트랜스코딩
+        return ffmpegProcessor.getVideoStream(absPath.toString(), start);
     }
 }

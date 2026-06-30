@@ -37,4 +37,12 @@ public class CacheConfig {
                 .maximumSize(5000)
                 .build();
     }
+
+    @Bean
+    public Cache<String, String> sharedFilePathCache() {
+        return Caffeine.newBuilder()
+                .expireAfterAccess(Duration.ofMinutes(3))
+                .maximumSize(1000)
+                .build();
+    }
 }
