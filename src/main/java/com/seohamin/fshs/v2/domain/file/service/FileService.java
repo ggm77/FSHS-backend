@@ -656,7 +656,7 @@ public class FileService {
         }
 
         // 6) 페이저블 객체 생성
-        final Pageable pageable = PageRequest.of(page, size, Sort.by(direction));
+        final Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "originUpdatedAt"));
 
         // 7) 파일 검색
         final String rootPathPattern = toRootPathPattern(userRoot.getRelativePath());
