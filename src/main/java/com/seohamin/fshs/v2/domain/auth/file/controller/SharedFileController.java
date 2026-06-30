@@ -5,6 +5,7 @@ import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -116,5 +117,19 @@ public class SharedFileController {
         return ResponseEntity.ok()
                 .contentType(mediaType)
                 .body(sharedFileService.streamSharedHlsFile(shareKey, hlsFile));
+    }
+
+    // 공유파일 썸네일 조회 API
+    @GetMapping("/files/{shareKey}/thumbnail")
+    public ResponseEntity<Resource> getSharedFileThumbnail(
+            @PathVariable final String shareKey
+    ) {
+        final FileDownloadResponseDto dto = sharedFileService.getSharedFileThumbnail(shareKey);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(dto.mimeType()))
+                .contentLength(dto.size())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + dto.name() + "\"")
+                .body(dto.resource());
     }
 }

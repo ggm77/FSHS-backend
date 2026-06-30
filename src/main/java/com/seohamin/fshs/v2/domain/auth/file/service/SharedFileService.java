@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
 import com.seohamin.fshs.v2.domain.file.entity.File;
+import com.seohamin.fshs.v2.domain.file.service.FileThumbnailProcessor;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.global.exception.CustomException;
@@ -11,12 +12,15 @@ import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,6 +33,7 @@ public class SharedFileService {
     private final StorageManager storageManager;
     private final Cache<String, String> sharedFilePathCache;
     private final FfmpegProcessor ffmpegProcessor;
+    private final FileThumbnailProcessor fileThumbnailProcessor;
 
     // HLS 세그먼트 파일명 패턴 (예: segment12.ts) — 자릿수를 제한해 int 오버플로 방지
     private static final Pattern HLS_SEGMENT_PATTERN = Pattern.compile("segment(\\d{1,9})\\.ts");
@@ -121,6 +126,7 @@ public class SharedFileService {
      * @param hlsFile 요청한 HLS 파일
      * @return HLS 스트림
      */
+    @Transactional(readOnly = true)
     public InputStreamResource streamSharedHlsFile(
             final String shareKey,
             final String hlsFile
@@ -155,5 +161,44 @@ public class SharedFileService {
         }
 
         return ffmpegProcessor.getHlsSegment(absPath, Integer.parseInt(matcher.group(1)));
+    }
+
+    /**
+     * 공유 파일 썸네일 가져오는 메서드
+     * @param shareKey 공유키
+     * @return 썸네일 파일
+     */
+    @Transactional(readOnly = true)
+    public FileDownloadResponseDto getSharedFileThumbnail(
+            final String shareKey
+    ) {
+        // 1) null 검사
+        if (shareKey == null || shareKey.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 키 조회
+        final SharedFile sharedFile = sharedFileRepository.findByShareKey(shareKey)
+                .orElseThrow(() -> new CustomException(ExceptionCode.SHARE_KEY_NOT_FOUND));
+
+        // 3) 파일의 UUID 조회
+        final String uuid = sharedFile.getFile().getUuid();
+
+        // 4) 썸네일 파일 조회
+        final Path thumbnailPath = fileThumbnailProcessor.resolveThumbnailPath(uuid);
+        if (Files.notExists(thumbnailPath) || !Files.isRegularFile(thumbnailPath)) {
+            throw new CustomException(ExceptionCode.FILE_NOT_EXIST);
+        }
+
+        try {
+            return new FileDownloadResponseDto(
+                    uuid + ".jpg",
+                    "image/jpeg",
+                    Files.size(thumbnailPath),
+                    new FileSystemResource(thumbnailPath)
+            );
+        } catch (final IOException ex) {
+            throw new CustomException(ExceptionCode.FILE_READ_ERROR, ex);
+        }
     }
 }
