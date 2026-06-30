@@ -7,6 +7,7 @@ import com.seohamin.fshs.v2.domain.share.dto.ShareKeyDto;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import com.seohamin.fshs.v2.domain.user.dto.UserRootFolderRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserShareResponseDto;
+import com.seohamin.fshs.v2.domain.user.dto.UserUpdateRequestDto;
 import lombok.RequiredArgsConstructor;
 import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
@@ -110,40 +111,37 @@ public class UserService implements UserDetailsService {
     @Transactional
     public UserResponseDto updateUser(
             final Long userId,
-            final UserRequestDto userRequestDto,
+            final UserUpdateRequestDto userRequestDto,
             final String sessionUsername
     ) {
 
-        // 1) 유저 이름 변수에 저장
-        final String username = userRequestDto.username();
-
-        // 2) 비밀번호 비어있지 않으면 해싱
-        final String password;
-        if(userRequestDto.password() != null && !userRequestDto.password().isEmpty()) {
-
-            // 비밀번호 길이 제한
-            if(userRequestDto.password().length() < 4 ) {
-                throw new CustomException(ExceptionCode.TOO_SHORT_PASSWORD);
-            }
-
-            password = passwordEncoder.encode(userRequestDto.password());
-        }
-        else {
-            password = null;
+        // 1) null 검사
+        if (userRequestDto == null) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
-        // 3) 유저 엔티티 조회
+        // 2) 유저 엔티티 조회
         final User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
 
-        // 4) 자기 계정인지 확인
+        // 3) 자기 계정인지 확인
         if (!user.getUsername().equals(sessionUsername)) {
             throw new CustomException(ExceptionCode.ACCESS_DENIED);
         }
 
-        // 5) 유저명 비어있지 않다면 변경
-        if(username != null && !username.isEmpty()) {
+        final String username = userRequestDto.username();
+        final String newPassword = userRequestDto.newPassword();
+        final boolean isUsernameChanged = username != null && !username.isEmpty()
+                && !username.equals(user.getUsername());
+        final boolean isPasswordChanged = newPassword != null && !newPassword.isEmpty();
 
+        // 4) 변경이 있다면 현재 비밀번호 확인
+        if (isUsernameChanged || isPasswordChanged) {
+            validateCurrentPassword(userRequestDto.currentPassword(), user.getPassword());
+        }
+
+        // 5) 유저명 변경
+        if(isUsernameChanged) {
             // 유저명 겹치는지 확인
             if (userRepository.existsByUsername(username)) {
                 throw new CustomException(ExceptionCode.USERNAME_DUPLICATE);
@@ -152,13 +150,31 @@ public class UserService implements UserDetailsService {
             user.updateUsername(username);
         }
 
-        // 6) 비밀번호 비어있지 않다면 변경
-        if(password != null) {
+        // 6) 비밀번호 변경
+        if(isPasswordChanged) {
+            if(newPassword.length() < 4 ) {
+                throw new CustomException(ExceptionCode.TOO_SHORT_PASSWORD);
+            }
+
+            final String password = passwordEncoder.encode(newPassword);
             user.updatePassword(password);
         }
 
         // 7) DTO에 담아서 리턴
         return UserResponseDto.of(user);
+    }
+
+    private void validateCurrentPassword(
+            final String currentPassword,
+            final String encodedPassword
+    ) {
+        if (currentPassword == null || currentPassword.isEmpty()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        if (!passwordEncoder.matches(currentPassword, encodedPassword)) {
+            throw new CustomException(ExceptionCode.INVALID_PASSWORD);
+        }
     }
 
     /**

@@ -2,6 +2,7 @@ package com.seohamin.fshs.v2.domain.user.controller;
 
 import com.seohamin.fshs.v2.domain.user.dto.UserRootFolderRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserShareResponseDto;
+import com.seohamin.fshs.v2.domain.user.dto.UserUpdateRequestDto;
 import com.seohamin.fshs.v2.global.util.SessionUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +10,6 @@ import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
 import com.seohamin.fshs.v2.domain.user.service.UserService;
 import com.seohamin.fshs.v2.global.validation.Create;
-import com.seohamin.fshs.v2.global.validation.Update;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -48,7 +48,7 @@ public class UserController {
     public ResponseEntity<UserResponseDto> updateUser(
             @AuthenticationPrincipal final UserDetails userDetails,
             @PathVariable final Long userId,
-            @Validated(Update.class) @RequestBody final UserRequestDto userRequestDto,
+            @RequestBody final UserUpdateRequestDto userRequestDto,
             final HttpServletRequest request
     ) {
 
@@ -99,8 +99,8 @@ public class UserController {
     }
 
     // 요청 DTO에 username이나 password가 있는지 확인하는 메서드
-    private boolean isSecuritySensitiveChange(final UserRequestDto dto) {
-        boolean isPasswordChanged = dto.password() != null && !dto.password().isEmpty();
+    private boolean isSecuritySensitiveChange(final UserUpdateRequestDto dto) {
+        boolean isPasswordChanged = dto.newPassword() != null && !dto.newPassword().isEmpty();
         boolean isUsernameChanged = dto.username() != null && !dto.username().isEmpty();
         return isPasswordChanged || isUsernameChanged;
     }

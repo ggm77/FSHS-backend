@@ -12,6 +12,7 @@ public enum ExceptionCode {
     USERNAME_DUPLICATE(HttpStatus.BAD_REQUEST, "유저 이름이 이미 존재합니다."),
     USER_NOT_EXIST(HttpStatus.BAD_REQUEST, "유저가 존재하지 않습니다."),
     TOO_SHORT_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 너무 짧습니다."),
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다."),
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "잘못된 토큰입니다."),
     LOGIN_FAILED(HttpStatus.BAD_REQUEST, "로그인에 실패했습니다."),
     INVALID_ENUM_VALUE(HttpStatus.BAD_REQUEST, "올바르지 않은 Enum입니다."),

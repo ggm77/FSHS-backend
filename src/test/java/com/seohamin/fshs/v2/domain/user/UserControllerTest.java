@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.seohamin.fshs.v2.domain.user.controller.UserController;
 import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
+import com.seohamin.fshs.v2.domain.user.dto.UserUpdateRequestDto;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.service.UserService;
 import com.seohamin.fshs.v2.global.util.SessionUtil;
@@ -92,11 +93,11 @@ public class UserControllerTest {
     void updateUser_Success() throws Exception {
         // Given
         final Long userId = 1L;
-        final UserRequestDto requestDto = new UserRequestDto("tester", "password123");
+        final UserUpdateRequestDto requestDto = new UserUpdateRequestDto("tester", "oldPassword", "password123");
         final String requestBody = new ObjectMapper().writeValueAsString(requestDto);
         final UserResponseDto responseDto = UserResponseDto.of(new User("tester", "hashedPassword123"));
 
-        given(userService.updateUser(eq(userId), any(UserRequestDto.class), eq("tester"))).willReturn(responseDto);
+        given(userService.updateUser(eq(userId), any(UserUpdateRequestDto.class), eq("tester"))).willReturn(responseDto);
 
         // When & Then
         try (MockedStatic<SessionUtil> mockedStatic = Mockito.mockStatic(SessionUtil.class)) {

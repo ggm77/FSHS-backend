@@ -2,6 +2,7 @@ package com.seohamin.fshs.v2.domain.user;
 
 import com.seohamin.fshs.v2.domain.user.dto.UserRequestDto;
 import com.seohamin.fshs.v2.domain.user.dto.UserResponseDto;
+import com.seohamin.fshs.v2.domain.user.dto.UserUpdateRequestDto;
 import com.seohamin.fshs.v2.domain.user.entity.User;
 import com.seohamin.fshs.v2.domain.user.repository.UserRepository;
 import com.seohamin.fshs.v2.domain.user.service.UserService;
@@ -171,7 +172,7 @@ public class UserServiceTest {
     void updateUser_NotFound() {
         // Given
         final Long userId = 1L;
-        final UserRequestDto updateDto = new UserRequestDto("newName", "newPassword");
+        final UserUpdateRequestDto updateDto = new UserUpdateRequestDto("newName", "oldPassword", "newPassword");
 
         given(userRepository.findById(userId)).willReturn(Optional.empty());
 
@@ -186,10 +187,11 @@ public class UserServiceTest {
     void updateUser_PasswordOnly() {
         // Given
         final Long userId = 1L;
-        final User existingUser = User.builder().username("oldName").password("oldPass").build();
-        final UserRequestDto updateDto = new UserRequestDto("", "newPassword");
+        final User existingUser = User.builder().username("oldName").password("hashedOldPassword").build();
+        final UserUpdateRequestDto updateDto = new UserUpdateRequestDto("", "oldPassword", "newPassword");
 
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
+        given(passwordEncoder.matches("oldPassword", "hashedOldPassword")).willReturn(true);
         given(passwordEncoder.encode("newPassword")).willReturn("hashedNewPassword");
 
         // When
@@ -205,17 +207,51 @@ public class UserServiceTest {
     void updateUser_UsernameOnly() {
         // Given
         final Long userId = 1L;
-        final User existingUser = User.builder().username("oldName").password("oldPass").build();
-        final UserRequestDto updateDto = new UserRequestDto("newName", "");
+        final User existingUser = User.builder().username("oldName").password("hashedOldPassword").build();
+        final UserUpdateRequestDto updateDto = new UserUpdateRequestDto("newName", "oldPassword", "");
 
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
+        given(passwordEncoder.matches("oldPassword", "hashedOldPassword")).willReturn(true);
 
         // When
         userService.updateUser(userId, updateDto, "oldName");
 
         // Then
-        assertThat(existingUser.getPassword()).isEqualTo("oldPass");
+        assertThat(existingUser.getPassword()).isEqualTo("hashedOldPassword");
         assertThat(existingUser.getUsername()).isEqualTo("newName");
+    }
+
+    @Test
+    @DisplayName("유저 수정 : 유저명 수정 시 현재 비밀번호가 필요함")
+    void updateUser_UsernameOnlyRequiresCurrentPassword() {
+        // Given
+        final Long userId = 1L;
+        final User existingUser = User.builder().username("oldName").password("hashedOldPassword").build();
+        final UserUpdateRequestDto updateDto = new UserUpdateRequestDto("newName", "", "");
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser(userId, updateDto, "oldName"))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_REQUEST);
+    }
+
+    @Test
+    @DisplayName("유저 수정 : 현재 비밀번호가 틀리면 수정 불가")
+    void updateUser_InvalidCurrentPassword() {
+        // Given
+        final Long userId = 1L;
+        final User existingUser = User.builder().username("oldName").password("hashedOldPassword").build();
+        final UserUpdateRequestDto updateDto = new UserUpdateRequestDto("newName", "wrongPassword", "");
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
+        given(passwordEncoder.matches("wrongPassword", "hashedOldPassword")).willReturn(false);
+
+        // When & Then
+        assertThatThrownBy(() -> userService.updateUser(userId, updateDto, "oldName"))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_PASSWORD);
     }
 
     @Test
@@ -224,7 +260,7 @@ public class UserServiceTest {
         // Given
         final Long userId = 1L;
         final User existingUser = User.builder().username("oldName").password("oldPass").build();
-        final UserRequestDto updateDto = new UserRequestDto("", "");
+        final UserUpdateRequestDto updateDto = new UserUpdateRequestDto("", "", "");
 
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
 
@@ -242,7 +278,7 @@ public class UserServiceTest {
         // Given
         final Long userId = 1L;
         final User existingUser = User.builder().username("oldName").password("oldPass").build();
-        final UserRequestDto updateDto = new UserRequestDto("newName", "");
+        final UserUpdateRequestDto updateDto = new UserUpdateRequestDto("newName", "oldPassword", "");
 
         given(userRepository.findById(userId)).willReturn(Optional.of(existingUser));
 
