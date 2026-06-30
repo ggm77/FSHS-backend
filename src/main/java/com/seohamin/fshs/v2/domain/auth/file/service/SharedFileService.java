@@ -11,12 +11,15 @@ import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
 import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import com.seohamin.fshs.v2.global.infra.storage.StorageManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.file.Path;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +29,9 @@ public class SharedFileService {
     private final StorageManager storageManager;
     private final Cache<String, String> sharedFilePathCache;
     private final FfmpegProcessor ffmpegProcessor;
+
+    // HLS 세그먼트 파일명 패턴 (예: segment12.ts) — 자릿수를 제한해 int 오버플로 방지
+    private static final Pattern HLS_SEGMENT_PATTERN = Pattern.compile("segment(\\d{1,9})\\.ts");
 
     /**
      * 공유 파일의 상세 정보 가져오는 메서드
@@ -99,7 +105,7 @@ public class SharedFileService {
                 shareKey, key -> sharedFileRepository.findByShareKey(shareKey)
                         .map(SharedFile::getFile)
                         .map(File::getRelativePath)
-                        .orElseThrow(() -> new CustomException(ExceptionCode.FILE_NOT_EXIST))
+                        .orElseThrow(() -> new CustomException(ExceptionCode.SHARE_KEY_NOT_FOUND))
         );
 
         // 3) 절대 경로로 변환
@@ -107,5 +113,47 @@ public class SharedFileService {
 
         // 4) 실시간 트랜스코딩
         return ffmpegProcessor.getVideoStream(absPath.toString(), start);
+    }
+
+    /**
+     * 공유파일 HLS 실시간 트랜스코딩하는 메서드
+     * @param shareKey 공유키
+     * @param hlsFile 요청한 HLS 파일
+     * @return HLS 스트림
+     */
+    public InputStreamResource streamSharedHlsFile(
+            final String shareKey,
+            final String hlsFile
+    ) {
+        // 1) null 검사
+        if (shareKey == null || shareKey.isBlank() ||  hlsFile == null || hlsFile.isBlank()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 캐시에서 공유키 이용해서 파일 위치 확인
+        final String path = sharedFilePathCache.get(
+                shareKey, key -> sharedFileRepository.findByShareKey(shareKey)
+                        .map(SharedFile::getFile)
+                        .map(File::getRelativePath)
+                        .orElseThrow(() -> new CustomException(ExceptionCode.SHARE_KEY_NOT_FOUND))
+        );
+
+        // 3) 절대 경로로 변환
+        final Path absPath = storageManager.resolvePath(path, false);
+
+        // 4) 재생목록(.m3u8) 요청이면 DB duration으로 즉시 생성해 반환 (ffprobe 불필요)
+        if (hlsFile.endsWith(".m3u8")) {
+            final SharedFile sharedFile = sharedFileRepository.findByShareKey(shareKey)
+                    .orElseThrow(() -> new CustomException(ExceptionCode.SHARE_KEY_NOT_FOUND));
+            return ffmpegProcessor.getHlsPlaylist(sharedFile.getFile().getDuration());
+        }
+
+        // 5) 세그먼트(.ts) 요청이면 인덱스를 파싱해 해당 구간만 실시간 트랜스코딩
+        final Matcher matcher = HLS_SEGMENT_PATTERN.matcher(hlsFile);
+        if (!matcher.matches()) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        return ffmpegProcessor.getHlsSegment(absPath, Integer.parseInt(matcher.group(1)));
     }
 }

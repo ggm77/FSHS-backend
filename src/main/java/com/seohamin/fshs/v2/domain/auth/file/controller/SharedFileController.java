@@ -4,6 +4,7 @@ import com.seohamin.fshs.v2.domain.auth.file.service.SharedFileService;
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.support.ResourceRegion;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -100,4 +101,20 @@ public class SharedFileController {
                 .body(sharedFileService.streamSharedFile(shareKey, start));
     }
 
+    // 실시간 hls 트랜스코딩 API
+    @GetMapping("/files/{shareKey}/stream/{hlsFile}")
+    public ResponseEntity<InputStreamResource> streamSharedHlsFile(
+            @PathVariable final String shareKey,
+            @PathVariable final String hlsFile
+    ) {
+
+        // 재생목록(.m3u8)과 세그먼트(.ts)는 Content-Type이 다름
+        final MediaType mediaType = hlsFile.endsWith(".m3u8")
+                ? MediaType.parseMediaType("application/x-mpegURL")
+                : MediaType.parseMediaType("video/mp2t");
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .body(sharedFileService.streamSharedHlsFile(shareKey, hlsFile));
+    }
 }
