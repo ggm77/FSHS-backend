@@ -30,6 +30,7 @@ public enum ExceptionCode {
     RESTRICT_DELETE_USER_ROOT(HttpStatus.BAD_REQUEST, "유저 루트 폴더는 삭제할 수 없습니다."),
     RESTRICT_MOVE_SYSTEM_ROOT(HttpStatus.BAD_REQUEST, "시스템 루트는 옮길 수 없습니다."),
     RESTRICT_MOVE_INTO_DESCENDANT(HttpStatus.BAD_REQUEST, "폴더를 자기 자신이나 하위 폴더로 옮길 수 없습니다."),
+    SHARE_KEY_NOT_FOUND(HttpStatus.BAD_REQUEST, "공유키를 찾을 수 없습니다."),
 
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
 
