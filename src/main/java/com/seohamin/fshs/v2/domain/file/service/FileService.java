@@ -610,6 +610,67 @@ public class FileService {
     }
 
     /**
+     * 갤러리 목록 조회하는 메서드
+     * @param username 요청 유저명
+     * @param order asc or desc
+     * @param size 페이지 크기
+     * @param page 페이지 번호
+     * @return 갤러리 목록
+     */
+    public FileListResponseDto getGallery(
+            final String username,
+            final String order,
+            final Integer size,
+            final Integer page
+    ) {
+        // 1) null 검사
+        if (
+                username == null || order == null || size == null || page == null
+        ) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 2) 페이지네이션 값 검사
+        if (page < 0 || size <= 0 || size > 1000) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 3) 정렬 순서 검사
+        final Sort.Direction direction;
+        if (order.equalsIgnoreCase("asc")) {
+            direction = Sort.Direction.ASC;
+        } else if (order.equalsIgnoreCase("desc")) {
+            direction = Sort.Direction.DESC;
+        } else {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
+
+        // 4) 유저 정보 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        // 5) 유저 루트 폴더 가져오기
+        final Folder userRoot = user.getRootFolder();
+        if (userRoot == null) {
+            throw new CustomException(ExceptionCode.ROOT_NOT_EXIST);
+        }
+
+        // 6) 페이저블 객체 생성
+        final Pageable pageable = PageRequest.of(page, size, Sort.by(direction));
+
+        // 7) 파일 검색
+        final String rootPathPattern = toRootPathPattern(userRoot.getRelativePath());
+        final Page<File> files = fileRepository.findImageAndVideo(rootPathPattern, pageable);
+
+        return new FileListResponseDto(
+                files.hasNext(),
+                files.getContent().stream()
+                        .map(FileResponseDto::of)
+                        .toList()
+        );
+    }
+
+    /**
      * 특정 폴더로 파일을 이동시키는 메서드
      * @param file 이동시킬 파일
      * @param folder 목적지 폴더

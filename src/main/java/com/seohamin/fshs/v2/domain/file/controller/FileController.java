@@ -217,4 +217,16 @@ public class FileController {
 
         return ResponseEntity.ok(fileService.shareFile(userDetails.getUsername(), fileId));
     }
+
+    // 갤러리 API
+    @GetMapping("/files/gallery")
+    public ResponseEntity<FileListResponseDto> getGallery(
+            @AuthenticationPrincipal final UserDetails userDetails,
+            @RequestParam final String order, // desc, asc
+            @RequestParam final Integer size,
+            @RequestParam final Integer page
+    ) {
+
+        return ResponseEntity.ok(fileService.getGallery(userDetails.getUsername(), order, size, page));
+    }
 }

@@ -39,6 +39,15 @@ public interface FileRepository extends JpaRepository<File, Long> {
                            @Param("queryPattern") String queryPattern,
                            Pageable pageable);
 
+    @Query("""
+            SELECT f
+            FROM File f
+            WHERE f.relativePath LIKE :rootPathPattern ESCAPE '\\'
+              AND f.category IN ('IMAGE', 'VIDEO')
+            """)
+    Page<File> findImageAndVideo(@Param("rootPathPattern") String rootPathPattern,
+                           Pageable pageable);
+
     // 폴더 이동/이름 변경 시 하위 파일들의 상대 경로/부모 경로 접두사를 한 번에 치환한다
     // pattern 은 '이전경로/%' 형태(ESCAPE '\'), cutFrom 은 '이전경로 길이 + 1'
     @Modifying(flushAutomatically = true, clearAutomatically = true)
