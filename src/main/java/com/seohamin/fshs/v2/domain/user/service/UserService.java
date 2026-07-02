@@ -112,6 +112,19 @@ public class UserService implements UserDetailsService {
         return UserResponseDto.of(user);
     }
 
+    public UserResponseDto getCurrentUser(final String username) {
+        // 1) null 검사
+        if (username == null) {
+            throw new CustomException(ExceptionCode.INVALID_USERNAME);
+        }
+
+        // 2) 유저 조회
+        final User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException(ExceptionCode.USER_NOT_EXIST));
+
+        return UserResponseDto.of(user);
+    }
+
     /**
      * 유저 정보 수정하는 메서드
      * @param userRequestDto 수정할 정보 담긴 DTO

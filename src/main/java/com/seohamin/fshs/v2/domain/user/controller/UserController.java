@@ -43,6 +43,15 @@ public class UserController {
         return ResponseEntity.ok().body(userService.getUser(userId, userDetails.getUsername()));
     }
 
+    // 현재 유저 정보 조회하는 API
+    @GetMapping("/users/me")
+    public ResponseEntity<UserResponseDto> getCurrentUser(
+            @AuthenticationPrincipal final UserDetails userDetails
+    ) {
+
+        return ResponseEntity.ok().body(userService.getCurrentUser(userDetails.getUsername()));
+    }
+
     // 유저 정보 수정하는 API
     @PatchMapping("/users/{userId}")
     public ResponseEntity<UserResponseDto> updateUser(
