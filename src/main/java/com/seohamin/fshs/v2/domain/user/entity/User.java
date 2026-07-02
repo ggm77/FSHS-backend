@@ -70,12 +70,13 @@ public class User {
     @Builder
     public User(
             final String username,
-            final String password
+            final String password,
+            final Folder rootFolder
     ) {
         this.username = username;
         this.password = password;
         this.userRole = Role.USER;
-        this.rootFolder = null;
+        this.rootFolder = rootFolder;
     }
 
     // 이름 변경용 메서드

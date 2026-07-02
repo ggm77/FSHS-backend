@@ -9,5 +9,8 @@ public record UserRequestDto(
     String username,
 
     @NotNull(groups = Create.class)
-    String password
+    String password,
+
+    @NotNull(groups = Create.class)
+    Long rootFolderId
 ) {}

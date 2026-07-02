@@ -50,6 +50,7 @@ public class UserService implements UserDetailsService {
         // 1) null 및 유효성 검사
         final String username = userRequestDto.username();
         final String rawPassword = userRequestDto.password();
+        final Long rootFolderId = userRequestDto.rootFolderId();
 
         if (username == null || username.isEmpty()) {
             throw new CustomException(ExceptionCode.INVALID_USERNAME);
@@ -57,25 +58,33 @@ public class UserService implements UserDetailsService {
         if (rawPassword == null || rawPassword.length() < 4) {
             throw new CustomException(ExceptionCode.TOO_SHORT_PASSWORD);
         }
+        if (rootFolderId == null || rootFolderId <= 0) {
+            throw new CustomException(ExceptionCode.INVALID_REQUEST);
+        }
 
         // 2) 어드민인지 확인
         validateAdmin(authorities);
 
-        // 3) 유저명 겹치는지 확인
+        // 3) 루트 폴더 유효성 검증 및 조회
+        final Folder rootFolder = folderRepository.findById(rootFolderId)
+                .orElseThrow(() -> new CustomException(ExceptionCode.INVALID_REQUEST));
+
+        // 4) 유저명 겹치는지 확인
         if (userRepository.existsByUsername(username)) {
             throw new CustomException(ExceptionCode.USERNAME_DUPLICATE);
         }
 
-        // 4) 비밀번호 해싱
+        // 5) 비밀번호 해싱
         final String password = passwordEncoder.encode(rawPassword);
 
-        // 5) 엔티티 만들기
+        // 6) 엔티티 만들기
         final User user = User.builder()
                 .username(username)
                 .password(password)
+                .rootFolder(rootFolder)
                 .build();
 
-        // 6) DB에 저장
+        // 7) DB에 저장
         final User savedUser = userRepository.save(user);
 
         return UserResponseDto.of(savedUser);
