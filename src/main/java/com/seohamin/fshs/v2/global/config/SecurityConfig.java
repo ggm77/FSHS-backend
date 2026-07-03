@@ -138,7 +138,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/swagger-ui/**",
                                 "/api/swagger",
-                                "/api/v2/auth/**"
+                                "/api/v2/auth/**",
+                                "/api/v2/system/health"
                         ).permitAll()
 
                         // 인증 필요한 API

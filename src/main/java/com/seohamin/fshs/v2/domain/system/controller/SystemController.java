@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.system.controller;
 
+import com.seohamin.fshs.v2.domain.system.dto.SystemHealthResponseDto;
 import com.seohamin.fshs.v2.domain.system.dto.SystemStatusResponseDto;
 import com.seohamin.fshs.v2.domain.system.service.SystemService;
 import lombok.RequiredArgsConstructor;
@@ -20,5 +21,12 @@ public class SystemController {
     public ResponseEntity<SystemStatusResponseDto> getSystemStatus() {
 
         return ResponseEntity.ok(systemService.getSystemStatus());
+    }
+
+    // 시스템 상태 체크 API
+    @GetMapping("/system/health")
+    public ResponseEntity<SystemHealthResponseDto> getSystemHealth() {
+
+        return ResponseEntity.ok(systemService.getSystemHealth());
     }
 }

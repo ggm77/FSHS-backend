@@ -1,8 +1,10 @@
 package com.seohamin.fshs.v2.domain.system.service;
 
+import com.seohamin.fshs.v2.domain.system.dto.SystemHealthResponseDto;
 import com.seohamin.fshs.v2.domain.system.dto.SystemStatusResponseDto;
 import com.seohamin.fshs.v2.global.exception.CustomException;
 import com.seohamin.fshs.v2.global.exception.constants.ExceptionCode;
+import com.seohamin.fshs.v2.global.infra.ffmpeg.FfmpegProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,9 @@ import oshi.hardware.VirtualMemory;
 import oshi.software.os.OSFileStore;
 import oshi.software.os.OperatingSystem;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -24,8 +29,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SystemService {
 
+    private static final int DB_HEALTH_CHECK_TIMEOUT_SECOND = 3;
+
     @Value("${fshs.storage.data-path}")
     private String dataPath;
+
+    private final DataSource dataSource;
+    private final FfmpegProcessor ffmpegProcessor;
 
     private final SystemInfo systemInfo = new SystemInfo();
     private final HardwareAbstractionLayer hardware = systemInfo.getHardware();
@@ -86,6 +96,35 @@ public class SystemService {
                 networkIF.getBytesSent(),
                 networkIF.getBytesRecv()
         );
+    }
+
+    /**
+     * 시스템 상태 체크 API
+     * 각종 인프라 상태 체크한다.
+     * @return 괜찮은지 여부
+     */
+    public SystemHealthResponseDto getSystemHealth() {
+        // 1) DB 연결 확인
+        final boolean isDatabaseHealthy = isDatabaseHealthy();
+
+        // 2) FFmpeg 상태 확인
+        final boolean isFfmpegHealthy = ffmpegProcessor.isAvailable();
+
+        final String status = (isDatabaseHealthy && isFfmpegHealthy) ? "good" : "bad";
+
+        return new SystemHealthResponseDto(status);
+    }
+
+    /**
+     * DB 연결 상태 확인하는 메서드
+     * @return 정상 연결 여부
+     */
+    private boolean isDatabaseHealthy() {
+        try (final Connection connection = dataSource.getConnection()) {
+            return connection.isValid(DB_HEALTH_CHECK_TIMEOUT_SECOND);
+        } catch (final SQLException ex) {
+            return false;
+        }
     }
 
     /**

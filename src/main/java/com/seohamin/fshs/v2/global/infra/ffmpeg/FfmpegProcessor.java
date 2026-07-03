@@ -247,6 +247,19 @@ public class FfmpegProcessor {
     }
 
     /**
+     * FFmpeg 사용 가능 여부 확인하는 메서드
+     * @return 정상 동작 여부
+     */
+    public boolean isAvailable() {
+        try {
+            execute(List.of(ffmpegConfig.getFfmpeg(), "-version"), 5);
+            return true;
+        } catch (final CustomException ex) {
+            return false;
+        }
+    }
+
+    /**
      * FFmpeg가 읽을 수 있는 파일의 첫 프레임을 JPEG 썸네일로 생성하는 메서드
      * @param filePath 원본 파일 절대 경로
      * @param targetPath 생성할 썸네일 절대 경로
