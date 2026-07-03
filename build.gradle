@@ -67,6 +67,9 @@ dependencies {
 	//Caffeine
 	implementation 'com.github.ben-manes.caffeine:caffeine'
 
+	//OSHI
+	implementation 'com.github.oshi:oshi-core:6.6.5'
+
 }
 
 tasks.named('test') {
