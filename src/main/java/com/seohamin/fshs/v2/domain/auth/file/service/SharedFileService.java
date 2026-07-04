@@ -1,8 +1,8 @@
 package com.seohamin.fshs.v2.domain.auth.file.service;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.seohamin.fshs.v2.domain.auth.file.dto.SharedFileResponseDto;
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
-import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
 import com.seohamin.fshs.v2.domain.file.entity.File;
 import com.seohamin.fshs.v2.domain.file.service.FileThumbnailProcessor;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
@@ -44,7 +44,7 @@ public class SharedFileService {
      * @return 파일의 상세 정보
      */
     @Transactional(readOnly = true)
-    public FileResponseDto getSharedFileDetail(final String shareKey) {
+    public SharedFileResponseDto getSharedFileDetail(final String shareKey) {
         // 1) null 검사
         if (shareKey == null || shareKey.isBlank()) {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
@@ -55,7 +55,7 @@ public class SharedFileService {
                 .orElseThrow(() -> new CustomException(ExceptionCode.SHARE_KEY_NOT_FOUND));
 
         // 3) 파일 정보 리턴
-        return FileResponseDto.of(sharedFile.getFile());
+        return SharedFileResponseDto.of(sharedFile.getFile());
     }
 
     /**

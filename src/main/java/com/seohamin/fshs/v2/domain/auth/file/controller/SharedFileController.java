@@ -1,8 +1,8 @@
 package com.seohamin.fshs.v2.domain.auth.file.controller;
 
+import com.seohamin.fshs.v2.domain.auth.file.dto.SharedFileResponseDto;
 import com.seohamin.fshs.v2.domain.auth.file.service.SharedFileService;
 import com.seohamin.fshs.v2.domain.file.dto.FileDownloadResponseDto;
-import com.seohamin.fshs.v2.domain.file.dto.FileResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -24,7 +24,7 @@ public class SharedFileController {
 
     // 공유한 파일 정보 조회 API
     @GetMapping("/files/{shareKey}")
-    public ResponseEntity<FileResponseDto> getSharedFileDetail(
+    public ResponseEntity<SharedFileResponseDto> getSharedFileDetail(
             @PathVariable final String shareKey
     ) {
 
