@@ -1,5 +1,6 @@
 package com.seohamin.fshs.v2.domain.share.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.seohamin.fshs.v2.domain.share.entity.SharedFile;
 import com.seohamin.fshs.v2.domain.share.repository.SharedFileRepository;
 import com.seohamin.fshs.v2.domain.user.entity.User;
@@ -15,6 +16,7 @@ public class ShareService {
 
     private final UserRepository userRepository;
     private final SharedFileRepository sharedFileRepository;
+    private final Cache<String, String> sharedFilePathCache;
 
     /**
      * 생성된 공유키 삭제하는 메서드
@@ -46,5 +48,8 @@ public class ShareService {
 
         // 5) 공유키 삭제
         sharedFileRepository.delete(sharedFile);
+
+        // 6) 스트리밍 캐시 무효화 (삭제 후에도 캐시로 계속 접근되는 것 방지)
+        sharedFilePathCache.invalidate(sharedFile.getShareKey());
     }
 }
