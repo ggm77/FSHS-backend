@@ -17,7 +17,7 @@ spring:
         format_sql: true
     database-platform: com.seohamin.fshs.v2.global.config.FshsSQLiteDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
   datasource:
     url: "jdbc:sqlite:./db/app.sqlite"
     driver-class-name: org.sqlite.JDBC
