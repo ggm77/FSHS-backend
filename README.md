@@ -4,6 +4,36 @@
 
 ---
 
+# 프로젝트 사용해보기
+```bash
+
+git clone https://github.com/ggm77/FSHS-backend
+
+git clone https://github.com/ggm77/FSHS-frontend-web
+
+cd ./FSHS-frontend-web
+
+npm install
+
+npm run build
+
+mkdir ../FSHS-backend/src/main/resources/static
+
+mv dist/* ../FSHS-backend/src/main/resources/static
+
+cd ../FSHS-backend
+
+./gradlew build
+
+cd build/libs
+
+java -jar ./FSHS-2.0.0.jar
+
+```
+
+
+---
+
 ## 1. 프로젝트 개요
 
 ### 1.1 배경 및 목표
