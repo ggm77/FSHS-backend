@@ -43,11 +43,6 @@ springdoc:
   api-docs:
     path: /api/swagger-ui/v3/api-docs
 
-file:
-  upload:
-    # 한번에 업로드 가능한 최대 파일 개수
-    max-count: 100
-
 fshs:
   base-path: /mnt/nas1/hosting/fshs2
   storage:
