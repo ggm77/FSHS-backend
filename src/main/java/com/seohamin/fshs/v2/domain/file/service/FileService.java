@@ -553,7 +553,10 @@ public class FileService {
         //    디스크 삭제가 실패하면 예외로 트랜잭션이 롤백돼 DB 삭제도 원복된다.
         storageManager.removeFile(file.getRelativePath());
 
-        // 7) 삭제된 파일 관련 캐시 무효화
+        // 7) 원본 삭제 후 썸네일도 정리
+        fileThumbnailProcessor.deleteThumbnail(file.getUuid());
+
+        // 8) 삭제된 파일 관련 캐시 무효화
         filePathCache.invalidate(fileId);
         fileStatusCache.invalidate(file.getUuid());
         fileAccessCache.asMap().keySet().removeIf(key -> key.startsWith(fileId + ":"));

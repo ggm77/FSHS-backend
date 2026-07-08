@@ -33,6 +33,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 class FileServiceThumbnailTest {
@@ -124,6 +125,23 @@ class FileServiceThumbnailTest {
         assertThatThrownBy(() -> fileService.getFileThumbnail(fileUuid, "tester"))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("exceptionCode", ExceptionCode.INVALID_PATH);
+    }
+
+    @Test
+    @DisplayName("파일 삭제 시 썸네일 삭제도 요청한다")
+    void deleteFile_requestsThumbnailDeletion() {
+        final Long fileId = 1L;
+        final String fileUuid = "file-uuid";
+        final File file = createFile(fileUuid, "userA/photos/photo.jpg");
+        final User user = createUser("tester", "userA");
+
+        given(fileRepository.findById(fileId)).willReturn(Optional.of(file));
+        given(userRepository.findByUsername("tester")).willReturn(Optional.of(user));
+
+        fileService.deleteFile(fileId, "tester");
+
+        then(fileThumbnailProcessor).should()
+                .deleteThumbnail(fileUuid);
     }
 
     private File createFile(

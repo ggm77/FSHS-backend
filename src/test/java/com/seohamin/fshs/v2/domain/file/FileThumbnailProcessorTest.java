@@ -62,7 +62,7 @@ class FileThumbnailProcessorTest {
 
         fileThumbnailProcessor.process(fileUuid, "user/source.png", Category.IMAGE);
 
-        assertThat(Files.exists(tempDir.resolve("thumbnails").resolve(fileUuid + ".jpg"))).isTrue();
+        assertThat(Files.exists(fileThumbnailProcessor.resolveThumbnailPath(fileUuid))).isTrue();
         then(ffmpegProcessor).shouldHaveNoInteractions();
     }
 
@@ -81,7 +81,7 @@ class FileThumbnailProcessorTest {
 
         fileThumbnailProcessor.process(fileUuid, "user/source.mp4", Category.VIDEO);
 
-        assertThat(Files.exists(tempDir.resolve("thumbnails").resolve(fileUuid + ".jpg"))).isTrue();
+        assertThat(Files.exists(fileThumbnailProcessor.resolveThumbnailPath(fileUuid))).isTrue();
         then(ffmpegProcessor).should()
                 .createThumbnail(eq(sourcePath), any(Path.class), eq(480));
     }
@@ -101,7 +101,7 @@ class FileThumbnailProcessorTest {
 
         fileThumbnailProcessor.process(fileUuid, "user/source.webp", Category.IMAGE);
 
-        assertThat(Files.exists(tempDir.resolve("thumbnails").resolve(fileUuid + ".jpg"))).isTrue();
+        assertThat(Files.exists(fileThumbnailProcessor.resolveThumbnailPath(fileUuid))).isTrue();
         then(ffmpegProcessor).should()
                 .createThumbnail(eq(sourcePath), any(Path.class), eq(480));
     }
@@ -121,9 +121,22 @@ class FileThumbnailProcessorTest {
 
         fileThumbnailProcessor.process(fileUuid, "user/source.heic", Category.IMAGE);
 
-        assertThat(Files.exists(tempDir.resolve("thumbnails").resolve(fileUuid + ".jpg"))).isTrue();
+        assertThat(Files.exists(fileThumbnailProcessor.resolveThumbnailPath(fileUuid))).isTrue();
         then(ffmpegProcessor).should()
                 .createThumbnail(eq(sourcePath), any(Path.class), eq(480));
+    }
+
+    @Test
+    @DisplayName("파일 UUID에 해당하는 썸네일을 삭제한다")
+    void deleteThumbnail_deletesThumbnailFile() throws Exception {
+        final String fileUuid = "delete-uuid";
+        final Path thumbnailPath = fileThumbnailProcessor.resolveThumbnailPath(fileUuid);
+        Files.createDirectories(thumbnailPath.getParent());
+        Files.writeString(thumbnailPath, "thumbnail");
+
+        fileThumbnailProcessor.deleteThumbnail(fileUuid);
+
+        assertThat(Files.exists(thumbnailPath)).isFalse();
     }
 
     @Test

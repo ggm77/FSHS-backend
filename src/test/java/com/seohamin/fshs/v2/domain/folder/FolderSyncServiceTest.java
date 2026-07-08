@@ -240,6 +240,30 @@ class FolderSyncServiceTest {
     }
 
     @Test
+    @DisplayName("폴더 동기화 : 디스크에서 사라진 파일의 썸네일 삭제를 요청한다")
+    void syncFolder_deletedFile_requestsThumbnailDeletion() {
+        final Folder docs = folderRepository.findById(docsId).orElseThrow();
+        final File missingFile = persistFile(
+                "missing.jpg",
+                docs,
+                "userA/docs/missing.jpg",
+                "userA/docs",
+                1L,
+                Instant.parse("2026-06-01T00:00:00Z"),
+                Category.IMAGE
+        );
+        final String missingFileUuid = missingFile.getUuid();
+        testEntityManager.flush();
+        testEntityManager.clear();
+
+        final FolderSyncResponseDto response = folderSyncService.syncFolder(docsId, USERNAME);
+
+        assertThat(response.deletedFiles()).contains("userA/docs/missing.jpg");
+        then(fileThumbnailProcessor).should()
+                .deleteThumbnail(missingFileUuid);
+    }
+
+    @Test
     @DisplayName("폴더 동기화 : 기존 파일 카테고리가 ETC 또는 UNKNOWN이면 파일이 그대로여도 다시 분류한다")
     void syncFolder_rechecksEtcAndUnknownFileCategory() throws IOException {
         final Folder docs = folderRepository.findById(docsId).orElseThrow();

@@ -219,6 +219,7 @@ public class FolderSyncService {
 
         for (final File file : filesToDelete) {
             fileRepository.delete(file);
+            fileThumbnailProcessor.deleteThumbnail(file.getUuid());
             filesByPath.remove(file.getRelativePath());
             result.deletedFiles().add(file.getRelativePath());
         }

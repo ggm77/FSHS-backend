@@ -109,6 +109,15 @@ public class FileThumbnailProcessor {
         return targetPath;
     }
 
+    public void deleteThumbnail(final String fileUuid) {
+        try {
+            final Path targetPath = resolveThumbnailPath(fileUuid);
+            Files.deleteIfExists(targetPath);
+        } catch (final Exception ex) {
+            log.warn("[썸네일 삭제 실패]: uuid={}, message={}", fileUuid, ex.getMessage(), ex);
+        }
+    }
+
     private boolean isValidRequest(
             final String fileUuid,
             final String relativePath,
