@@ -94,8 +94,15 @@ public class FileThumbnailProcessor {
             throw new CustomException(ExceptionCode.INVALID_REQUEST);
         }
 
+        // 샤딩
+        final String shardingPath = fileUuid.substring(0, 2)
+                + "/"
+                + fileUuid.substring(2,4)
+                + "/"
+                + fileUuid;
+
         final Path basePath = Path.of(thumbnailPath).toAbsolutePath().normalize();
-        final Path targetPath = basePath.resolve(fileUuid + THUMBNAIL_EXTENSION).normalize();
+        final Path targetPath = basePath.resolve(shardingPath + THUMBNAIL_EXTENSION).normalize();
         if (!targetPath.startsWith(basePath)) {
             throw new CustomException(ExceptionCode.INVALID_PATH);
         }
