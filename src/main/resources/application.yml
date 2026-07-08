@@ -44,14 +44,11 @@ springdoc:
     path: /api/swagger-ui/v3/api-docs
 
 fshs:
-  base-path: /mnt/nas1/hosting/fshs2
+  # /mnt/nas1/hosting/fshs2
   storage:
-    data-dir-name: data
-    temp-dir-name: temp
-    thumbnail-dir-name: thumbnail
-    data-path: ${fshs.base-path}/${fshs.storage.data-dir-name}
-    temp-path: ${fshs.base-path}/${fshs.storage.temp-dir-name}
-    thumbnail-path: ${fshs.base-path}/${fshs.storage.thumbnail-dir-name}
+    data-path: ./data
+    temp-path: ./temp
+    thumbnail-path: ./thumbnail
 
 app:
   csrf.enabled: true
