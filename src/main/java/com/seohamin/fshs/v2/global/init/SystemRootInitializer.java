@@ -18,14 +18,16 @@ import java.util.Optional;
 @Slf4j
 public class SystemRootInitializer implements CommandLineRunner {
 
-    @Value("${fshs.storage.data-dir-name}")
-    private String SYSTEM_ROOT_NAME;
+    @Value("${fshs.storage.data-path}")
+    private String SYSTEM_ROOT_PATH;
 
     private final FolderRepository folderRepository;
 
     @Override
     @Transactional
     public void run(String... args) {
+
+        final String systemRootName = SYSTEM_ROOT_PATH.substring(SYSTEM_ROOT_PATH.lastIndexOf("/")+1);
 
         log.info("[시스템 루트 폴더 확인 중...]");
 
@@ -35,7 +37,7 @@ public class SystemRootInitializer implements CommandLineRunner {
         // 2) 1번 폴더가 존재하는지 확인
         // 존재할 때
         if (systemRoot.isPresent()) {
-            if (systemRoot.get().getName().equals(SYSTEM_ROOT_NAME)) {
+            if (systemRoot.get().getName().equals(systemRootName)) {
                 log.info("[시스템 루트 확인 됨]");
             }
             else{
@@ -49,7 +51,7 @@ public class SystemRootInitializer implements CommandLineRunner {
 
             // 3) 1번 폴더 없으면 시스템 루트 폴더 생성
             try {
-                folderRepository.insertSystemRoot(SYSTEM_ROOT_NAME, SYSTEM_ROOT_NAME.toLowerCase());
+                folderRepository.insertSystemRoot(systemRootName, systemRootName.toLowerCase());
                 log.info("[시스템 루트 폴더가 생성되었습니다.]");
             } catch (Exception ex) {
                 log.error("[시스템 루트 폴더 생성 중 오류 발생] - {}", ex.getMessage());
