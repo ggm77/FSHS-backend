@@ -58,8 +58,14 @@ public class MetadataAnalyzer {
             );
 
         } catch (final Exception ex) {
-            log.error("[이미지 파일 분석중 에러] {}", ex.getMessage());
-            throw new CustomException(ExceptionCode.METADATA_EXTRACTOR_ERROR, ex);
+            log.warn("[이미지 파일 분석중 에러] {}", ex.getMessage());
+            return new MetadataAnalysisResultDto(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
         }
     }
 
