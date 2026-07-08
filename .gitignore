@@ -17,6 +17,10 @@ Agents.md
 
 /src/main/resources/static/
 
+/data/
+/temp/
+/thumbnail/
+
 /db/
 *.mv.db
 
