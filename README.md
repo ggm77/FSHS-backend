@@ -47,7 +47,8 @@ java -jar ./FSHS-2.0.0.jar
 * **파일 스트리밍**: 이미지/비디오 갤러리 뷰 및 음악/영상 재생목록 기능.
 * **다중 사용자 지원**: 사용자별 루트 폴더 분리를 통한 독립적 저장 공간 제공.
 * **파일 동기화**: 실제 디스크의 파일 정보와 DB 캐시 정보를 일치시키는 동기화 기능.
-* **파일 공유**: 파일 공유 링크 생성 기능 제공.
+* **파일 공유**: 로그인 없이도 접근 가능한 파일 공유 링크 생성 기능 제공.
+* **트랜스코딩 설정 관리**: 관리자가 트랜스코딩 화질 및 하드웨어 가속(H264 인코더 등) 설정을 조회/변경 가능.
 
 ---
 
@@ -66,15 +67,20 @@ java -jar ./FSHS-2.0.0.jar
 ```text
 com.seohamin.fshs.v2
  ├ domain
+ |  ├ auth/file (비로그인 공유 파일 접근 API)
  |  ├ file (파일 관련 API)
  |  ├ folder (폴더 관련 API)
- |  ├ user (유저 관련 API)
  |  ├ share (공유 관련 API)
- |  └ system (시스템 관련 API)
+ |  ├ system (시스템 관련 API)
+ |  ├ transcoding (트랜스코딩 설정 API)
+ |  └ user (유저 관련 API)
  └ global
-    ├ config (스웨거 등 공통 설정)
+    ├ config (시큐리티, 스웨거 등 공통 설정)
+    ├ exception (커스텀 예외 처리)
+    ├ infra (FFmpeg, 메타데이터 추출, 스토리지 등 외부 연동)
+    ├ init (초기 관리자/시스템 루트 등 부팅 초기화)
     ├ util (유틸 도구 모음)
-    └ exception (커스텀 예외 처리)
+    └ validation (요청 검증 그룹)
 ```
 
 ---
@@ -83,11 +89,16 @@ com.seohamin.fshs.v2
 
 시스템은 SQLite를 사용하여 파일 메타데이터를 캐싱하며, 실제 파일 시스템과 유기적으로 연동됩니다.
 
-![FSHS ERD](https://github.com/user-attachments/assets/a80171ca-6d56-4b6e-b3b6-a2530b4e2fa7)
+[![ERD Cloud](https://img.shields.io/badge/ERD_Cloud-333333?style=for-the-badge&logo=read-the-docs&logoColor=white)](https://www.erdcloud.com/d/4852om6L7xKY4az66)
 
-* **User**: 사용자 계정 정보 및 권한(Role)을 관리합니다.
+![FSHS ERD](docs/erd.png)
+
+* **Member**: 사용자 계정 정보 및 권한(Role)을 관리합니다.
 * **Folder**: 유저별로 독립된 루트 폴더를 가지며, 디렉토리 계층 구조를 저장합니다.
 * **File**: 파일의 상대 경로, 크기, MIME 타입, 미디어 코덱 정보 및 카테고리(IMAGE, VIDEO 등)를 저장하여 빠른 조회를 지원합니다.
+* **SharedFile**: 파일 공유 시 발급되는 공유 키와 소유자 정보를 관리합니다.
+* **TranscodingSetting**: 트랜스코딩 화질 및 하드웨어 가속(H264 인코더) 설정을 관리합니다.
+* **PersistentLogins**: 자동 로그인(remember-me)을 위한 토큰 정보를 관리합니다.
 
 ---
 
